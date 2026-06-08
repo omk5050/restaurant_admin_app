@@ -1,12 +1,12 @@
-import Constants from "expo-constants";
 import { AppSettings } from "@/types";
+import Constants from "expo-constants";
 
 // Extract host IP for Android/iOS device support in local development
 const hostUri = Constants.expoConfig?.hostUri;
 const ip = hostUri ? hostUri.split(":")[0] : "localhost";
 
 // Once you deploy to Render, paste your web service URL here (e.g., "https://restaurant-pos-api.onrender.com")
-export const DEPLOYED_API_URL = "";
+export const DEPLOYED_API_URL = "https://restaurant-admin-app-q86t.onrender.com";
 
 export const API_URL = DEPLOYED_API_URL || `http://${ip}:3000`;
 
