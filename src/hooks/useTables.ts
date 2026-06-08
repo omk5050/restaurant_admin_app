@@ -25,13 +25,13 @@ export function useTables() {
   );
 
   const ensureOrderForTable = useCallback(
-    (tableId: number) => {
+    async (tableId: number) => {
       const currentOrder = getOrderForTable(tableId);
       if (currentOrder) {
         return currentOrder;
       }
 
-      const order = createOrder(tableId, 4);
+      const order = await createOrder(tableId, 4);
       setTableOrder(tableId, order.id);
       return order;
     },

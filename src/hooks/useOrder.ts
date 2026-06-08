@@ -33,12 +33,12 @@ export function useOrder(orderId?: string) {
   );
 
   const ensureOrderForTable = useCallback(
-    (tableId: number) => {
+    async (tableId: number) => {
       const currentOrder = getOrderForTable(tableId);
       if (currentOrder) {
         return currentOrder;
       }
-      const newOrder = createOrder(tableId, 4);
+      const newOrder = await createOrder(tableId, 4);
       setTableOrder(tableId, newOrder.id);
       return newOrder;
     },
@@ -57,8 +57,8 @@ export function useOrder(orderId?: string) {
   );
 
   const closeOrder = useCallback(
-    (targetOrderId: string, method: PaymentMethod) => {
-      const invoice = closeOrderInStore(targetOrderId, method);
+    async (targetOrderId: string, method: PaymentMethod) => {
+      const invoice = await closeOrderInStore(targetOrderId, method);
       setTableStatus(invoice.tableId, "paid");
       return invoice;
     },

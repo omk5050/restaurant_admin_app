@@ -27,7 +27,8 @@ export default function TableOrderScreen() {
     if (Number.isFinite(tableId)) {
       ensureOrderForTable(tableId);
     }
-  }, [ensureOrderForTable, tableId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tableId]);
 
   const table = findTable(tableId);
   const order = getOrderForTable(tableId);
@@ -90,9 +91,7 @@ export default function TableOrderScreen() {
               variant="secondary"
               onPress={async () => {
                 await clearTable(tableId);
-                setTimeout(() => {
-                  ensureOrderForTable(tableId);
-                }, 150);
+                await ensureOrderForTable(tableId);
               }}
             >
               Start New Session

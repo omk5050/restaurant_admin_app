@@ -9,7 +9,7 @@ import { useTableStore } from "@/store/tableStore";
 
 export default function InvoiceScreen() {
   const { orderId } = useLocalSearchParams<{ orderId: string }>();
-  const { invoice, settings, previewPrint } = useInvoice(orderId);
+  const { invoice, settings, printReceipt, shareAsPDF } = useInvoice(orderId);
   const { findOrder } = useOrder();
   const order = orderId ? findOrder(orderId) : undefined;
   const fallbackInvoice =
@@ -39,8 +39,10 @@ export default function InvoiceScreen() {
         <>
           <ThermalReceipt invoice={fallbackInvoice} settings={settings} />
           <View style={styles.actions}>
-            <Button onPress={() => previewPrint(fallbackInvoice)}>Print Receipt</Button>
-            <Button variant="secondary">Share as PDF</Button>
+            <Button onPress={() => printReceipt(fallbackInvoice)}>Print Receipt</Button>
+            <Button variant="secondary" onPress={() => shareAsPDF(fallbackInvoice)}>
+              Share as PDF
+            </Button>
             <Button variant="success" onPress={handleDone}>
               Done — Back to Tables
             </Button>
