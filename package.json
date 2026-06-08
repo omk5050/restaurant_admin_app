@@ -51,7 +51,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "build:web": "npx expo export --platform web",
-    "build": "npx expo export --platform web && cd backend && npm install",
+    "build": "npm install && npx expo export --platform web && cd backend && npm install",
     "start:prod": "node backend/server.js",
     "lint": "expo lint"
   },
