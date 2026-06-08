@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const dns = require("dns");
+const path = require("path");
 
 dotenv.config();
 
@@ -19,6 +20,9 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
+
+// Serve static frontend assets
+app.use(express.static(path.join(__dirname, "../dist")));
 
 // ==========================================
 // 1. MONGODB CONNECTION
@@ -812,6 +816,18 @@ setInterval(async () => {
     console.error("Auto-clear background job error:", err.message);
   }
 }, 10000); // Run every 10 seconds
+
+// Fallback route for SPA routing (must be placed after all API endpoints)
+app.get("*", (req, res, next) => {
+  if (req.path.startsWith("/api/")) {
+    return next();
+  }
+  res.sendFile(path.join(__dirname, "../dist/index.html"), (err) => {
+    if (err) {
+      res.status(404).send("Frontend build not found. Please build the frontend first.");
+    }
+  });
+});
 
 // ==========================================
 // 5. SERVER START
