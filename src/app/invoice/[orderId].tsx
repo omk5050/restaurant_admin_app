@@ -29,14 +29,7 @@ export default function InvoiceScreen() {
         }
       : undefined);
 
-  const handleDone = async () => {
-    if (fallbackInvoice) {
-      try {
-        await useTableStore.getState().clearTable(fallbackInvoice.tableId);
-      } catch (err) {
-        console.error("Failed to clear table:", err);
-      }
-    }
+  const handleDone = () => {
     router.replace("/(tabs)" as never);
   };
 

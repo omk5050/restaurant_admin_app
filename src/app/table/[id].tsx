@@ -7,17 +7,18 @@ import { CategorySidebar } from "@/components/menu/CategorySidebar";
 import { MenuList } from "@/components/menu/MenuList";
 import { OrderBottomBar } from "@/components/orders/OrderBottomBar";
 import { OrderSummary } from "@/components/orders/OrderSummary";
+import { Button } from "@/components/ui/Button";
 import { COLORS } from "@/constants/colors";
 import { useMenu } from "@/hooks/useMenu";
 import { useOrder } from "@/hooks/useOrder";
 import { useTables } from "@/hooks/useTables";
-import { formatTime } from "@/utils/formatters";
+import { formatCurrency, formatTime } from "@/utils/formatters";
 import { MenuItem } from "@/types";
 
 export default function TableOrderScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const tableId = Number(id);
-  const { findTable, ensureOrderForTable } = useTables();
+  const { findTable, ensureOrderForTable, clearTable } = useTables();
   const { categories } = useMenu();
   const [selectedCategory, setSelectedCategory] = useState(categories[0]?.id ?? "popular");
   const { getOrderForTable, updateOrderItem, generateBill } = useOrder();
@@ -58,6 +59,46 @@ export default function TableOrderScreen() {
     return (
       <View style={styles.emptyScreen}>
         <Text style={styles.emptyText}>Preparing table...</Text>
+      </View>
+    );
+  }
+
+  if (table.status === "paid") {
+    return (
+      <View style={styles.paidScreen}>
+        <View style={styles.paidCard}>
+          <Text style={styles.paidEmoji}>✅</Text>
+          <Text style={styles.paidTitle}>{table.name} is Paid</Text>
+          <Text style={styles.paidSubtitle}>
+            Order {order.orderNo} was completed for {formatCurrency(order.total)}.
+          </Text>
+          <Text style={styles.paidTimer}>
+            Table will auto-clear in 5 mins.
+          </Text>
+          
+          <View style={styles.paidActions}>
+            <Button
+              onPress={async () => {
+                await clearTable(tableId);
+                router.replace("/(tabs)" as never);
+              }}
+            >
+              Clear Table Now
+            </Button>
+            
+            <Button
+              variant="secondary"
+              onPress={async () => {
+                await clearTable(tableId);
+                setTimeout(() => {
+                  ensureOrderForTable(tableId);
+                }, 150);
+              }}
+            >
+              Start New Session
+            </Button>
+          </View>
+        </View>
       </View>
     );
   }
@@ -162,4 +203,49 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "row",
   },
+  paidScreen: {
+    flex: 1,
+    backgroundColor: COLORS.bg,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 20,
+  },
+  paidCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 24,
+    padding: 24,
+    alignItems: "center",
+    gap: 12,
+    width: "100%",
+    maxWidth: 400,
+    boxShadow: "0 10px 30px rgba(0,0,0,0.06)",
+  },
+  paidEmoji: {
+    fontSize: 48,
+  },
+  paidTitle: {
+    fontSize: 24,
+    fontWeight: "900",
+    color: COLORS.text,
+  },
+  paidSubtitle: {
+    fontSize: 14,
+    color: COLORS.textSec,
+    textAlign: "center",
+  },
+  paidTimer: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: COLORS.green,
+    backgroundColor: COLORS.greenLight,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 99,
+  },
+  paidActions: {
+    width: "100%",
+    gap: 10,
+    marginTop: 8,
+  },
 });
+
