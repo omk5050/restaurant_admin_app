@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FlatList, Pressable, StyleSheet, Text, View, Modal, TextInput, ScrollView, Alert } from "react-native";
+import { FlatList, Pressable, StyleSheet, Text, View, Modal, TextInput, ScrollView, Alert, useWindowDimensions } from "react-native";
 
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -20,30 +20,33 @@ function Header({
   averagePrice: number;
   onAddPress: () => void;
 }) {
+  const { width } = useWindowDimensions();
+  const isSmallScreen = width < 500;
+
   return (
     <View style={styles.headerWrap}>
-      <View style={styles.hero}>
-        <View>
+      <View style={[styles.hero, isSmallScreen && { flexWrap: "wrap", gap: 12 }]}>
+        <View style={{ flex: 1, flexShrink: 1, minWidth: 150 }}>
           <Text style={styles.kicker}>MENU CONTROL</Text>
           <Text style={styles.heroTitle}>Kitchen catalog</Text>
           <Text style={styles.heroSubtitle}>Fast edits, quick scanning, live availability.</Text>
         </View>
-        <View style={styles.heroBadge}>
+        <View style={[styles.heroBadge, isSmallScreen && { alignSelf: "flex-start" }]}>
           <Text style={styles.heroBadgeValue}>{menuItems.length}</Text>
           <Text style={styles.heroBadgeLabel}>items</Text>
         </View>
       </View>
 
-      <View style={styles.metricRow}>
-        <Card style={styles.metric}>
+      <View style={[styles.metricRow, isSmallScreen && { flexWrap: "wrap", gap: 10 }]}>
+        <Card style={[styles.metric, isSmallScreen && { minWidth: "47%", flex: 0 }]}>
           <Text style={styles.metricValue}>{categories.length}</Text>
           <Text style={styles.metricLabel}>Categories</Text>
         </Card>
-        <Card style={styles.metric}>
+        <Card style={[styles.metric, isSmallScreen && { minWidth: "47%", flex: 0 }]}>
           <Text style={styles.metricValue}>{formatCurrency(averagePrice)}</Text>
           <Text style={styles.metricLabel}>Avg price</Text>
         </Card>
-        <Card style={styles.metric}>
+        <Card style={[styles.metric, isSmallScreen && { minWidth: "100%", flex: 0, alignItems: "center" }]}>
           <Text style={styles.metricValue}>{menuItems.filter((item) => item.isVeg).length}</Text>
           <Text style={styles.metricLabel}>Veg items</Text>
         </Card>

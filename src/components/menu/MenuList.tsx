@@ -42,6 +42,6 @@ const styles = StyleSheet.create({
   },
   list: {
     gap: 8,
-    paddingBottom: 20,
+    paddingBottom: 120,
   },
 });

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 
 import { Card } from "@/components/ui/Card";
 import { COLORS } from "@/constants/colors";
@@ -75,7 +75,7 @@ export default function ReportsScreen() {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} contentInsetAdjustmentBehavior="automatic">
       <View style={styles.hero}>
-        <View>
+        <View style={styles.heroText}>
           <Text style={styles.kicker}>MANAGER REPORT</Text>
           <Text style={styles.heroTitle}>Sales pulse</Text>
           <Text style={styles.heroSubtitle}>Weekly rhythm, monthly trend, and table velocity.</Text>
@@ -135,8 +135,13 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     flexDirection: "row",
     gap: 16,
+    alignItems: "flex-end",
     justifyContent: "space-between",
     padding: 22,
+  },
+  heroText: {
+    flex: 1,
+    flexShrink: 1,
   },
   kicker: {
     color: "#FDBA74",
@@ -163,7 +168,8 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
     borderCurve: "continuous",
     borderRadius: 20,
-    minWidth: 104,
+    flexShrink: 0,
+    minWidth: 88,
     paddingHorizontal: 12,
     paddingVertical: 12,
   },
@@ -184,10 +190,12 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   metric: {
+    flex: 1,
+    flexBasis: "45%",
     gap: 5,
     minHeight: 88,
+    minWidth: 120,
     padding: 13,
-    width: "48.6%",
   },
   metricValue: {
     fontSize: 21,

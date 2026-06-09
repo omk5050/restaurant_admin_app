@@ -4,6 +4,7 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 const dns = require("dns");
 const path = require("path");
+const { authenticateToken } = require("./authenticationmiddleware");
 
 dotenv.config();
 
@@ -20,6 +21,18 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
+
+// Load authentication routes
+const authRouter = require("./authentucationroutes");
+app.use("/api", authRouter);
+
+// Authenticate all API requests except for the public login endpoint
+app.use("/api", (req, res, next) => {
+  if (req.path === "/auth/login") {
+    return next();
+  }
+  return authenticateToken(req, res, next);
+});
 
 // Serve static frontend assets
 app.use(express.static(path.join(__dirname, "../dist")));
@@ -117,6 +130,15 @@ const InvoiceSchema = new mongoose.Schema({
   createdAt: { type: String, required: true },
 });
 const Invoice = mongoose.model("Invoice", InvoiceSchema);
+
+const UserSchema = new mongoose.Schema({
+  email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+  password: { type: String, required: true },
+  role: { type: String, enum: ["admin", "super-admin"], required: true },
+  name: { type: String, default: "" },
+  createdAt: { type: Date, default: Date.now },
+});
+const User = mongoose.model("User", UserSchema);
 
 // ==========================================
 // 3. DATABASE SEEDER
@@ -379,6 +401,33 @@ async function seedDatabase() {
       });
       await Table.insertMany(defaultTables);
       console.log("Seeded default tables.");
+    }
+
+    // 7. Users Seeding
+    const userCount = await User.countDocuments();
+    if (userCount === 0) {
+      const bcrypt = require("bcryptjs");
+      
+      // Seed Super Admin
+      const superAdminSalt = await bcrypt.genSalt(10);
+      const superAdminHash = await bcrypt.hash("supersecure123", superAdminSalt);
+      await User.create({
+        email: "superadmin@restaurant.com",
+        password: superAdminHash,
+        role: "super-admin",
+        name: "Super Admin",
+      });
+
+      // Seed Regular Admin
+      const adminSalt = await bcrypt.genSalt(10);
+      const adminHash = await bcrypt.hash("adminsecure123", adminSalt);
+      await User.create({
+        email: "admin@restaurant.com",
+        password: adminHash,
+        role: "admin",
+        name: "Manager Admin",
+      });
+      console.log("Seeded default Admin and Super Admin users.");
     }
   } catch (error) {
     console.error("Seeding database failed:", error);

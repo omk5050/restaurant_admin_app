@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { Invoice, MenuItem, Order, PaymentMethod } from "@/types";
 import { API_URL } from "@/constants/config";
+import { apiFetch } from "@/utils/api";
 
 // Default structure for analytics state
 const DEFAULT_ANALYTICS = {
@@ -54,8 +55,8 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
   fetchOrders: async () => {
     try {
       const [ordersRes, invoicesRes] = await Promise.all([
-        fetch(`${API_URL}/api/orders`),
-        fetch(`${API_URL}/api/invoices`),
+        apiFetch(`${API_URL}/api/orders`),
+        apiFetch(`${API_URL}/api/invoices`),
       ]);
       if (ordersRes.ok && invoicesRes.ok) {
         const orders = await ordersRes.json();
@@ -68,7 +69,7 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
   },
   fetchAnalytics: async () => {
     try {
-      const res = await fetch(`${API_URL}/api/analytics`);
+      const res = await apiFetch(`${API_URL}/api/analytics`);
       if (res.ok) {
         const data = await res.json();
         set({ analytics: data });
@@ -79,7 +80,7 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
   },
   createOrder: async (tableId, guests) => {
     try {
-      const res = await fetch(`${API_URL}/api/orders`, {
+      const res = await apiFetch(`${API_URL}/api/orders`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tableId, guests }),
@@ -114,7 +115,7 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
             ]
           : withoutItem;
 
-      const res = await fetch(`${API_URL}/api/orders/${orderId}/items`, {
+      const res = await apiFetch(`${API_URL}/api/orders/${orderId}/items`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ items }),
@@ -132,7 +133,7 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
   },
   generateBill: async (orderId) => {
     try {
-      const res = await fetch(`${API_URL}/api/orders/${orderId}/bill`, {
+      const res = await apiFetch(`${API_URL}/api/orders/${orderId}/bill`, {
         method: "POST",
       });
       if (res.ok) {
@@ -147,7 +148,7 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
   },
   closeOrder: async (orderId, method) => {
     try {
-      const res = await fetch(`${API_URL}/api/orders/${orderId}/pay`, {
+      const res = await apiFetch(`${API_URL}/api/orders/${orderId}/pay`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ paymentMethod: method }),
