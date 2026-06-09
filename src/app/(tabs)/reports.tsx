@@ -1,10 +1,11 @@
 import { useEffect } from "react";
-import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { ScrollView, StyleSheet, Text, View, TouchableOpacity } from "react-native";
 
 import { Card } from "@/components/ui/Card";
 import { COLORS } from "@/constants/colors";
 import { useOrderStore } from "@/store/orderStore";
 import { formatCurrency } from "@/utils/formatters";
+import { useAuth } from "@/contexts/AuthContext";
 
 function BarChart({
   title,
@@ -61,6 +62,7 @@ function MetricCard({ label, value, tone }: { label: string; value: string | num
 export default function ReportsScreen() {
   const analytics = useOrderStore((state) => state.analytics);
   const fetchAnalytics = useOrderStore((state) => state.fetchAnalytics);
+  const { signOut } = useAuth();
 
   useEffect(() => {
     fetchAnalytics();
@@ -76,8 +78,15 @@ export default function ReportsScreen() {
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} contentInsetAdjustmentBehavior="automatic">
       <View style={styles.hero}>
         <View style={styles.heroText}>
-          <Text style={styles.kicker}>MANAGER REPORT</Text>
-          <Text style={styles.heroTitle}>Sales pulse</Text>
+          <View style={styles.heroTitleRow}>
+            <View>
+              <Text style={styles.kicker}>MANAGER REPORT</Text>
+              <Text style={styles.heroTitle}>Sales pulse</Text>
+            </View>
+            <TouchableOpacity style={styles.logoutBtn} onPress={signOut} activeOpacity={0.8}>
+              <Text style={styles.logoutBtnText}>⏻  Logout</Text>
+            </TouchableOpacity>
+          </View>
           <Text style={styles.heroSubtitle}>Weekly rhythm, monthly trend, and table velocity.</Text>
         </View>
         <View style={styles.heroBadge}>
@@ -142,6 +151,25 @@ const styles = StyleSheet.create({
   heroText: {
     flex: 1,
     flexShrink: 1,
+  },
+  heroTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 4,
+  },
+  logoutBtn: {
+    backgroundColor: "rgba(255,255,255,0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.25)",
+    borderRadius: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  logoutBtnText: {
+    color: "#fca5a5",
+    fontWeight: "700",
+    fontSize: 13,
   },
   kicker: {
     color: "#FDBA74",
