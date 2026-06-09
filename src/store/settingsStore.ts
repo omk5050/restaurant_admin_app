@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { AppSettings } from "@/types";
 import { API_URL, DEFAULT_SETTINGS } from "@/constants/config";
+import { apiFetch } from "@/utils/api";
 
 interface SettingsStore {
   settings: AppSettings;
@@ -12,7 +13,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   settings: DEFAULT_SETTINGS,
   fetchSettings: async () => {
     try {
-      const res = await fetch(`${API_URL}/api/settings`);
+      const res = await apiFetch(`${API_URL}/api/settings`);
       if (res.ok) {
         const data = await res.json();
         set({ settings: data });
@@ -25,7 +26,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     try {
       const current = get().settings;
       const merged = { ...current, ...newSettings };
-      const res = await fetch(`${API_URL}/api/settings`, {
+      const res = await apiFetch(`${API_URL}/api/settings`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(merged),

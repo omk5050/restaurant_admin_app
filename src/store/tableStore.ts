@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { Table } from "@/types";
 import { API_URL } from "@/constants/config";
 import { DEFAULT_TABLES } from "@/constants/mockData";
+import { apiFetch } from "@/utils/api";
 
 interface TableStore {
   tables: Table[];
@@ -15,7 +16,7 @@ export const useTableStore = create<TableStore>((set) => ({
   tables: DEFAULT_TABLES,
   fetchTables: async () => {
     try {
-      const res = await fetch(`${API_URL}/api/tables`);
+      const res = await apiFetch(`${API_URL}/api/tables`);
       if (res.ok) {
         const data = await res.json();
         set({ tables: data });
@@ -26,7 +27,7 @@ export const useTableStore = create<TableStore>((set) => ({
   },
   setTableStatus: async (id, status) => {
     try {
-      const res = await fetch(`${API_URL}/api/tables/${id}/status`, {
+      const res = await apiFetch(`${API_URL}/api/tables/${id}/status`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
@@ -51,7 +52,7 @@ export const useTableStore = create<TableStore>((set) => ({
   },
   clearTable: async (id) => {
     try {
-      const res = await fetch(`${API_URL}/api/tables/${id}/clear`, {
+      const res = await apiFetch(`${API_URL}/api/tables/${id}/clear`, {
         method: "POST",
       });
       if (res.ok) {

@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { Category, MenuItem } from "@/types";
 import { API_URL } from "@/constants/config";
 import { DEFAULT_CATEGORIES, DEFAULT_MENU } from "@/constants/mockData";
+import { apiFetch } from "@/utils/api";
 
 interface MenuStore {
   categories: Category[];
@@ -17,8 +18,8 @@ export const useMenuStore = create<MenuStore>((set) => ({
   fetchMenu: async () => {
     try {
       const [catRes, menuRes] = await Promise.all([
-        fetch(`${API_URL}/api/categories`),
-        fetch(`${API_URL}/api/menu`),
+        apiFetch(`${API_URL}/api/categories`),
+        apiFetch(`${API_URL}/api/menu`),
       ]);
       if (catRes.ok && menuRes.ok) {
         const categories = await catRes.json();
@@ -31,7 +32,7 @@ export const useMenuStore = create<MenuStore>((set) => ({
   },
   addMenuItem: async (item) => {
     try {
-      const res = await fetch(`${API_URL}/api/menu`, {
+      const res = await apiFetch(`${API_URL}/api/menu`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(item),
@@ -46,7 +47,7 @@ export const useMenuStore = create<MenuStore>((set) => ({
   },
   deleteMenuItem: async (id) => {
     try {
-      const res = await fetch(`${API_URL}/api/menu/${id}`, {
+      const res = await apiFetch(`${API_URL}/api/menu/${id}`, {
         method: "DELETE",
       });
       if (res.ok) {

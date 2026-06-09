@@ -2,8 +2,10 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const dotenv = require("dotenv");
+const bcrypt = require("bcryptjs");
 const dns = require("dns");
 const path = require("path");
+const authenticateToken = require("./authenticationmiddleware");
 
 dotenv.config();
 
@@ -43,6 +45,7 @@ mongoose
 // 2. MONGOOSE SCHEMAS & MODELS
 // ==========================================
 const SettingsSchema = new mongoose.Schema({
+  adminId: { type: String, required: true, unique: true },
   restaurantName: { type: String, default: "Hotel Grand" },
   address: { type: String, default: "123 MG Road, Your City" },
   gstNumber: { type: String, default: "07AABC1234D1Z5" },
@@ -53,24 +56,29 @@ const SettingsSchema = new mongoose.Schema({
 const Settings = mongoose.model("Settings", SettingsSchema);
 
 const TableSchema = new mongoose.Schema({
-  id: { type: Number, required: true, unique: true },
+  adminId: { type: String, required: true },
+  id: { type: Number, required: true },
   name: { type: String, required: true },
   seats: { type: Number, default: 4 },
   status: { type: String, enum: ["empty", "active", "bill", "paid"], default: "empty" },
   currentOrderId: { type: String, default: null },
 });
+TableSchema.index({ adminId: 1, id: 1 }, { unique: true });
 const Table = mongoose.model("Table", TableSchema);
 
 const CategorySchema = new mongoose.Schema({
-  id: { type: String, required: true, unique: true },
+  adminId: { type: String, required: true },
+  id: { type: String, required: true },
   name: { type: String, required: true },
   icon: { type: String, required: true },
   sortOrder: { type: Number, default: 0 },
 });
+CategorySchema.index({ adminId: 1, id: 1 }, { unique: true });
 const Category = mongoose.model("Category", CategorySchema);
 
 const MenuItemSchema = new mongoose.Schema({
-  id: { type: String, required: true, unique: true },
+  adminId: { type: String, required: true },
+  id: { type: String, required: true },
   categoryId: { type: String, required: true },
   name: { type: String, required: true },
   price: { type: Number, required: true },
@@ -78,6 +86,7 @@ const MenuItemSchema = new mongoose.Schema({
   isAvailable: { type: Boolean, default: true },
   isVeg: { type: Boolean, default: true },
 });
+MenuItemSchema.index({ adminId: 1, id: 1 }, { unique: true });
 const MenuItem = mongoose.model("MenuItem", MenuItemSchema);
 
 const OrderItemSchema = new mongoose.Schema({
@@ -89,7 +98,8 @@ const OrderItemSchema = new mongoose.Schema({
 });
 
 const OrderSchema = new mongoose.Schema({
-  id: { type: String, required: true, unique: true },
+  adminId: { type: String, required: true },
+  id: { type: String, required: true },
   tableId: { type: Number, required: true },
   orderNo: { type: String, required: true },
   guests: { type: Number, default: 1 },
@@ -102,10 +112,12 @@ const OrderSchema = new mongoose.Schema({
   closedAt: { type: String, default: null },
   paymentMethod: { type: String, default: null },
 });
+OrderSchema.index({ adminId: 1, id: 1 }, { unique: true });
 const Order = mongoose.model("Order", OrderSchema);
 
 const InvoiceSchema = new mongoose.Schema({
-  id: { type: String, required: true, unique: true },
+  adminId: { type: String, required: true },
+  id: { type: String, required: true },
   orderId: { type: String, required: true },
   tableId: { type: Number, required: true },
   orderNo: { type: String, required: true },
@@ -116,17 +128,60 @@ const InvoiceSchema = new mongoose.Schema({
   paymentMethod: { type: String, required: true },
   createdAt: { type: String, required: true },
 });
+InvoiceSchema.index({ adminId: 1, id: 1 }, { unique: true });
 const Invoice = mongoose.model("Invoice", InvoiceSchema);
+
+const UserSchema = new mongoose.Schema({
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  role: { type: String, enum: ["admin", "super-admin"], required: true },
+  name: { type: String, required: true },
+  createdAt: { type: String, required: true },
+});
+const User = mongoose.model("User", UserSchema);
 
 // ==========================================
 // 3. DATABASE SEEDER
 // ==========================================
 async function seedDatabase() {
   try {
+    // 0. Users Seeding
+    const superadminExists = await User.findOne({ email: "superadmin@restaurant.com" });
+    if (!superadminExists) {
+      await User.create({
+        email: "superadmin@restaurant.com",
+        password: bcrypt.hashSync("superadmin123", 10),
+        role: "super-admin",
+        name: "Super Admin",
+        createdAt: new Date().toISOString(),
+      });
+      console.log("Seeded default superadmin user.");
+    }
+
+    const adminExists = await User.findOne({ email: "admin@restaurant.com" });
+    if (!adminExists) {
+      await User.create({
+        email: "admin@restaurant.com",
+        password: bcrypt.hashSync("admin123", 10),
+        role: "admin",
+        name: "Manager Admin",
+        createdAt: new Date().toISOString(),
+      });
+      console.log("Seeded default admin user.");
+    }
+
+    const adminUser = await User.findOne({ email: "admin@restaurant.com" });
+    if (!adminUser) {
+      console.error("Default admin user not found. Seeding aborted.");
+      return;
+    }
+    const adminId = adminUser._id.toString();
+
     // 1. Settings Seeding
     const settingsCount = await Settings.countDocuments();
     if (settingsCount === 0) {
       await Settings.create({
+        adminId,
         restaurantName: "Hotel Grand",
         address: "123 MG Road, Your City",
         gstNumber: "07AABC1234D1Z5",
@@ -149,7 +204,7 @@ async function seedDatabase() {
         { id: "snacks", name: "Snacks", icon: "🍟", sortOrder: 5 },
         { id: "desserts", name: "Desserts", icon: "🍰", sortOrder: 6 },
       ];
-      await Category.insertMany(defaultCategories);
+      await Category.insertMany(defaultCategories.map(c => ({ ...c, adminId })));
       console.log("Seeded default categories.");
     }
 
@@ -195,7 +250,7 @@ async function seedDatabase() {
         { id: "m36", categoryId: "desserts", name: "Kulfi", price: 50, emoji: "🍦", isAvailable: true, isVeg: true },
         { id: "m37", categoryId: "desserts", name: "Kheer", price: 45, emoji: "🍮", isAvailable: true, isVeg: true },
       ];
-      await MenuItem.insertMany(defaultMenu);
+      await MenuItem.insertMany(defaultMenu.map(m => ({ ...m, adminId })));
       console.log("Seeded default menu items.");
     }
 
@@ -300,7 +355,7 @@ async function seedDatabase() {
           createdAt: createPastDateISO(6),
         },
       ];
-      await Invoice.insertMany(pastInvoices);
+      await Invoice.insertMany(pastInvoices.map(inv => ({ ...inv, adminId })));
       console.log("Seeded default invoices for analytics.");
     }
 
@@ -358,7 +413,7 @@ async function seedDatabase() {
           openedAt: new Date(Date.now() - 26 * 60 * 1000).toISOString(),
         },
       ];
-      await Order.insertMany(defaultOrders);
+      await Order.insertMany(defaultOrders.map(o => ({ ...o, adminId })));
       console.log("Seeded default orders.");
     }
 
@@ -377,7 +432,7 @@ async function seedDatabase() {
           currentOrderId: order ? order.id : null,
         };
       });
-      await Table.insertMany(defaultTables);
+      await Table.insertMany(defaultTables.map(t => ({ ...t, adminId })));
       console.log("Seeded default tables.");
     }
   } catch (error) {
@@ -388,6 +443,18 @@ async function seedDatabase() {
 // ==========================================
 // 4. API ENDPOINTS
 // ==========================================
+
+// Helper to resolve current tenant's adminId
+function resolveAdminId(req) {
+  if (req.user) {
+    if (req.user.role === "super-admin") {
+      const selected = req.headers["x-selected-admin-id"] || req.query.adminId;
+      if (selected) return selected;
+    }
+    return req.user.userId;
+  }
+  return null;
+}
 
 // Helper function to calculate subtotal, gst, total
 function calculateTotal(items, gstPercent = 5) {
@@ -400,12 +467,17 @@ function calculateTotal(items, gstPercent = 5) {
   };
 }
 
+// --- AUTHENTICATION ---
+const authRoutes = require("./authentucationroutes");
+app.use("/api/auth", authRoutes);
+
 // --- SETTINGS ---
-app.get("/api/settings", async (req, res) => {
+app.get("/api/settings", authenticateToken, async (req, res) => {
   try {
-    let settings = await Settings.findOne();
+    const adminId = resolveAdminId(req);
+    let settings = await Settings.findOne({ adminId });
     if (!settings) {
-      settings = await Settings.create({});
+      settings = await Settings.create({ adminId });
     }
     res.json(settings);
   } catch (err) {
@@ -413,12 +485,13 @@ app.get("/api/settings", async (req, res) => {
   }
 });
 
-app.put("/api/settings", async (req, res) => {
+app.put("/api/settings", authenticateToken, async (req, res) => {
   try {
+    const adminId = resolveAdminId(req);
     const { restaurantName, address, gstNumber, gstPercent, currency, tableCount } = req.body;
-    let settings = await Settings.findOne();
+    let settings = await Settings.findOne({ adminId });
     if (!settings) {
-      settings = new Settings();
+      settings = new Settings({ adminId });
     }
 
     const oldTableCount = settings.tableCount;
@@ -430,6 +503,7 @@ app.put("/api/settings", async (req, res) => {
         const newTables = [];
         for (let i = oldTableCount + 1; i <= newTableCount; i++) {
           newTables.push({
+            adminId,
             id: i,
             name: `T${i}`,
             seats: 4,
@@ -441,6 +515,7 @@ app.put("/api/settings", async (req, res) => {
       } else {
         // Check if any tables that will be deleted are active
         const activeTablesCount = await Table.countDocuments({
+          adminId,
           id: { $gt: newTableCount },
           status: { $in: ["active", "bill"] },
         });
@@ -452,7 +527,7 @@ app.put("/api/settings", async (req, res) => {
         }
 
         // Delete tables with id > newTableCount
-        await Table.deleteMany({ id: { $gt: newTableCount } });
+        await Table.deleteMany({ adminId, id: { $gt: newTableCount } });
       }
     }
 
@@ -471,20 +546,22 @@ app.put("/api/settings", async (req, res) => {
 });
 
 // --- TABLES ---
-app.get("/api/tables", async (req, res) => {
+app.get("/api/tables", authenticateToken, async (req, res) => {
   try {
-    const tables = await Table.find().sort({ id: 1 });
+    const adminId = resolveAdminId(req);
+    const tables = await Table.find({ adminId }).sort({ id: 1 });
     res.json(tables);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-app.post("/api/tables/:id/status", async (req, res) => {
+app.post("/api/tables/:id/status", authenticateToken, async (req, res) => {
   try {
+    const adminId = resolveAdminId(req);
     const { status } = req.body;
     const table = await Table.findOneAndUpdate(
-      { id: Number(req.params.id) },
+      { adminId, id: Number(req.params.id) },
       { status },
       { new: true }
     );
@@ -494,10 +571,11 @@ app.post("/api/tables/:id/status", async (req, res) => {
   }
 });
 
-app.post("/api/tables/:id/clear", async (req, res) => {
+app.post("/api/tables/:id/clear", authenticateToken, async (req, res) => {
   try {
+    const adminId = resolveAdminId(req);
     const table = await Table.findOneAndUpdate(
-      { id: Number(req.params.id) },
+      { adminId, id: Number(req.params.id) },
       { status: "empty", currentOrderId: null },
       { new: true }
     );
@@ -508,9 +586,10 @@ app.post("/api/tables/:id/clear", async (req, res) => {
 });
 
 // --- CATEGORIES ---
-app.get("/api/categories", async (req, res) => {
+app.get("/api/categories", authenticateToken, async (req, res) => {
   try {
-    const categories = await Category.find().sort({ sortOrder: 1 });
+    const adminId = resolveAdminId(req);
+    const categories = await Category.find({ adminId }).sort({ sortOrder: 1 });
     res.json(categories);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -518,20 +597,23 @@ app.get("/api/categories", async (req, res) => {
 });
 
 // --- MENU ITEMS ---
-app.get("/api/menu", async (req, res) => {
+app.get("/api/menu", authenticateToken, async (req, res) => {
   try {
-    const menuItems = await MenuItem.find();
+    const adminId = resolveAdminId(req);
+    const menuItems = await MenuItem.find({ adminId });
     res.json(menuItems);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-app.post("/api/menu", async (req, res) => {
+app.post("/api/menu", authenticateToken, async (req, res) => {
   try {
+    const adminId = resolveAdminId(req);
     const { categoryId, name, price, emoji, isAvailable, isVeg } = req.body;
     const id = "m_" + Date.now();
     const menuItem = await MenuItem.create({
+      adminId,
       id,
       categoryId,
       name,
@@ -546,9 +628,10 @@ app.post("/api/menu", async (req, res) => {
   }
 });
 
-app.delete("/api/menu/:id", async (req, res) => {
+app.delete("/api/menu/:id", authenticateToken, async (req, res) => {
   try {
-    await MenuItem.deleteOne({ id: req.params.id });
+    const adminId = resolveAdminId(req);
+    await MenuItem.deleteOne({ adminId, id: req.params.id });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -556,23 +639,26 @@ app.delete("/api/menu/:id", async (req, res) => {
 });
 
 // --- ORDERS & INVOICES ---
-app.get("/api/orders", async (req, res) => {
+app.get("/api/orders", authenticateToken, async (req, res) => {
   try {
-    const orders = await Order.find();
+    const adminId = resolveAdminId(req);
+    const orders = await Order.find({ adminId });
     res.json(orders);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-app.post("/api/orders", async (req, res) => {
+app.post("/api/orders", authenticateToken, async (req, res) => {
   try {
+    const adminId = resolveAdminId(req);
     const { tableId, guests } = req.body;
-    const totalOrders = await Order.countDocuments();
+    const totalOrders = await Order.countDocuments({ adminId });
     const orderNo = `#${1026 + totalOrders}`;
     const id = "ord_" + Date.now();
 
     const order = await Order.create({
+      adminId,
       id,
       tableId: Number(tableId),
       orderNo,
@@ -586,7 +672,7 @@ app.post("/api/orders", async (req, res) => {
     });
 
     await Table.findOneAndUpdate(
-      { id: Number(tableId) },
+      { adminId, id: Number(tableId) },
       { status: "active", currentOrderId: id }
     );
 
@@ -596,14 +682,15 @@ app.post("/api/orders", async (req, res) => {
   }
 });
 
-app.put("/api/orders/:id/items", async (req, res) => {
+app.put("/api/orders/:id/items", authenticateToken, async (req, res) => {
   try {
+    const adminId = resolveAdminId(req);
     const { items } = req.body; // Array of items
-    const settings = await Settings.findOne() || { gstPercent: 5 };
+    const settings = await Settings.findOne({ adminId }) || { gstPercent: 5 };
     const { subtotal, gstAmount, total } = calculateTotal(items, settings.gstPercent);
 
     const order = await Order.findOneAndUpdate(
-      { id: req.params.id },
+      { adminId, id: req.params.id },
       { items, subtotal, gstAmount, total },
       { new: true }
     );
@@ -613,15 +700,16 @@ app.put("/api/orders/:id/items", async (req, res) => {
   }
 });
 
-app.post("/api/orders/:id/bill", async (req, res) => {
+app.post("/api/orders/:id/bill", authenticateToken, async (req, res) => {
   try {
+    const adminId = resolveAdminId(req);
     const order = await Order.findOneAndUpdate(
-      { id: req.params.id },
+      { adminId, id: req.params.id },
       { status: "billed" },
       { new: true }
     );
     await Table.findOneAndUpdate(
-      { id: order.tableId },
+      { adminId, id: order.tableId },
       { status: "bill" }
     );
     res.json(order);
@@ -630,19 +718,21 @@ app.post("/api/orders/:id/bill", async (req, res) => {
   }
 });
 
-app.post("/api/orders/:id/pay", async (req, res) => {
+app.post("/api/orders/:id/pay", authenticateToken, async (req, res) => {
   try {
+    const adminId = resolveAdminId(req);
     const { paymentMethod } = req.body;
     const closedAt = new Date().toISOString();
 
     const order = await Order.findOneAndUpdate(
-      { id: req.params.id },
+      { adminId, id: req.params.id },
       { status: "paid", closedAt, paymentMethod },
       { new: true }
     );
 
     const invoiceId = "inv_" + Date.now();
     const invoice = await Invoice.create({
+      adminId,
       id: invoiceId,
       orderId: order.id,
       tableId: order.tableId,
@@ -656,7 +746,7 @@ app.post("/api/orders/:id/pay", async (req, res) => {
     });
 
     await Table.findOneAndUpdate(
-      { id: order.tableId },
+      { adminId, id: order.tableId },
       { status: "paid" }
     );
 
@@ -666,9 +756,10 @@ app.post("/api/orders/:id/pay", async (req, res) => {
   }
 });
 
-app.get("/api/invoices", async (req, res) => {
+app.get("/api/invoices", authenticateToken, async (req, res) => {
   try {
-    const invoices = await Invoice.find().sort({ createdAt: -1 });
+    const adminId = resolveAdminId(req);
+    const invoices = await Invoice.find({ adminId }).sort({ createdAt: -1 });
     res.json(invoices);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -676,8 +767,9 @@ app.get("/api/invoices", async (req, res) => {
 });
 
 // --- ANALYTICS ---
-app.get("/api/analytics", async (req, res) => {
+app.get("/api/analytics", authenticateToken, async (req, res) => {
   try {
+    const adminId = resolveAdminId(req);
     const now = new Date();
     
     // Start of today (local midnight)
@@ -686,11 +778,12 @@ app.get("/api/analytics", async (req, res) => {
     const yesterdayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1).toISOString();
     
     // Today's invoices
-    const todayInvoices = await Invoice.find({ createdAt: { $gte: todayStart } });
+    const todayInvoices = await Invoice.find({ adminId, createdAt: { $gte: todayStart } });
     const todaySales = todayInvoices.reduce((sum, inv) => sum + inv.total, 0);
 
     // Yesterday's invoices
     const yesterdayInvoices = await Invoice.find({
+      adminId,
       createdAt: { $gte: yesterdayStart, $lt: todayStart },
     });
     const yesterdaySales = yesterdayInvoices.reduce((sum, inv) => sum + inv.total, 0);
@@ -704,11 +797,11 @@ app.get("/api/analytics", async (req, res) => {
     }
 
     // Active/Billed/Paid/Empty counts
-    const activeTablesCount = await Table.countDocuments({ status: "active" });
-    const billedTablesCount = await Table.countDocuments({ status: "bill" });
-    const paidTablesCount = await Table.countDocuments({ status: "paid" });
-    const emptyTablesCount = await Table.countDocuments({ status: "empty" });
-    const openOrdersCount = await Order.countDocuments({ status: { $ne: "paid" } });
+    const activeTablesCount = await Table.countDocuments({ adminId, status: "active" });
+    const billedTablesCount = await Table.countDocuments({ adminId, status: "bill" });
+    const paidTablesCount = await Table.countDocuments({ adminId, status: "paid" });
+    const emptyTablesCount = await Table.countDocuments({ adminId, status: "empty" });
+    const openOrdersCount = await Order.countDocuments({ adminId, status: { $ne: "paid" } });
 
     // Weekly sales (group last 7 days Mon-Sun)
     // For simplicity, find the last 7 days including today
@@ -721,6 +814,7 @@ app.get("/api/analytics", async (req, res) => {
       const endOfDay = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).toISOString();
       
       const dayInvoices = await Invoice.find({
+        adminId,
         createdAt: { $gte: startOfDay, $lt: endOfDay },
       });
       const daySales = dayInvoices.reduce((sum, inv) => sum + inv.total, 0);
@@ -739,6 +833,7 @@ app.get("/api/analytics", async (req, res) => {
       const endOfMonth = new Date(d.getFullYear(), d.getMonth() + 1, 1).toISOString();
 
       const monthInvoices = await Invoice.find({
+        adminId,
         createdAt: { $gte: startOfMonth, $lt: endOfMonth },
       });
       const monthSales = monthInvoices.reduce((sum, inv) => sum + inv.total, 0);
@@ -749,18 +844,18 @@ app.get("/api/analytics", async (req, res) => {
     }
 
     // Ticket averages
-    const allInvoices = await Invoice.find();
+    const allInvoices = await Invoice.find({ adminId });
     const averageTicket = allInvoices.length
       ? Math.round(allInvoices.reduce((sum, inv) => sum + inv.total, 0) / allInvoices.length)
       : 0;
 
     // Month Pace
     const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-    const currentMonthInvoices = await Invoice.find({ createdAt: { $gte: currentMonthStart } });
+    const currentMonthInvoices = await Invoice.find({ adminId, createdAt: { $gte: currentMonthStart } });
     const monthPace = currentMonthInvoices.reduce((sum, inv) => sum + inv.total, 0);
 
     // Latest order opened time
-    const latestOrder = await Order.findOne().sort({ openedAt: -1 });
+    const latestOrder = await Order.findOne({ adminId }).sort({ openedAt: -1 });
     const latestOrderOpenedAt = latestOrder ? latestOrder.openedAt : new Date().toISOString();
 
     res.json({

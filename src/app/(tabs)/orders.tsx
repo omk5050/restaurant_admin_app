@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { FlatList, StyleSheet, Text, View } from "react-native";
+import { FlatList, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
@@ -21,30 +21,33 @@ function Header({ orders }: { orders: Order[] }) {
   const billedOrders = orders.filter((order) => order.status === "billed");
   const sales = orders.reduce((sum, order) => sum + order.total, 0);
 
+  const { width } = useWindowDimensions();
+  const isSmallScreen = width < 500;
+
   return (
     <View style={styles.headerWrap}>
-      <View style={styles.hero}>
-        <View>
+      <View style={[styles.hero, isSmallScreen && { flexWrap: "wrap", gap: 12 }]}>
+        <View style={{ flex: 1, flexShrink: 1, minWidth: 150 }}>
           <Text style={styles.kicker}>ORDER RAIL</Text>
           <Text style={styles.heroTitle}>Live queue</Text>
           <Text style={styles.heroSubtitle}>Keep tables, bills, and payments moving.</Text>
         </View>
-        <View style={styles.heroBadge}>
+        <View style={[styles.heroBadge, isSmallScreen && { alignSelf: "flex-start" }]}>
           <Text style={styles.heroBadgeValue}>{liveOrders.length}</Text>
           <Text style={styles.heroBadgeLabel}>live</Text>
         </View>
       </View>
 
-      <View style={styles.metricRow}>
-        <Card style={styles.metric}>
+      <View style={[styles.metricRow, isSmallScreen && { flexWrap: "wrap", gap: 10 }]}>
+        <Card style={[styles.metric, isSmallScreen && { minWidth: "47%", flex: 0 }]}>
           <Text style={styles.metricValue}>{orders.length}</Text>
           <Text style={styles.metricLabel}>Total orders</Text>
         </Card>
-        <Card style={styles.metric}>
+        <Card style={[styles.metric, isSmallScreen && { minWidth: "47%", flex: 0 }]}>
           <Text style={[styles.metricValue, { color: COLORS.blue }]}>{billedOrders.length}</Text>
           <Text style={styles.metricLabel}>Need payment</Text>
         </Card>
-        <Card style={styles.metricWide}>
+        <Card style={[styles.metricWide, isSmallScreen && { minWidth: "100%", flex: 0, alignItems: "center" }]}>
           <Text style={styles.metricValue}>{formatCurrency(sales)}</Text>
           <Text style={styles.metricLabel}>Order value</Text>
         </Card>

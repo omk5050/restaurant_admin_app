@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ScrollView, StyleSheet, Text, View, Pressable, Modal, TextInput } from "react-native";
+import { ScrollView, StyleSheet, Text, View, Pressable, Modal, TextInput, useWindowDimensions } from "react-native";
 
 import { Card } from "@/components/ui/Card";
 import { TableGrid } from "@/components/tables/TableGrid";
@@ -12,6 +12,9 @@ import { useTableStore } from "@/store/tableStore";
 import { formatCurrency, formatTime } from "@/utils/formatters";
 
 export default function DashboardScreen() {
+  const { width } = useWindowDimensions();
+  const isSmallScreen = width < 500;
+  
   const { tables, getOrderForTable } = useTables();
   const { settings, updateSettings } = useSettingsStore();
   const analytics = useOrderStore((state) => state.analytics);
@@ -92,12 +95,12 @@ export default function DashboardScreen() {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} contentInsetAdjustmentBehavior="automatic">
       <View style={styles.hero}>
-        <View style={styles.heroTop}>
-          <View>
+        <View style={[styles.heroTop, isSmallScreen && { flexWrap: "wrap", gap: 12 }]}>
+          <View style={{ flex: 1, flexShrink: 1, minWidth: 150 }}>
             <Text style={styles.kicker}>DINING ROOM LIVE</Text>
-            <Text style={styles.heroTitle}>{settings.restaurantName}</Text>
+            <Text style={styles.heroTitle} numberOfLines={1} ellipsizeMode="tail">{settings.restaurantName}</Text>
           </View>
-          <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+          <View style={{ flexDirection: "row", gap: 8, alignItems: "center", flexShrink: 0 }}>
             <Pressable onPress={handleOpenSettings} style={styles.servicePill}>
               <Text style={{ color: "#F8FAFC", fontSize: 13 }}>⚙️</Text>
             </Pressable>
@@ -107,8 +110,8 @@ export default function DashboardScreen() {
             </View>
           </View>
         </View>
-        <View style={styles.heroBottom}>
-          <View>
+        <View style={[styles.heroBottom, isSmallScreen && { flexWrap: "wrap", gap: 12 }]}>
+          <View style={{ flex: 1, flexShrink: 1, minWidth: 150 }}>
             <Text style={styles.heroLabel}>Today Sales</Text>
             <Text style={styles.heroValue}>{formatCurrency(todaysSales)}</Text>
             <Text style={styles.heroGood}>
@@ -122,20 +125,20 @@ export default function DashboardScreen() {
         </View>
       </View>
 
-      <View style={styles.metricsRow}>
-        <Card style={styles.metricCard}>
+      <View style={[styles.metricsRow, isSmallScreen && { flexWrap: "wrap", gap: 10 }]}>
+        <Card style={[styles.metricCard, isSmallScreen && { minWidth: "47%", flex: 0 }]}>
           <Text style={styles.metricValue}>{activeTables}</Text>
           <Text style={styles.metricLabel}>Active</Text>
         </Card>
-        <Card style={styles.metricCard}>
+        <Card style={[styles.metricCard, isSmallScreen && { minWidth: "47%", flex: 0 }]}>
           <Text style={[styles.metricValue, styles.billMetric]}>{billedTables}</Text>
           <Text style={styles.metricLabel}>Bills</Text>
         </Card>
-        <Card style={styles.metricCard}>
+        <Card style={[styles.metricCard, isSmallScreen && { minWidth: "47%", flex: 0 }]}>
           <Text style={[styles.metricValue, styles.paidMetric]}>{paidTables}</Text>
           <Text style={styles.metricLabel}>Paid</Text>
         </Card>
-        <Card style={styles.metricCard}>
+        <Card style={[styles.metricCard, isSmallScreen && { minWidth: "47%", flex: 0 }]}>
           <Text style={styles.metricValue}>{emptyTables}</Text>
           <Text style={styles.metricLabel}>Open</Text>
         </Card>

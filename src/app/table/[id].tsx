@@ -137,8 +137,9 @@ export default function TableOrderScreen() {
           getQty={(itemId) => qtyById.get(itemId) ?? 0}
           onChangeQty={changeQty}
         />
-        <OrderSummary order={order} onReviewBill={reviewBill} />
       </View>
+
+      <OrderSummary order={order} onReviewBill={reviewBill} />
 
       <OrderBottomBar onKotPress={() => Alert.alert("KOT ready", "Kitchen Order Ticket print is UI-only for this MVP.")} />
     </View>
