@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, TextInput, ActivityIndicator, Alert, ScrollView } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import {
+  View, Text, StyleSheet, FlatList, TouchableOpacity,
+  Modal, TextInput, ActivityIndicator, Alert, ScrollView,
+  SafeAreaView, StatusBar, Platform,
+} from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'expo-router';
 import { apiFetch } from '@/utils/api';
@@ -8,21 +11,23 @@ import { API_URL } from '@/constants/config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function SuperAdminDashboard() {
-  const { role } = useAuth();
+  const { role, signOut } = useAuth();
   const router = useRouter();
 
   const [admins, setAdmins] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
-  
+
   // Form state
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [restaurantName, setRestaurantName] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   const fetchAdmins = async () => {
+    setLoading(true);
     try {
       const res = await apiFetch(`${API_URL}/api/auth/admins`);
       if (res.ok) {
@@ -30,10 +35,12 @@ export default function SuperAdminDashboard() {
         setAdmins(data);
       } else {
         const err = await res.json();
-        console.error("Failed to fetch admins:", err.error);
+        console.error('Failed to fetch admins:', err.error);
       }
     } catch (e) {
-      console.error("Failed to fetch admins:", e);
+      console.error('Failed to fetch admins:', e);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -50,7 +57,7 @@ export default function SuperAdminDashboard() {
       setError('Please fill in all fields.');
       return;
     }
-    setLoading(true);
+    setSubmitting(true);
     setError('');
     try {
       const res = await apiFetch(`${API_URL}/api/auth/register-admin`, {
@@ -61,388 +68,491 @@ export default function SuperAdminDashboard() {
       const data = await res.json();
       if (res.ok) {
         setModalVisible(false);
-        setName('');
-        setEmail('');
-        setPassword('');
-        setRestaurantName('');
+        setName(''); setEmail(''); setPassword(''); setRestaurantName('');
         fetchAdmins();
-        Alert.alert('Success', 'Admin registered successfully and restaurant seeded!');
+        Alert.alert('✅ Success', `${restaurantName} has been registered!`);
       } else {
         setError(data.error || 'Failed to register admin.');
       }
     } catch (e) {
-      setError('Connection error.');
+      setError('Connection error. Please try again.');
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
-  const handleInspect = async (adminId: string) => {
+  const handleInspect = async (adminId: string, restName: string) => {
     await AsyncStorage.setItem('selectedAdminId', adminId);
     router.replace('/(tabs)');
   };
 
-  if (role !== 'super-admin') {
-    return null;
-  }
+  const handleCloseModal = () => {
+    setModalVisible(false);
+    setName(''); setEmail(''); setPassword(''); setRestaurantName('');
+    setError('');
+  };
+
+  if (role !== 'super-admin') return null;
 
   return (
-    <LinearGradient colors={['#f3e5f5', '#e1bee7']} style={styles.container}>
+    <SafeAreaView style={styles.safe}>
+      <StatusBar barStyle="light-content" backgroundColor="#1e1b4b" />
+
+      {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.headerTitle}>Super Admin Dashboard</Text>
-          <Text style={styles.headerSubtitle}>Manage registered admins and inspect portal views</Text>
+          <Text style={styles.headerLabel}>SUPER ADMIN</Text>
+          <Text style={styles.headerTitle}>Restaurant Hub</Text>
         </View>
-        <TouchableOpacity style={styles.addButton} onPress={() => setModalVisible(true)}>
-          <Text style={styles.addButtonText}>+ Register Admin</Text>
+        <TouchableOpacity style={styles.logoutBtn} onPress={signOut} activeOpacity={0.8}>
+          <Text style={styles.logoutText}>⏻  Logout</Text>
         </TouchableOpacity>
       </View>
 
-      <View style={styles.statsRow}>
-        <View style={styles.statsCard}>
-          <Text style={styles.statsValue}>{admins.length}</Text>
-          <Text style={styles.statsLabel}>Total Admins</Text>
+      {/* Stats bar */}
+      <View style={styles.statsBar}>
+        <View style={styles.statItem}>
+          <Text style={styles.statValue}>{admins.length}</Text>
+          <Text style={styles.statLabel}>Total Admins</Text>
         </View>
+        <View style={styles.statDivider} />
+        <View style={styles.statItem}>
+          <Text style={styles.statValue}>{admins.length}</Text>
+          <Text style={styles.statLabel}>Restaurants</Text>
+        </View>
+        <View style={styles.statDivider} />
+        <TouchableOpacity style={[styles.statItem, styles.registerStat]} onPress={() => setModalVisible(true)}>
+          <Text style={styles.registerStatText}>＋ Register Admin</Text>
+        </TouchableOpacity>
       </View>
 
-      <Text style={styles.sectionTitle}>Registered Admins</Text>
-
-      <FlatList
-        data={admins}
-        keyExtractor={(item) => item._id}
-        contentContainerStyle={styles.listContent}
-        renderItem={({ item }) => (
-          <View style={styles.adminCard}>
-            <View style={styles.cardHeader}>
-              <View style={styles.restaurantIcon}>
-                <Text style={styles.restaurantEmoji}>🏪</Text>
-              </View>
-              <View style={styles.cardHeaderInfo}>
-                <Text style={styles.restaurantTitle}>{item.restaurantName}</Text>
-                <Text style={styles.adminName}>{item.name}</Text>
-              </View>
+      {/* Admin List */}
+      {loading ? (
+        <View style={styles.centerBox}>
+          <ActivityIndicator size="large" color="#7c3aed" />
+          <Text style={styles.loadingText}>Loading restaurants...</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={admins}
+          keyExtractor={(item) => item._id}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          ListHeaderComponent={
+            <Text style={styles.sectionTitle}>Registered Restaurants</Text>
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyBox}>
+              <Text style={styles.emptyEmoji}>🏪</Text>
+              <Text style={styles.emptyTitle}>No admins yet</Text>
+              <Text style={styles.emptySubtitle}>Tap "Register Admin" to add your first restaurant</Text>
+              <TouchableOpacity style={styles.emptyBtn} onPress={() => setModalVisible(true)}>
+                <Text style={styles.emptyBtnText}>＋ Register Admin</Text>
+              </TouchableOpacity>
             </View>
-            <View style={styles.cardDetails}>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Email:</Text>
-                <Text style={styles.detailValue}>{item.email}</Text>
+          }
+          renderItem={({ item }) => (
+            <View style={styles.card}>
+              {/* Card header */}
+              <View style={styles.cardTop}>
+                <View style={styles.cardIconWrap}>
+                  <Text style={styles.cardIcon}>🏪</Text>
+                </View>
+                <View style={styles.cardInfo}>
+                  <Text style={styles.cardRestaurant} numberOfLines={1}>{item.restaurantName}</Text>
+                  <Text style={styles.cardAdmin} numberOfLines={1}>{item.name}</Text>
+                </View>
+                <View style={styles.activeBadge}>
+                  <Text style={styles.activeBadgeText}>Active</Text>
+                </View>
               </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Registered:</Text>
-                <Text style={styles.detailValue}>{new Date(item.createdAt).toLocaleDateString()}</Text>
-              </View>
-            </View>
-            <TouchableOpacity style={styles.inspectButton} onPress={() => handleInspect(item._id)}>
-              <Text style={styles.inspectButtonText}>Inspect Portal →</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No registered admins found. Register a new admin above.</Text>
-          </View>
-        }
-      />
 
-      {/* Register Modal */}
-      <Modal visible={modalVisible} animationType="slide" transparent>
+              {/* Card details */}
+              <View style={styles.cardDetails}>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailIcon}>✉️</Text>
+                  <Text style={styles.detailText} numberOfLines={1}>{item.email}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailIcon}>📅</Text>
+                  <Text style={styles.detailText}>
+                    Joined {new Date(item.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Inspect button */}
+              <TouchableOpacity
+                style={styles.inspectBtn}
+                onPress={() => handleInspect(item._id, item.restaurantName)}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.inspectBtnText}>View Portal  →</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        />
+      )}
+
+      {/* Register Admin Modal */}
+      <Modal visible={modalVisible} animationType="slide" transparent onRequestClose={handleCloseModal}>
         <View style={styles.modalOverlay}>
-          <ScrollView contentContainerStyle={styles.modalContainer}>
+          <View style={styles.modalSheet}>
+            {/* Pull indicator */}
+            <View style={styles.modalHandle} />
+
             <Text style={styles.modalTitle}>Register New Admin</Text>
-            {error ? <Text style={styles.errorText}>{error}</Text> : null}
+            <Text style={styles.modalSubtitle}>A restaurant will be auto-created with demo data.</Text>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Admin Full Name</Text>
-              <TextInput 
-                placeholder="e.g. Jane Doe"
-                placeholderTextColor="#aaa"
-                value={name} 
-                onChangeText={setName} 
-                style={styles.input} 
-              />
-            </View>
+            {error ? (
+              <View style={styles.errorBanner}>
+                <Text style={styles.errorText}>⚠️  {error}</Text>
+              </View>
+            ) : null}
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Admin Email</Text>
-              <TextInput 
-                placeholder="e.g. jane@restaurant.com"
-                placeholderTextColor="#aaa"
-                value={email} 
-                onChangeText={setEmail} 
-                keyboardType="email-address"
-                autoCapitalize="none"
-                style={styles.input} 
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Password</Text>
-              <TextInput 
-                placeholder="Must be secure"
-                placeholderTextColor="#aaa"
-                value={password} 
-                onChangeText={setPassword} 
-                secureTextEntry
-                autoCapitalize="none"
-                style={styles.input} 
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Restaurant Name</Text>
-              <TextInput 
-                placeholder="e.g. Jane's Pizzeria"
-                placeholderTextColor="#aaa"
-                value={restaurantName} 
-                onChangeText={setRestaurantName} 
-                style={styles.input} 
-              />
-            </View>
+            <ScrollView showsVerticalScrollIndicator={false} style={styles.modalScroll}>
+              {[
+                { label: 'Admin Full Name', value: name, setter: setName, placeholder: 'e.g. Jane Doe', keyboard: 'default' as const },
+                { label: 'Email Address', value: email, setter: setEmail, placeholder: 'e.g. jane@restaurant.com', keyboard: 'email-address' as const },
+                { label: 'Password', value: password, setter: setPassword, placeholder: 'Minimum 6 characters', keyboard: 'default' as const, secure: true },
+                { label: 'Restaurant Name', value: restaurantName, setter: setRestaurantName, placeholder: "e.g. Jane's Pizzeria", keyboard: 'default' as const },
+              ].map((field) => (
+                <View key={field.label} style={styles.fieldGroup}>
+                  <Text style={styles.fieldLabel}>{field.label}</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder={field.placeholder}
+                    placeholderTextColor="#aaa"
+                    value={field.value}
+                    onChangeText={field.setter}
+                    keyboardType={field.keyboard}
+                    secureTextEntry={field.secure}
+                    autoCapitalize={field.keyboard === 'email-address' || field.secure ? 'none' : 'words'}
+                  />
+                </View>
+              ))}
+            </ScrollView>
 
             <View style={styles.modalActions}>
-              <TouchableOpacity 
-                disabled={loading} 
-                style={[styles.modalBtn, styles.modalCancelBtn]} 
-                onPress={() => setModalVisible(false)}
-              >
-                <Text style={styles.modalCancelText}>Cancel</Text>
+              <TouchableOpacity style={styles.cancelBtn} onPress={handleCloseModal} disabled={submitting}>
+                <Text style={styles.cancelText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
-                disabled={loading} 
-                style={[styles.modalBtn, styles.modalSubmitBtn]} 
-                onPress={handleRegister}
-              >
-                {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.modalSubmitText}>Register</Text>}
+              <TouchableOpacity style={styles.submitBtn} onPress={handleRegister} disabled={submitting} activeOpacity={0.85}>
+                {submitting
+                  ? <ActivityIndicator color="#fff" />
+                  : <Text style={styles.submitText}>Register</Text>
+                }
               </TouchableOpacity>
             </View>
-          </ScrollView>
+          </View>
         </View>
       </Modal>
-    </LinearGradient>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safe: {
     flex: 1,
-    paddingTop: 40,
-    paddingHorizontal: 20,
+    backgroundColor: '#1e1b4b',
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 24,
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'android' ? 16 : 12,
+    paddingBottom: 16,
+    backgroundColor: '#1e1b4b',
+  },
+  headerLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#a5b4fc',
+    letterSpacing: 1.5,
   },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#4a148c',
+    fontSize: 24,
+    fontWeight: '900',
+    color: '#ffffff',
+    marginTop: 2,
   },
-  headerSubtitle: {
-    fontSize: 13,
-    color: '#6a1b9a',
-    marginTop: 4,
+  logoutBtn: {
+    backgroundColor: 'rgba(239,68,68,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(239,68,68,0.35)',
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
   },
-  addButton: {
-    backgroundColor: '#7b1fa2',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  addButtonText: {
-    color: '#fff',
+  logoutText: {
+    color: '#fca5a5',
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: 13,
   },
-  statsRow: {
-    marginBottom: 24,
-  },
-  statsCard: {
-    backgroundColor: '#fff',
+  statsBar: {
+    flexDirection: 'row',
+    backgroundColor: '#2d2a6e',
+    marginHorizontal: 16,
+    marginBottom: 16,
     borderRadius: 16,
     padding: 16,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-    width: 140,
   },
-  statsValue: {
-    fontSize: 32,
-    fontWeight: '900',
-    color: '#4a148c',
-  },
-  statsLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#7b1fa2',
-    marginTop: 4,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#4a148c',
-    marginBottom: 16,
-  },
-  listContent: {
-    gap: 16,
-    paddingBottom: 40,
-  },
-  adminCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderRadius: 20,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  cardHeader: {
-    flexDirection: 'row',
+  statItem: {
+    flex: 1,
     alignItems: 'center',
-    marginBottom: 14,
   },
-  restaurantIcon: {
-    width: 44,
-    height: 44,
+  statValue: {
+    fontSize: 26,
+    fontWeight: '900',
+    color: '#fff',
+  },
+  statLabel: {
+    fontSize: 11,
+    color: '#a5b4fc',
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  statDivider: {
+    width: 1,
+    height: 36,
+    backgroundColor: 'rgba(165,180,252,0.2)',
+    marginHorizontal: 8,
+  },
+  registerStat: {
+    backgroundColor: '#7c3aed',
     borderRadius: 12,
-    backgroundColor: '#f3e5f5',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  registerStatText: {
+    color: '#fff',
+    fontWeight: '800',
+    fontSize: 13,
+    textAlign: 'center',
+  },
+  centerBox: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#f5f3ff',
   },
-  restaurantEmoji: {
-    fontSize: 22,
+  loadingText: {
+    color: '#7c3aed',
+    fontWeight: '600',
+    fontSize: 14,
   },
-  cardHeaderInfo: {
-    marginLeft: 14,
+  listContent: {
+    flexGrow: 1,
+    backgroundColor: '#f5f3ff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 16,
+    paddingTop: 20,
+    paddingBottom: 40,
+    gap: 14,
   },
-  restaurantTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#222',
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#3730a3',
+    marginBottom: 6,
   },
-  adminName: {
-    fontSize: 13,
-    color: '#666',
+  emptyBox: {
+    alignItems: 'center',
+    paddingVertical: 60,
+    gap: 10,
+  },
+  emptyEmoji: { fontSize: 52 },
+  emptyTitle: { fontSize: 20, fontWeight: '800', color: '#1e1b4b' },
+  emptySubtitle: { fontSize: 13, color: '#6b7280', textAlign: 'center', maxWidth: 260 },
+  emptyBtn: {
+    marginTop: 8,
+    backgroundColor: '#7c3aed',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+  },
+  emptyBtnText: { color: '#fff', fontWeight: '800', fontSize: 14 },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 18,
+    shadowColor: '#4c1d95',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+    gap: 12,
+  },
+  cardTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  cardIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: '#ede9fe',
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexShrink: 0,
+  },
+  cardIcon: { fontSize: 24 },
+  cardInfo: { flex: 1, minWidth: 0 },
+  cardRestaurant: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#1e1b4b',
+  },
+  cardAdmin: {
+    fontSize: 12,
+    color: '#6b7280',
     marginTop: 2,
+  },
+  activeBadge: {
+    backgroundColor: '#dcfce7',
+    borderRadius: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+  },
+  activeBadgeText: {
+    color: '#16a34a',
+    fontSize: 11,
+    fontWeight: '700',
   },
   cardDetails: {
     borderTopWidth: 1,
-    borderTopColor: '#eee',
-    paddingVertical: 12,
+    borderTopColor: '#f3f4f6',
+    paddingTop: 10,
     gap: 6,
   },
   detailRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 8,
   },
-  detailLabel: {
-    fontSize: 12,
-    color: '#777',
+  detailIcon: { fontSize: 13 },
+  detailText: {
+    fontSize: 13,
+    color: '#374151',
     fontWeight: '500',
+    flex: 1,
   },
-  detailValue: {
-    fontSize: 12,
-    color: '#333',
-    fontWeight: '600',
-  },
-  inspectButton: {
-    backgroundColor: '#ab47bc',
-    paddingVertical: 10,
-    borderRadius: 10,
+  inspectBtn: {
+    backgroundColor: '#7c3aed',
+    borderRadius: 12,
+    paddingVertical: 12,
     alignItems: 'center',
-    marginTop: 6,
   },
-  inspectButtonText: {
+  inspectBtnText: {
     color: '#fff',
-    fontWeight: '700',
+    fontWeight: '800',
     fontSize: 14,
   },
-  emptyContainer: {
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  emptyText: {
-    fontSize: 14,
-    color: '#888',
-    textAlign: 'center',
-  },
+  // Modal styles
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    padding: 20,
+    justifyContent: 'flex-end',
   },
-  modalContainer: {
+  modalSheet: {
     backgroundColor: '#fff',
-    borderRadius: 24,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     padding: 24,
-    gap: 16,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+    maxHeight: '90%',
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#e5e7eb',
+    borderRadius: 99,
+    alignSelf: 'center',
+    marginBottom: 20,
   },
   modalTitle: {
     fontSize: 22,
-    fontWeight: '800',
-    color: '#4a148c',
-    marginBottom: 8,
+    fontWeight: '900',
+    color: '#1e1b4b',
     textAlign: 'center',
   },
-  inputGroup: {
-    gap: 6,
+  modalSubtitle: {
+    fontSize: 13,
+    color: '#6b7280',
+    textAlign: 'center',
+    marginTop: 4,
+    marginBottom: 16,
   },
-  inputLabel: {
+  errorBanner: {
+    backgroundColor: '#fef2f2',
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 12,
+  },
+  errorText: {
+    color: '#dc2626',
+    fontWeight: '600',
+    fontSize: 13,
+  },
+  modalScroll: {
+    maxHeight: 340,
+  },
+  fieldGroup: {
+    marginBottom: 14,
+  },
+  fieldLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#555',
+    color: '#374151',
+    marginBottom: 6,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: '#e5e7eb',
     borderRadius: 12,
     paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingVertical: 11,
     fontSize: 15,
-    color: '#222',
-    backgroundColor: '#f9f9f9',
+    color: '#111',
+    backgroundColor: '#fafafa',
   },
   modalActions: {
     flexDirection: 'row',
     gap: 12,
-    marginTop: 12,
+    marginTop: 16,
   },
-  modalBtn: {
+  cancelBtn: {
     flex: 1,
-    paddingVertical: 12,
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  cancelText: {
+    color: '#6b7280',
+    fontWeight: '700',
+    fontSize: 15,
+  },
+  submitBtn: {
+    flex: 2,
+    borderRadius: 12,
+    backgroundColor: '#7c3aed',
+    paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
+    minHeight: 50,
   },
-  modalCancelBtn: {
-    backgroundColor: '#f5f5f5',
-  },
-  modalCancelText: {
-    color: '#666',
-    fontWeight: '700',
-  },
-  modalSubmitBtn: {
-    backgroundColor: '#7b1fa2',
-  },
-  modalSubmitText: {
+  submitText: {
     color: '#fff',
-    fontWeight: '700',
-  },
-  errorText: {
-    color: '#d32f2f',
-    fontSize: 13,
-    fontWeight: '700',
-    textAlign: 'center',
+    fontWeight: '800',
+    fontSize: 15,
   },
 });

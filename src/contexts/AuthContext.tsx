@@ -66,10 +66,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signOut = async () => {
-    await AsyncStorage.removeItem('userRole');
-    await AsyncStorage.removeItem('authToken');
+    // Clear all auth-related storage
+    await AsyncStorage.multiRemove(['userRole', 'authToken', 'selectedAdminId']);
+    // Set role to null BEFORE navigating so the index page doesn't redirect back
     setRole(null);
-    router.replace('/');
+    // Small timeout to ensure state update is processed before navigation
+    setTimeout(() => {
+      router.replace('/');
+    }, 50);
   };
 
   return (
