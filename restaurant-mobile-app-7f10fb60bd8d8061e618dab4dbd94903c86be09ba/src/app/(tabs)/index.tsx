@@ -10,10 +10,12 @@ import { useSettingsStore } from "@/store/settingsStore";
 import { useOrderStore } from "@/store/orderStore";
 import { useTableStore } from "@/store/tableStore";
 import { formatCurrency, formatTime } from "@/utils/formatters";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function DashboardScreen() {
   const { width } = useWindowDimensions();
   const isSmallScreen = width < 500;
+  const { signOut } = useAuth();
   
   const { tables, getOrderForTable } = useTables();
   const { settings, updateSettings } = useSettingsStore();
@@ -101,6 +103,9 @@ export default function DashboardScreen() {
             <Text style={styles.heroTitle} numberOfLines={1} ellipsizeMode="tail">{settings.restaurantName}</Text>
           </View>
           <View style={{ flexDirection: "row", gap: 8, alignItems: "center", flexShrink: 0 }}>
+            <Pressable onPress={signOut} style={styles.servicePill}>
+              <Text style={{ color: "#F8FAFC", fontSize: 11, fontWeight: "800" }}>Logout</Text>
+            </Pressable>
             <Pressable onPress={handleOpenSettings} style={styles.servicePill}>
               <Text style={{ color: "#F8FAFC", fontSize: 13 }}>⚙️</Text>
             </Pressable>

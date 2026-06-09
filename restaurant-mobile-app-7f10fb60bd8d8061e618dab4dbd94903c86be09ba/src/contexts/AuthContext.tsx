@@ -18,15 +18,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [role, setRole] = useState<UserRole>(null);
   const isAuthenticated = !!role;
 
-  // Load stored role on mount
+  // Clear stored role and token on mount so reloading forces re-login
   useEffect(() => {
-    const load = async () => {
-      const storedRole = await AsyncStorage.getItem('userRole');
-      if (storedRole === 'admin' || storedRole === 'super-admin') {
-        setRole(storedRole as UserRole);
-      }
+    const clearSession = async () => {
+      await AsyncStorage.removeItem('userRole');
+      await AsyncStorage.removeItem('userToken');
+      setRole(null);
     };
-    load();
+    clearSession();
   }, []);
 
   const signIn = async (email: string, password: string, chosenRole: UserRole) => {
