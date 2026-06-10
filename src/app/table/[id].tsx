@@ -195,7 +195,13 @@ export default function TableOrderScreen() {
             <Text style={styles.infoValue}>{order.orderNo}</Text>
           </View>
         </View>
-        <Badge label={order.status === "billed" ? "Bill Ready" : "Active"} />
+        {order.status === "billed" ? (
+          <TouchableOpacity style={styles.clearNowBtn} onPress={handleClearTable} activeOpacity={0.8}>
+            <Text style={styles.clearNowBtnText}>🗑️ Clear Table</Text>
+          </TouchableOpacity>
+        ) : (
+          <Badge label="Active" />
+        )}
       </View>
 
       <View style={styles.body}>
@@ -285,6 +291,19 @@ const styles = StyleSheet.create({
   },
   infoIcon: {
     fontSize: 14,
+  },
+  clearNowBtn: {
+    backgroundColor: "#ef4444",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  clearNowBtnText: {
+    color: "#fff",
+    fontSize: 11,
+    fontWeight: "800",
   },
   infoLabel: {
     color: COLORS.textSec,
