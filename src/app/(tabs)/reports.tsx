@@ -153,8 +153,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 4,
   },
-    marginBottom: 4,
-  },
   kicker: {
     color: "#FDBA74",
     fontSize: 11,
