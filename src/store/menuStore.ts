@@ -51,7 +51,15 @@ export const useMenuStore = create<MenuStore>((set) => ({
         method: "DELETE",
       });
       if (res.ok) {
-        set((state) => ({ menuItems: state.menuItems.filter((item) => item.id !== id) }));
+        // Refetch the full menu to ensure UI is in sync with backend
+        const menuRes = await apiFetch(`${API_URL}/api/menu`);
+        if (menuRes.ok) {
+          const menuItems = await menuRes.json();
+          set({ menuItems });
+        } else {
+          // Fallback: optimistic local filter
+          set((state) => ({ menuItems: state.menuItems.filter((item) => item.id !== id) }));
+        }
       }
     } catch (err) {
       console.error("Failed to delete menu item:", err);

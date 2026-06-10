@@ -106,7 +106,7 @@ function MenuCard({
 }: {
   item: MenuItem;
   categoryName?: string;
-  onDeletePress: (id: string) => void;
+  onDeletePress: (id: string, name: string) => void;
 }) {
   return (
     <Card style={styles.menuCard}>
@@ -115,9 +115,13 @@ function MenuCard({
           <Text style={styles.emoji}>{item.emoji}</Text>
         </View>
         <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
-          <Pressable onPress={() => onDeletePress(item.id)}>
-            <Text style={{ fontSize: 16 }}>🗑️</Text>
-          </Pressable>
+          <TouchableOpacity
+            onPress={() => onDeletePress(item.id, item.name)}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            activeOpacity={0.6}
+          >
+            <Text style={{ fontSize: 18 }}>🗑️</Text>
+          </TouchableOpacity>
           <View style={[styles.vegDot, { borderColor: item.isVeg ? COLORS.green : COLORS.danger }]}>
             <View style={[styles.vegInner, { backgroundColor: item.isVeg ? COLORS.green : COLORS.danger }]} />
           </View>
@@ -207,10 +211,8 @@ export default function MenuManagementScreen() {
     }
   };
 
-  const handleDeleteItem = (id: string) => {
-    const targetItem = menuItems.find((i) => i.id === id);
-    if (!targetItem) return;
-    setItemToDelete({ id: targetItem.id, name: targetItem.name });
+  const handleDeleteItem = (id: string, name: string) => {
+    setItemToDelete({ id, name });
     setDeleteConfirmVisible(true);
   };
 
@@ -245,7 +247,7 @@ export default function MenuManagementScreen() {
             <MenuCard
               item={item}
               categoryName={categories.find((category) => category.id === item.categoryId)?.name}
-              onDeletePress={handleDeleteItem}
+              onDeletePress={(id, name) => handleDeleteItem(id, name)}
             />
           </View>
         )}

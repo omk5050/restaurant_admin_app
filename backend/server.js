@@ -612,7 +612,17 @@ app.get("/api/menu", authenticateToken, async (req, res) => {
   try {
     const adminId = resolveAdminId(req);
     const menuItems = await MenuItem.find({ adminId });
-    res.json(menuItems);
+    // Map to plain objects with a guaranteed 'id' field
+    const items = menuItems.map((item) => ({
+      id: item.id || item._id.toString(),
+      categoryId: item.categoryId,
+      name: item.name,
+      price: item.price,
+      emoji: item.emoji,
+      isAvailable: item.isAvailable,
+      isVeg: item.isVeg,
+    }));
+    res.json(items);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -633,7 +643,16 @@ app.post("/api/menu", authenticateToken, async (req, res) => {
       isAvailable: isAvailable !== undefined ? isAvailable : true,
       isVeg: isVeg !== undefined ? isVeg : true,
     });
-    res.json(menuItem);
+    // Return clean mapped object (consistent with GET /api/menu)
+    res.json({
+      id: menuItem.id || menuItem._id.toString(),
+      categoryId: menuItem.categoryId,
+      name: menuItem.name,
+      price: menuItem.price,
+      emoji: menuItem.emoji,
+      isAvailable: menuItem.isAvailable,
+      isVeg: menuItem.isVeg,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -642,7 +661,10 @@ app.post("/api/menu", authenticateToken, async (req, res) => {
 app.delete("/api/menu/:id", authenticateToken, async (req, res) => {
   try {
     const adminId = resolveAdminId(req);
-    await MenuItem.deleteOne({ adminId, id: req.params.id });
+    const paramId = req.params.id;
+    // Match by custom id field OR by MongoDB _id for safety
+    const query = { adminId, $or: [{ id: paramId }, { _id: paramId.match(/^[a-f\d]{24}$/i) ? paramId : undefined }].filter(Boolean) };
+    await MenuItem.deleteOne({ adminId, id: paramId });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
