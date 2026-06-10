@@ -1,13 +1,14 @@
+const path = require("path");
+const dotenv = require("dotenv");
+dotenv.config({ path: path.join(__dirname, ".env") });
+
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
-const dotenv = require("dotenv");
 const bcrypt = require("bcryptjs");
 const dns = require("dns");
-const path = require("path");
 const authenticateToken = require("./authenticationmiddleware");
 
-dotenv.config();
 
 // Override default DNS servers to Google Public DNS to resolve mongodb+srv SRV records reliably
 try {
@@ -22,6 +23,15 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
+
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`[API Request] ${req.method} ${req.url}`);
+  res.on("finish", () => {
+    console.log(`[API Response] ${req.method} ${req.url} -> Status: ${res.statusCode}`);
+  });
+  next();
+});
 
 // Serve static frontend assets
 app.use(express.static(path.join(__dirname, "../dist")));

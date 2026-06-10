@@ -21,7 +21,8 @@ if (Platform.OS === "web" && typeof window !== "undefined") {
 // Once you deploy to Render, paste your web service URL here (e.g., "https://restaurant-pos-api.onrender.com")
 export const DEPLOYED_API_URL = "https://restaurant-admin-app-q86t.onrender.com";
 
-export const API_URL = relativeApiUrl || (Platform.OS === "web" ? `http://localhost:3000` : `http://${ip}:3000`);
+// Allow overriding via environment variable, otherwise fall back to relative or local URL
+export const API_URL = process.env.EXPO_PUBLIC_API_URL || relativeApiUrl || (Platform.OS === "web" ? `http://localhost:3000` : `http://${ip}:3000`);
 
 export const APP_CONFIG = {
   gstPercent: 5,

@@ -32,7 +32,10 @@ export default function TableOrderScreen() {
 
   useEffect(() => {
     if (Number.isFinite(tableId)) {
-      ensureOrderForTable(tableId);
+      ensureOrderForTable(tableId).catch((err) => {
+        console.error("ensureOrderForTable failed:", err);
+        setErrorModal(err.message || "Failed to initialize table session.");
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tableId]);
