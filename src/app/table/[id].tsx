@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 import { CategorySidebar } from "@/components/menu/CategorySidebar";
 import { MenuList } from "@/components/menu/MenuList";
@@ -25,6 +25,8 @@ export default function TableOrderScreen() {
 
   // KOT success modal state
   const [kotModalVisible, setKotModalVisible] = useState(false);
+  // Clear table confirm modal state
+  const [clearConfirmVisible, setClearConfirmVisible] = useState(false);
 
   useEffect(() => {
     if (Number.isFinite(tableId)) {
@@ -67,25 +69,17 @@ export default function TableOrderScreen() {
     router.replace("/(tabs)" as never);
   }
 
-  // Clear Table: cancel order and free the table (for active/billed tables)
-  async function handleClearTable() {
-    Alert.alert(
-      "Clear Table",
-      "This will cancel the current order and free the table. Continue?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Clear Table",
-          style: "destructive",
-          onPress: async () => {
-            await clearTable(tableId);
-            await useOrderStore.getState().fetchOrders();
-            await useOrderStore.getState().fetchAnalytics();
-            router.replace("/(tabs)" as never);
-          },
-        },
-      ]
-    );
+  // Clear Table: show custom confirm modal (Alert.alert doesn't work on web)
+  function handleClearTable() {
+    setClearConfirmVisible(true);
+  }
+
+  async function executeClearTable() {
+    setClearConfirmVisible(false);
+    await clearTable(tableId);
+    await useOrderStore.getState().fetchOrders();
+    await useOrderStore.getState().fetchAnalytics();
+    router.replace("/(tabs)" as never);
   }
 
   // KOT: show confirmation popup, set table active, go back to dashboard
@@ -235,6 +229,25 @@ export default function TableOrderScreen() {
             </Text>
             <TouchableOpacity style={styles.kotDismissBtn} onPress={handleKotDismiss}>
               <Text style={styles.kotDismissText}>OK, Back to Dashboard</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Clear Table Confirm Modal */}
+      <Modal visible={clearConfirmVisible} transparent animationType="fade" onRequestClose={() => setClearConfirmVisible(false)}>
+        <View style={styles.kotOverlay}>
+          <View style={styles.kotCard}>
+            <Text style={styles.kotEmoji}>🗑️</Text>
+            <Text style={[styles.kotTitle, { color: "#ef4444" }]}>Clear Table?</Text>
+            <Text style={styles.kotMessage}>
+              This will cancel the current order and free {table.name}. This cannot be undone.
+            </Text>
+            <TouchableOpacity style={[styles.kotDismissBtn, { backgroundColor: "#ef4444" }]} onPress={executeClearTable}>
+              <Text style={styles.kotDismissText}>Yes, Clear Table</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.kotDismissBtn, { backgroundColor: "#f1f5f9", marginTop: 0 }]} onPress={() => setClearConfirmVisible(false)}>
+              <Text style={[styles.kotDismissText, { color: "#64748b" }]}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
