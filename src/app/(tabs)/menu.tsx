@@ -13,15 +13,23 @@ function Header({
   categories,
   menuItems,
   averagePrice,
+  selectedCategoryId,
+  onSelectCategory,
   onAddPress,
 }: {
   categories: Category[];
   menuItems: MenuItem[];
   averagePrice: number;
+  selectedCategoryId: string | null;
+  onSelectCategory: (id: string) => void;
   onAddPress: () => void;
 }) {
   const { width } = useWindowDimensions();
   const isSmallScreen = width < 500;
+
+  const activeCategory = categories.find((c) => c.id === selectedCategoryId);
+  const sectionTitle = activeCategory ? `${activeCategory.icon} ${activeCategory.name}` : "All Items";
+  const visibleCount = menuItems.filter((item) => item.isAvailable).length;
 
   return (
     <View style={styles.headerWrap}>
@@ -53,21 +61,35 @@ function Header({
       </View>
 
       <View style={styles.categoryRail}>
-        {categories.map((category) => (
-          <Pressable key={category.id} style={styles.categoryPill}>
-            <Text style={styles.categoryIcon}>{category.icon}</Text>
-            <Text style={styles.categoryText}>{category.name}</Text>
-          </Pressable>
-        ))}
+        {categories.map((category) => {
+          const isActive = selectedCategoryId === category.id;
+          return (
+            <Pressable
+              key={category.id}
+              onPress={() => onSelectCategory(category.id)}
+              style={[
+                styles.categoryPill,
+                isActive && { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+              ]}
+            >
+              <Text style={styles.categoryIcon}>{category.icon}</Text>
+              <Text style={[styles.categoryText, isActive && { color: COLORS.white }]}>
+                {category.name}
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
 
       <View style={styles.sectionHeader}>
         <View>
-          <Text style={styles.title}>Popular menu</Text>
-          <Text style={styles.subtitle}>Tap-friendly cards for quick item review</Text>
+          <Text style={styles.title}>{sectionTitle}</Text>
+          <Text style={styles.subtitle}>
+            {selectedCategoryId ? "Filtered by category" : "Tap-friendly cards for quick item review"}
+          </Text>
         </View>
         <View style={{ alignItems: "flex-end", gap: 6 }}>
-          <Text style={styles.availableText}>{menuItems.filter((item) => item.isAvailable).length} available</Text>
+          <Text style={styles.availableText}>{visibleCount} available</Text>
           <Pressable onPress={onAddPress} style={[styles.categoryPill, { backgroundColor: COLORS.primary, borderColor: COLORS.primary }]}>
             <Text style={[styles.categoryText, { color: COLORS.white }]}>+ Add Item</Text>
           </Pressable>
@@ -124,6 +146,7 @@ export default function MenuManagementScreen() {
   const addMenuItem = useMenuStore((state) => state.addMenuItem);
   const deleteMenuItem = useMenuStore((state) => state.deleteMenuItem);
   
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [formName, setFormName] = useState("");
   const [formPrice, setFormPrice] = useState("");
@@ -133,7 +156,17 @@ export default function MenuManagementScreen() {
   const [formIsAvailable, setFormIsAvailable] = useState(true);
   const [error, setError] = useState("");
 
+  // Toggle category filter — click same pill again to show all
+  function handleSelectCategory(id: string) {
+    setSelectedCategoryId((prev) => (prev === id ? null : id));
+  }
+
   const averagePrice = Math.round(menuItems.reduce((sum, item) => sum + item.price, 0) / Math.max(menuItems.length, 1));
+
+  // Apply category filter to the displayed list
+  const filteredItems = selectedCategoryId
+    ? menuItems.filter((item) => item.categoryId === selectedCategoryId)
+    : menuItems;
 
   const handleOpenAdd = () => {
     setFormName("");
@@ -191,7 +224,7 @@ export default function MenuManagementScreen() {
       <FlatList
         style={styles.screen}
         contentContainerStyle={styles.content}
-        data={menuItems}
+        data={filteredItems}
         keyExtractor={(item) => item.id}
         numColumns={2}
         columnWrapperStyle={styles.menuRow}
@@ -200,6 +233,8 @@ export default function MenuManagementScreen() {
             categories={categories}
             menuItems={menuItems}
             averagePrice={averagePrice}
+            selectedCategoryId={selectedCategoryId}
+            onSelectCategory={handleSelectCategory}
             onAddPress={handleOpenAdd}
           />
         }
@@ -212,6 +247,11 @@ export default function MenuManagementScreen() {
             />
           </View>
         )}
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateText}>No items in this category</Text>
+          </View>
+        }
       />
 
       {/* Add Item Modal */}
@@ -612,6 +652,15 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "800",
     marginBottom: 4,
+  },
+  emptyState: {
+    alignItems: "center",
+    paddingVertical: 40,
+  },
+  emptyStateText: {
+    color: COLORS.textSec,
+    fontSize: 14,
+    fontWeight: "700",
   },
 });
 
