@@ -41,6 +41,7 @@
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
+    "concurrently": "^9.2.1",
     "eslint": "^9.0.0",
     "eslint-config-expo": "~56.0.4",
     "typescript": "~6.0.3"
@@ -54,6 +55,9 @@
     "build:web": "npx expo export --platform web",
     "build": "npm install && npx expo export --platform web && cd backend && npm install",
     "start:prod": "node backend/server.js",
+    "dev:backend": "node backend/server.js",
+    "dev:web": "expo start --web",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:web\"",
     "lint": "expo lint"
   },
   "private": true
