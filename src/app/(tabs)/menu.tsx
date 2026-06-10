@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FlatList, Pressable, StyleSheet, Text, View, Modal, TextInput, ScrollView, Alert, useWindowDimensions } from "react-native";
+import { FlatList, Pressable, StyleSheet, Text, View, Modal, TextInput, ScrollView, TouchableOpacity, useWindowDimensions } from "react-native";
 
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -155,6 +155,8 @@ export default function MenuManagementScreen() {
   const [formIsVeg, setFormIsVeg] = useState(true);
   const [formIsAvailable, setFormIsAvailable] = useState(true);
   const [error, setError] = useState("");
+  const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ id: string; name: string } | null>(null);
 
   // Toggle category filter — click same pill again to show all
   function handleSelectCategory(id: string) {
@@ -208,15 +210,15 @@ export default function MenuManagementScreen() {
   const handleDeleteItem = (id: string) => {
     const targetItem = menuItems.find((i) => i.id === id);
     if (!targetItem) return;
+    setItemToDelete({ id: targetItem.id, name: targetItem.name });
+    setDeleteConfirmVisible(true);
+  };
 
-    Alert.alert(
-      "Delete Menu Item",
-      `Are you sure you want to delete "${targetItem.name}"?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "Delete", style: "destructive", onPress: () => deleteMenuItem(id) },
-      ]
-    );
+  const executeDeleteItem = async () => {
+    if (!itemToDelete) return;
+    setDeleteConfirmVisible(false);
+    await deleteMenuItem(itemToDelete.id);
+    setItemToDelete(null);
   };
 
   return (
@@ -383,6 +385,25 @@ export default function MenuManagementScreen() {
               </View>
             </View>
           </ScrollView>
+        </View>
+      </Modal>
+
+      {/* Delete Confirm Modal */}
+      <Modal visible={deleteConfirmVisible} transparent animationType="fade" onRequestClose={() => setDeleteConfirmVisible(false)}>
+        <View style={styles.kotOverlay}>
+          <View style={styles.kotCard}>
+            <Text style={styles.kotEmoji}>🗑️</Text>
+            <Text style={[styles.kotTitle, { color: "#ef4444" }]}>Delete Item?</Text>
+            <Text style={styles.kotMessage}>
+              Are you sure you want to delete "{itemToDelete?.name}"? This cannot be undone.
+            </Text>
+            <TouchableOpacity style={[styles.kotDismissBtn, { backgroundColor: "#ef4444" }]} onPress={executeDeleteItem}>
+              <Text style={styles.kotDismissText}>Yes, Delete</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.kotDismissBtn, { backgroundColor: "#f1f5f9", marginTop: 0 }]} onPress={() => setDeleteConfirmVisible(false)}>
+              <Text style={[styles.kotDismissText, { color: "#64748b" }]}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </Modal>
     </View>
@@ -661,6 +682,55 @@ const styles = StyleSheet.create({
     color: COLORS.textSec,
     fontSize: 14,
     fontWeight: "700",
+  },
+  kotOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  kotCard: {
+    backgroundColor: "#fff",
+    borderRadius: 24,
+    padding: 28,
+    alignItems: "center",
+    gap: 12,
+    width: "100%",
+    maxWidth: 360,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.2,
+    shadowRadius: 24,
+    elevation: 12,
+  },
+  kotEmoji: {
+    fontSize: 52,
+  },
+  kotTitle: {
+    fontSize: 24,
+    fontWeight: "900",
+    color: "#15803d",
+  },
+  kotMessage: {
+    fontSize: 14,
+    color: COLORS.textSec,
+    textAlign: "center",
+    lineHeight: 20,
+  },
+  kotDismissBtn: {
+    backgroundColor: "#15803d",
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    marginTop: 8,
+    width: "100%",
+    alignItems: "center",
+  },
+  kotDismissText: {
+    color: "#fff",
+    fontWeight: "800",
+    fontSize: 15,
   },
 });
 
