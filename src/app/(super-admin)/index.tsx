@@ -104,6 +104,9 @@ export default function SuperAdminDashboard() {
           <Text style={styles.headerLabel}>SUPER ADMIN</Text>
           <Text style={styles.headerTitle}>Restaurant Hub</Text>
         </View>
+        <TouchableOpacity style={styles.logoutBtn} onPress={signOut} activeOpacity={0.8}>
+          <Text style={styles.logoutBtnText}>Logout</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Stats bar */}
@@ -273,6 +276,19 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: '#ffffff',
     marginTop: 2,
+  },
+  logoutBtn: {
+    backgroundColor: 'rgba(239,68,68,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(239,68,68,0.4)',
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+  },
+  logoutBtnText: {
+    color: '#fca5a5',
+    fontWeight: '800',
+    fontSize: 13,
   },
   statsBar: {
     flexDirection: 'row',
