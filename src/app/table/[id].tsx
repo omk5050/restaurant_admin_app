@@ -27,6 +27,8 @@ export default function TableOrderScreen() {
   const [kotModalVisible, setKotModalVisible] = useState(false);
   // Clear table confirm modal state
   const [clearConfirmVisible, setClearConfirmVisible] = useState(false);
+  // Error modal state
+  const [errorModal, setErrorModal] = useState("");
 
   useEffect(() => {
     if (Number.isFinite(tableId)) {
@@ -61,7 +63,7 @@ export default function TableOrderScreen() {
   async function handleHold() {
     if (!order) return;
     if (order.items.length === 0) {
-      Alert.alert("No Items", "Add at least one item before putting on hold.");
+      setErrorModal("Add at least one item before putting on hold.");
       return;
     }
     // Table is already active if items exist; ensure status is set to active
@@ -86,7 +88,7 @@ export default function TableOrderScreen() {
   async function handleKot() {
     if (!order) return;
     if (order.items.length === 0) {
-      Alert.alert("No Items", "Add at least one item before printing KOT.");
+      setErrorModal("Add at least one item before printing KOT.");
       return;
     }
     await setTableStatus(tableId, "active");
@@ -217,6 +219,20 @@ export default function TableOrderScreen() {
         onKotPress={handleKot}
         onAddCustomItem={handleAddCustomItem}
       />
+
+      {/* Error Modal */}
+      <Modal visible={!!errorModal} transparent animationType="fade" onRequestClose={() => setErrorModal("")}>
+        <View style={styles.kotOverlay}>
+          <View style={styles.kotCard}>
+            <Text style={styles.kotEmoji}>⚠️</Text>
+            <Text style={[styles.kotTitle, { color: "#f59e0b" }]}>No Items</Text>
+            <Text style={styles.kotMessage}>{errorModal}</Text>
+            <TouchableOpacity style={[styles.kotDismissBtn, { backgroundColor: "#f59e0b" }]} onPress={() => setErrorModal("")}>
+              <Text style={styles.kotDismissText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* KOT Success Modal */}
       <Modal visible={kotModalVisible} transparent animationType="fade" onRequestClose={handleKotDismiss}>
