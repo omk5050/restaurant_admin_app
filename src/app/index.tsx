@@ -49,9 +49,6 @@ export default function Index() {
             <View style={styles.loggedInBadge}>
               <Text style={styles.loggedInText}>✓  Logged in as {role}</Text>
             </View>
-            <TouchableOpacity style={styles.logoutButton} onPress={signOut}>
-              <Text style={styles.logoutText}>Sign Out</Text>
-            </TouchableOpacity>
           </View>
         ) : (
           <View style={styles.buttonGroup}>
@@ -217,17 +214,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 14,
   },
-  logoutButton: {
-    backgroundColor: 'rgba(239,68,68,0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(239,68,68,0.4)',
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 32,
-  },
-  logoutText: {
-    color: '#fca5a5',
-    fontWeight: '700',
     fontSize: 14,
   },
   footer: {

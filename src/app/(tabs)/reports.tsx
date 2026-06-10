@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/Card";
 import { COLORS } from "@/constants/colors";
 import { useOrderStore } from "@/store/orderStore";
 import { formatCurrency } from "@/utils/formatters";
-import { useAuth } from "@/contexts/AuthContext";
+import { formatCurrency } from "@/utils/formatters";
 
 function BarChart({
   title,
@@ -62,7 +62,7 @@ function MetricCard({ label, value, tone }: { label: string; value: string | num
 export default function ReportsScreen() {
   const analytics = useOrderStore((state) => state.analytics);
   const fetchAnalytics = useOrderStore((state) => state.fetchAnalytics);
-  const { signOut } = useAuth();
+  const fetchAnalytics = useOrderStore((state) => state.fetchAnalytics);
 
   useEffect(() => {
     fetchAnalytics();
@@ -83,9 +83,6 @@ export default function ReportsScreen() {
               <Text style={styles.kicker}>MANAGER REPORT</Text>
               <Text style={styles.heroTitle}>Sales pulse</Text>
             </View>
-            <TouchableOpacity style={styles.logoutBtn} onPress={signOut} activeOpacity={0.8}>
-              <Text style={styles.logoutBtnText}>⏻  Logout</Text>
-            </TouchableOpacity>
           </View>
           <Text style={styles.heroSubtitle}>Weekly rhythm, monthly trend, and table velocity.</Text>
         </View>
@@ -158,18 +155,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 4,
   },
-  logoutBtn: {
-    backgroundColor: "rgba(255,255,255,0.12)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.25)",
-    borderRadius: 10,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-  },
-  logoutBtnText: {
-    color: "#fca5a5",
-    fontWeight: "700",
-    fontSize: 13,
+    marginBottom: 4,
   },
   kicker: {
     color: "#FDBA74",

@@ -95,11 +95,6 @@ const RootContent = () => {
           name="payment/[tableId]" 
           options={{ 
             title: 'Receive Payment',
-            headerRight: () => isAuthenticated ? (
-              <TouchableOpacity onPress={signOut} style={styles.logoutButton}>
-                <Text style={styles.logoutText}>Logout</Text>
-              </TouchableOpacity>
-            ) : null,
           }} 
         />
         <Stack.Screen name="invoice/[orderId]" options={{ title: 'Invoice' }} />
@@ -142,8 +137,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   stackContainer: { flex: 1 },
-  logoutButton: { marginRight: 12, padding: 6 },
-  logoutText: { color: COLORS.danger, fontWeight: '600' },
   impersonationBanner: {
     backgroundColor: '#1e293b',
     paddingVertical: 10,

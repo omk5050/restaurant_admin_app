@@ -17,9 +17,6 @@ export default function AuthBar() {
   return (
     <View style={styles.container}>
       <Text style={styles.role}>Signed in as: {role}</Text>
-      <Pressable style={styles.btn} onPress={signOut}>
-        <Text style={styles.text}>Logout</Text>
-      </Pressable>
     </View>
   );
 }
@@ -36,11 +33,4 @@ const styles = StyleSheet.create({
     backdropFilter: 'blur(6px)',
   },
   role: { color: '#fff', fontSize: 14 },
-  btn: {
-    backgroundColor: '#ff4d4d',
-    borderRadius: 6,
-    paddingVertical: 4,
-    paddingHorizontal: 12,
-  },
-  text: { color: '#fff', fontWeight: '600' },
 });
