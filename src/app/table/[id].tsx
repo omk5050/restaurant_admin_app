@@ -2,7 +2,6 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { Alert, Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-import { Badge } from "@/components/ui/Badge";
 import { CategorySidebar } from "@/components/menu/CategorySidebar";
 import { MenuList } from "@/components/menu/MenuList";
 import { OrderBottomBar } from "@/components/orders/OrderBottomBar";
@@ -195,13 +194,9 @@ export default function TableOrderScreen() {
             <Text style={styles.infoValue}>{order.orderNo}</Text>
           </View>
         </View>
-        {order.status === "billed" ? (
-          <TouchableOpacity style={styles.clearNowBtn} onPress={handleClearTable} activeOpacity={0.8}>
-            <Text style={styles.clearNowBtnText}>🗑️ Clear Table</Text>
-          </TouchableOpacity>
-        ) : (
-          <Badge label="Active" />
-        )}
+        <TouchableOpacity style={styles.clearNowBtn} onPress={handleClearTable} activeOpacity={0.8}>
+          <Text style={styles.clearNowBtnText}>🗑️ Clear</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.body}>
