@@ -1,9 +1,11 @@
 import { router } from "expo-router";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { COLORS, TABLE_STATUS_ACCENTS, TABLE_STATUS_COLORS } from "@/constants/colors";
 import { formatCurrency } from "@/utils/formatters";
 import { Order, Table } from "@/types";
+import { useTableStore } from "@/store/tableStore";
+import { useOrderStore } from "@/store/orderStore";
 
 interface TableCardProps {
   table: Table;
@@ -14,10 +16,33 @@ export function TableCard({ table, order }: TableCardProps) {
   const status = TABLE_STATUS_COLORS[table.status];
   const accent = TABLE_STATUS_ACCENTS[table.status];
   const occupied = table.status !== "empty";
+  const clearTable = useTableStore((state) => state.clearTable);
+
+  const handleLongPress = () => {
+    if (table.status === "empty") return;
+
+    Alert.alert(
+      `Clear Table ${table.name}`,
+      "This will cancel the active order and free the table. Continue?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Clear Table",
+          style: "destructive",
+          onPress: async () => {
+            await clearTable(table.id);
+            await useOrderStore.getState().fetchOrders();
+            await useOrderStore.getState().fetchAnalytics();
+          },
+        },
+      ]
+    );
+  };
 
   return (
     <Pressable
       onPress={() => router.push(`/table/${table.id}` as never)}
+      onLongPress={handleLongPress}
       style={({ pressed }) => [
         styles.card,
         {

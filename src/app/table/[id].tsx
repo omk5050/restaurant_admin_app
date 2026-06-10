@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/Button";
 import { COLORS } from "@/constants/colors";
 import { useMenu } from "@/hooks/useMenu";
 import { useOrder } from "@/hooks/useOrder";
+import { useOrderStore } from "@/store/orderStore";
 import { useTables } from "@/hooks/useTables";
 import { formatCurrency, formatTime } from "@/utils/formatters";
 import { MenuItem } from "@/types";
@@ -67,6 +68,27 @@ export default function TableOrderScreen() {
     router.replace("/(tabs)" as never);
   }
 
+  // Clear Table: cancel order and free the table (for active/billed tables)
+  async function handleClearTable() {
+    Alert.alert(
+      "Clear Table",
+      "This will cancel the current order and free the table. Continue?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Clear Table",
+          style: "destructive",
+          onPress: async () => {
+            await clearTable(tableId);
+            await useOrderStore.getState().fetchOrders();
+            await useOrderStore.getState().fetchAnalytics();
+            router.replace("/(tabs)" as never);
+          },
+        },
+      ]
+    );
+  }
+
   // KOT: show confirmation popup, set table active, go back to dashboard
   async function handleKot() {
     if (!order) return;
@@ -117,13 +139,15 @@ export default function TableOrderScreen() {
             Order {order.orderNo} was completed for {formatCurrency(order.total)}.
           </Text>
           <Text style={styles.paidTimer}>
-            Table will auto-clear in 5 mins.
+            Table will auto-clear in 2 mins.
           </Text>
           
           <View style={styles.paidActions}>
             <Button
               onPress={async () => {
                 await clearTable(tableId);
+                await useOrderStore.getState().fetchOrders();
+                await useOrderStore.getState().fetchAnalytics();
                 router.replace("/(tabs)" as never);
               }}
             >
@@ -134,6 +158,8 @@ export default function TableOrderScreen() {
               variant="secondary"
               onPress={async () => {
                 await clearTable(tableId);
+                await useOrderStore.getState().fetchOrders();
+                await useOrderStore.getState().fetchAnalytics();
                 await ensureOrderForTable(tableId);
               }}
             >
@@ -181,6 +207,13 @@ export default function TableOrderScreen() {
           onChangeQty={changeQty}
         />
       </View>
+
+      {/* Clear Table Button for active/billed tables */}
+      {(table.status === "active" || table.status === "bill") && (
+        <TouchableOpacity style={styles.clearTableBtn} onPress={handleClearTable} activeOpacity={0.8}>
+          <Text style={styles.clearTableBtnText}>🗑️  Clear Table</Text>
+        </TouchableOpacity>
+      )}
 
       <OrderSummary order={order} onReviewBill={reviewBill} />
 
@@ -265,6 +298,19 @@ const styles = StyleSheet.create({
   body: {
     flex: 1,
     flexDirection: "row",
+  },
+  clearTableBtn: {
+    backgroundColor: "#fef2f2",
+    borderTopColor: "#fecaca",
+    borderTopWidth: 1,
+    paddingHorizontal: 18,
+    paddingVertical: 13,
+    alignItems: "center",
+  },
+  clearTableBtnText: {
+    color: "#ef4444",
+    fontSize: 14,
+    fontWeight: "800",
   },
   paidScreen: {
     flex: 1,

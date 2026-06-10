@@ -574,8 +574,19 @@ app.post("/api/tables/:id/status", authenticateToken, async (req, res) => {
 app.post("/api/tables/:id/clear", authenticateToken, async (req, res) => {
   try {
     const adminId = resolveAdminId(req);
+    const tableId = Number(req.params.id);
+
+    // Find the table to check if there is an active order
+    const tableData = await Table.findOne({ adminId, id: tableId });
+    if (tableData && tableData.currentOrderId) {
+      await Order.deleteOne({ adminId, id: tableData.currentOrderId });
+    }
+
+    // Delete any other open/billed orders for this table to avoid ghost orders
+    await Order.deleteMany({ adminId, tableId, status: { $ne: "paid" } });
+
     const table = await Table.findOneAndUpdate(
-      { adminId, id: Number(req.params.id) },
+      { adminId, id: tableId },
       { status: "empty", currentOrderId: null },
       { new: true }
     );
@@ -879,7 +890,7 @@ app.get("/api/analytics", authenticateToken, async (req, res) => {
   }
 });
 
-// Background job to auto-clear paid tables after 5 minutes grace period
+// Background job to auto-clear paid tables after 2 minutes grace period
 setInterval(async () => {
   try {
     const paidTables = await Table.find({ status: "paid" });
@@ -893,11 +904,11 @@ setInterval(async () => {
         const diffMs = now - paidTime;
         const diffMins = diffMs / 1000 / 60;
         
-        if (diffMins >= 5) {
+        if (diffMins >= 2) {
           table.status = "empty";
           table.currentOrderId = null;
           await table.save();
-          console.log(`Auto-cleared Table T${table.id} after 5 minutes grace period.`);
+          console.log(`Auto-cleared Table T${table.id} after 2 minutes grace period.`);
         }
       } else {
         // Fallback: If no invoice is found but the table is marked paid, clear it

@@ -83,11 +83,6 @@ const RootContent = () => {
           headerShadowVisible: false,
           headerStyle: { backgroundColor: COLORS.white },
           headerTintColor: COLORS.text,
-          headerRight: () => isAuthenticated ? (
-            <TouchableOpacity onPress={signOut} style={styles.logoutButton}>
-              <Text style={styles.logoutText}>Logout</Text>
-            </TouchableOpacity>
-          ) : null,
         }}
       >
         <Stack.Screen name="index" options={{ headerShown: false }} />
@@ -96,7 +91,17 @@ const RootContent = () => {
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(admin)" options={{ headerShown: false }} />
         <Stack.Screen name="table/[id]" options={{ title: 'Table Order' }} />
-        <Stack.Screen name="payment/[tableId]" options={{ title: 'Receive Payment' }} />
+        <Stack.Screen 
+          name="payment/[tableId]" 
+          options={{ 
+            title: 'Receive Payment',
+            headerRight: () => isAuthenticated ? (
+              <TouchableOpacity onPress={signOut} style={styles.logoutButton}>
+                <Text style={styles.logoutText}>Logout</Text>
+              </TouchableOpacity>
+            ) : null,
+          }} 
+        />
         <Stack.Screen name="invoice/[orderId]" options={{ title: 'Invoice' }} />
       </Stack>
     </View>

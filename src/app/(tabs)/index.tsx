@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ScrollView, StyleSheet, Text, View, Pressable, Modal, TextInput, useWindowDimensions } from "react-native";
+import { ScrollView, StyleSheet, Text, View, Pressable, Modal, TextInput, TouchableOpacity, useWindowDimensions } from "react-native";
 
 import { Card } from "@/components/ui/Card";
 import { TableGrid } from "@/components/tables/TableGrid";
@@ -10,6 +10,7 @@ import { useSettingsStore } from "@/store/settingsStore";
 import { useOrderStore } from "@/store/orderStore";
 import { useTableStore } from "@/store/tableStore";
 import { formatCurrency, formatTime } from "@/utils/formatters";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function DashboardScreen() {
   const { width } = useWindowDimensions();
@@ -17,6 +18,7 @@ export default function DashboardScreen() {
   
   const { tables, getOrderForTable } = useTables();
   const { settings, updateSettings } = useSettingsStore();
+  const { signOut } = useAuth();
   const analytics = useOrderStore((state) => state.analytics);
   const fetchTables = useTableStore((state) => state.fetchTables);
   const fetchAnalytics = useOrderStore((state) => state.fetchAnalytics);
@@ -83,10 +85,10 @@ export default function DashboardScreen() {
         currency: formCurrency,
         tableCount: countVal,
       });
-      await fetchTables();
-      await fetchAnalytics();
       setSettingsModalVisible(false);
       setError("");
+      fetchTables();
+      fetchAnalytics();
     } catch (err: any) {
       setError(err.message || "Failed to update settings");
     }
@@ -211,6 +213,17 @@ export default function DashboardScreen() {
                 <Button onPress={handleSaveSettings}>Save</Button>
               </View>
             </View>
+
+            <TouchableOpacity
+              style={styles.logoutBtn}
+              onPress={async () => {
+                setSettingsModalVisible(false);
+                await signOut();
+              }}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.logoutBtnText}>⏻  Logout</Text>
+            </TouchableOpacity>
           </ScrollView>
         </View>
       </Modal>
@@ -451,6 +464,18 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "800",
     marginBottom: 4,
+  },
+  logoutBtn: {
+    alignItems: "center",
+    borderTopColor: COLORS.border,
+    borderTopWidth: 1,
+    marginTop: 4,
+    paddingTop: 14,
+  },
+  logoutBtnText: {
+    color: "#ef4444",
+    fontSize: 14,
+    fontWeight: "800",
   },
 });
 
