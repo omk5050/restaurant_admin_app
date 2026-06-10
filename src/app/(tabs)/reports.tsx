@@ -61,7 +61,6 @@ function MetricCard({ label, value, tone }: { label: string; value: string | num
 export default function ReportsScreen() {
   const analytics = useOrderStore((state) => state.analytics);
   const fetchAnalytics = useOrderStore((state) => state.fetchAnalytics);
-  const fetchAnalytics = useOrderStore((state) => state.fetchAnalytics);
 
   useEffect(() => {
     fetchAnalytics();
