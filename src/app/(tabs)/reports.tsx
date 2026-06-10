@@ -5,7 +5,6 @@ import { Card } from "@/components/ui/Card";
 import { COLORS } from "@/constants/colors";
 import { useOrderStore } from "@/store/orderStore";
 import { formatCurrency } from "@/utils/formatters";
-import { formatCurrency } from "@/utils/formatters";
 
 function BarChart({
   title,
