@@ -214,8 +214,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 14,
   },
-    fontSize: 14,
-  },
   footer: {
     position: 'absolute',
     bottom: 24,
