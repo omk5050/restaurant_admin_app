@@ -10,11 +10,14 @@ export interface Table {
   currentOrderId?: string;
 }
 
+export type MenuSection = "restaurant" | "cafe";
+
 export interface Category {
   id: string;
   name: string;
   icon: string;
   sortOrder: number;
+  section?: MenuSection;
 }
 
 export interface MenuItem {

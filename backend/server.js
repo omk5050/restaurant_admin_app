@@ -82,6 +82,7 @@ const CategorySchema = new mongoose.Schema({
   name: { type: String, required: true },
   icon: { type: String, required: true },
   sortOrder: { type: Number, default: 0 },
+  section: { type: String, enum: ["restaurant", "cafe"], default: "restaurant" },
 });
 CategorySchema.index({ adminId: 1, id: 1 }, { unique: true });
 const Category = mongoose.model("Category", CategorySchema);
@@ -150,6 +151,60 @@ const UserSchema = new mongoose.Schema({
 });
 const User = mongoose.model("User", UserSchema);
 
+const REQUIRED_CATEGORIES = [
+  { id: "popular", name: "Popular", icon: "★", sortOrder: 0, section: "restaurant" },
+  { id: "breakfast", name: "Breakfast", icon: "☀", sortOrder: 1, section: "restaurant" },
+  { id: "main", name: "Main Course", icon: "🍛", sortOrder: 2, section: "restaurant" },
+  { id: "rice", name: "Rice", icon: "🍚", sortOrder: 3, section: "restaurant" },
+  { id: "beverages", name: "Beverages", icon: "🥤", sortOrder: 0, section: "cafe" },
+  { id: "snacks", name: "Snacks", icon: "🍟", sortOrder: 1, section: "cafe" },
+  { id: "desserts", name: "Desserts", icon: "🍰", sortOrder: 2, section: "cafe" },
+];
+
+const REQUIRED_MENU_ITEMS = [
+  { id: "m38", categoryId: "desserts", name: "Tripple Choco Bowl", price: 150, emoji: "🍫", isAvailable: true, isVeg: true },
+  { id: "m39", categoryId: "desserts", name: "Oreo Choco Bowl", price: 160, emoji: "🍪", isAvailable: true, isVeg: true },
+  { id: "m40", categoryId: "snacks", name: "French Fries Classic", price: 80, emoji: "🍟", isAvailable: true, isVeg: true },
+  { id: "m41", categoryId: "snacks", name: "Peri Peri French Fries", price: 100, emoji: "🌶️", isAvailable: true, isVeg: true },
+  { id: "m42", categoryId: "rice", name: "Veg Dum Biryani", price: 180, emoji: "🍛", isAvailable: true, isVeg: true },
+  { id: "m43", categoryId: "rice", name: "Egg Dum Biryani", price: 200, emoji: "🍳", isAvailable: true, isVeg: false },
+  { id: "m44", categoryId: "rice", name: "Paneer Tikka Biryani", price: 220, emoji: "🍢", isAvailable: true, isVeg: true },
+  { id: "m45", categoryId: "main", name: "Paneer Kalimiri Kabab", price: 180, emoji: "🫕", isAvailable: true, isVeg: true },
+];
+
+function getScopedId(baseId, adminId, usesSuffixedIds) {
+  return usesSuffixedIds ? `${baseId}_${adminId}` : baseId;
+}
+
+async function ensureDefaultMenuData(adminId) {
+  if (!adminId) return;
+
+  const categories = await Category.find({ adminId });
+  const usesSuffixedIds = categories.some((category) => category.id.endsWith(`_${adminId}`));
+  const requiredMenuIds = REQUIRED_MENU_ITEMS.map((item) => getScopedId(item.id, adminId, usesSuffixedIds));
+
+  await Promise.all(REQUIRED_CATEGORIES.map((category) => {
+    const id = getScopedId(category.id, adminId, usesSuffixedIds);
+    return Category.findOneAndUpdate(
+      { adminId, id },
+      { ...category, id, adminId },
+      { upsert: true, setDefaultsOnInsert: true }
+    );
+  }));
+
+  await MenuItem.deleteMany({ adminId, id: { $nin: requiredMenuIds } });
+
+  await Promise.all(REQUIRED_MENU_ITEMS.map((item) => {
+    const id = getScopedId(item.id, adminId, usesSuffixedIds);
+    const categoryId = getScopedId(item.categoryId, adminId, usesSuffixedIds);
+    return MenuItem.findOneAndUpdate(
+      { adminId, id },
+      { ...item, id, categoryId, adminId },
+      { upsert: true, setDefaultsOnInsert: true }
+    );
+  }));
+}
+
 // ==========================================
 // 3. DATABASE SEEDER
 // ==========================================
@@ -206,13 +261,13 @@ async function seedDatabase() {
     const categoryCount = await Category.countDocuments();
     if (categoryCount === 0) {
       const defaultCategories = [
-        { id: "popular", name: "Popular", icon: "★", sortOrder: 0 },
-        { id: "breakfast", name: "Breakfast", icon: "☀", sortOrder: 1 },
-        { id: "main", name: "Main Course", icon: "🍛", sortOrder: 2 },
-        { id: "rice", name: "Rice", icon: "🍚", sortOrder: 3 },
-        { id: "beverages", name: "Beverages", icon: "🥤", sortOrder: 4 },
-        { id: "snacks", name: "Snacks", icon: "🍟", sortOrder: 5 },
-        { id: "desserts", name: "Desserts", icon: "🍰", sortOrder: 6 },
+        { id: "popular", name: "Popular", icon: "★", sortOrder: 0, section: "restaurant" },
+        { id: "breakfast", name: "Breakfast", icon: "☀", sortOrder: 1, section: "restaurant" },
+        { id: "main", name: "Main Course", icon: "🍛", sortOrder: 2, section: "restaurant" },
+        { id: "rice", name: "Rice", icon: "🍚", sortOrder: 3, section: "restaurant" },
+        { id: "beverages", name: "Beverages", icon: "🥤", sortOrder: 0, section: "cafe" },
+        { id: "snacks", name: "Snacks", icon: "🍟", sortOrder: 1, section: "cafe" },
+        { id: "desserts", name: "Desserts", icon: "🍰", sortOrder: 2, section: "cafe" },
       ];
       await Category.insertMany(defaultCategories.map(c => ({ ...c, adminId })));
       console.log("Seeded default categories.");
@@ -221,46 +276,7 @@ async function seedDatabase() {
     // 3. Menu Items Seeding
     const menuCount = await MenuItem.countDocuments();
     if (menuCount === 0) {
-      const defaultMenu = [
-        { id: "m1", categoryId: "popular", name: "Tea", price: 10, emoji: "☕", isAvailable: true, isVeg: true },
-        { id: "m2", categoryId: "popular", name: "Coffee", price: 20, emoji: "☕", isAvailable: true, isVeg: true },
-        { id: "m3", categoryId: "popular", name: "Misal", price: 60, emoji: "🥘", isAvailable: true, isVeg: true },
-        { id: "m4", categoryId: "popular", name: "Biryani", price: 180, emoji: "🍛", isAvailable: true, isVeg: false },
-        { id: "m5", categoryId: "popular", name: "Coke", price: 40, emoji: "🥤", isAvailable: true, isVeg: true },
-        { id: "m6", categoryId: "popular", name: "Lassi", price: 40, emoji: "🥛", isAvailable: true, isVeg: true },
-        { id: "m7", categoryId: "popular", name: "Buttermilk", price: 30, emoji: "🥛", isAvailable: true, isVeg: true },
-        { id: "m8", categoryId: "popular", name: "Paneer Tikka", price: 120, emoji: "🍢", isAvailable: true, isVeg: true },
-        { id: "m9", categoryId: "breakfast", name: "Dosa", price: 60, emoji: "🫓", isAvailable: true, isVeg: true },
-        { id: "m10", categoryId: "breakfast", name: "Idli", price: 40, emoji: "🍚", isAvailable: true, isVeg: true },
-        { id: "m11", categoryId: "breakfast", name: "Poha", price: 30, emoji: "🍚", isAvailable: true, isVeg: true },
-        { id: "m12", categoryId: "breakfast", name: "Upma", price: 35, emoji: "🍚", isAvailable: true, isVeg: true },
-        { id: "m13", categoryId: "breakfast", name: "Paratha", price: 50, emoji: "🫓", isAvailable: true, isVeg: true },
-        { id: "m14", categoryId: "breakfast", name: "Omelette", price: 40, emoji: "🍳", isAvailable: true, isVeg: false },
-        { id: "m15", categoryId: "main", name: "Dal Makhani", price: 120, emoji: "🥘", isAvailable: true, isVeg: true },
-        { id: "m16", categoryId: "main", name: "Butter Chicken", price: 180, emoji: "🍗", isAvailable: true, isVeg: false },
-        { id: "m17", categoryId: "main", name: "Paneer Butter Masala", price: 150, emoji: "🥘", isAvailable: true, isVeg: true },
-        { id: "m18", categoryId: "main", name: "Palak Paneer", price: 140, emoji: "🥬", isAvailable: true, isVeg: true },
-        { id: "m19", categoryId: "main", name: "Chicken Curry", price: 170, emoji: "🍗", isAvailable: true, isVeg: false },
-        { id: "m20", categoryId: "rice", name: "Biryani", price: 180, emoji: "🍛", isAvailable: true, isVeg: false },
-        { id: "m21", categoryId: "rice", name: "Fried Rice", price: 120, emoji: "🍚", isAvailable: true, isVeg: true },
-        { id: "m22", categoryId: "rice", name: "Pulao", price: 100, emoji: "🍚", isAvailable: true, isVeg: true },
-        { id: "m23", categoryId: "rice", name: "Curd Rice", price: 80, emoji: "🍚", isAvailable: true, isVeg: true },
-        { id: "m24", categoryId: "beverages", name: "Tea", price: 10, emoji: "☕", isAvailable: true, isVeg: true },
-        { id: "m25", categoryId: "beverages", name: "Coffee", price: 20, emoji: "☕", isAvailable: true, isVeg: true },
-        { id: "m26", categoryId: "beverages", name: "Lassi", price: 40, emoji: "🥛", isAvailable: true, isVeg: true },
-        { id: "m27", categoryId: "beverages", name: "Coke", price: 40, emoji: "🥤", isAvailable: true, isVeg: true },
-        { id: "m28", categoryId: "beverages", name: "Fresh Lime", price: 30, emoji: "🍋", isAvailable: true, isVeg: true },
-        { id: "m29", categoryId: "beverages", name: "Mango Shake", price: 60, emoji: "🥭", isAvailable: true, isVeg: true },
-        { id: "m30", categoryId: "snacks", name: "Paneer Tikka", price: 120, emoji: "🍢", isAvailable: true, isVeg: true },
-        { id: "m31", categoryId: "snacks", name: "Pav Bhaji", price: 80, emoji: "🫓", isAvailable: true, isVeg: true },
-        { id: "m32", categoryId: "snacks", name: "French Fries", price: 60, emoji: "🍟", isAvailable: true, isVeg: true },
-        { id: "m33", categoryId: "snacks", name: "Spring Roll", price: 70, emoji: "🥚", isAvailable: true, isVeg: true },
-        { id: "m34", categoryId: "desserts", name: "Gulab Jamun", price: 40, emoji: "🍮", isAvailable: true, isVeg: true },
-        { id: "m35", categoryId: "desserts", name: "Ice Cream", price: 60, emoji: "🍨", isAvailable: true, isVeg: true },
-        { id: "m36", categoryId: "desserts", name: "Kulfi", price: 50, emoji: "🍦", isAvailable: true, isVeg: true },
-        { id: "m37", categoryId: "desserts", name: "Kheer", price: 45, emoji: "🍮", isAvailable: true, isVeg: true },
-      ];
-      await MenuItem.insertMany(defaultMenu.map(m => ({ ...m, adminId })));
+      await MenuItem.insertMany(REQUIRED_MENU_ITEMS.map(m => ({ ...m, adminId })));
       console.log("Seeded default menu items.");
     }
 
@@ -283,7 +299,7 @@ async function seedDatabase() {
           orderId: "ord_s1",
           tableId: 1,
           orderNo: "#1001",
-          items: [{ menuItemId: "m4", name: "Biryani", price: 180, qty: 2 }],
+          items: [{ menuItemId: "m42", name: "Veg Dum Biryani", price: 180, qty: 2 }],
           subtotal: 360,
           gstAmount: 18,
           total: 378,
@@ -296,10 +312,10 @@ async function seedDatabase() {
           orderId: "ord_s2",
           tableId: 3,
           orderNo: "#1002",
-          items: [{ menuItemId: "m16", name: "Butter Chicken", price: 180, qty: 1 }],
-          subtotal: 180,
-          gstAmount: 9,
-          total: 189,
+          items: [{ menuItemId: "m43", name: "Egg Dum Biryani", price: 200, qty: 1 }],
+          subtotal: 200,
+          gstAmount: 10,
+          total: 210,
           paymentMethod: "cash",
           createdAt: createPastDateISO(1, 12),
         },
@@ -309,10 +325,10 @@ async function seedDatabase() {
           orderId: "ord_s3",
           tableId: 4,
           orderNo: "#1003",
-          items: [{ menuItemId: "m17", name: "Paneer Butter Masala", price: 150, qty: 3 }],
-          subtotal: 450,
-          gstAmount: 23,
-          total: 473,
+          items: [{ menuItemId: "m44", name: "Paneer Tikka Biryani", price: 220, qty: 3 }],
+          subtotal: 660,
+          gstAmount: 33,
+          total: 693,
           paymentMethod: "card",
           createdAt: createPastDateISO(2),
         },
@@ -321,7 +337,7 @@ async function seedDatabase() {
           orderId: "ord_s4",
           tableId: 2,
           orderNo: "#1004",
-          items: [{ menuItemId: "m20", name: "Biryani", price: 180, qty: 4 }],
+          items: [{ menuItemId: "m45", name: "Paneer Kalimiri Kabab", price: 180, qty: 4 }],
           subtotal: 720,
           gstAmount: 36,
           total: 756,
@@ -333,10 +349,10 @@ async function seedDatabase() {
           orderId: "ord_s5",
           tableId: 6,
           orderNo: "#1005",
-          items: [{ menuItemId: "m3", name: "Misal", price: 60, qty: 2 }],
-          subtotal: 120,
-          gstAmount: 6,
-          total: 126,
+          items: [{ menuItemId: "m38", name: "Tripple Choco Bowl", price: 150, qty: 2 }],
+          subtotal: 300,
+          gstAmount: 15,
+          total: 315,
           paymentMethod: "cash",
           createdAt: createPastDateISO(4),
         },
@@ -345,10 +361,10 @@ async function seedDatabase() {
           orderId: "ord_s6",
           tableId: 7,
           orderNo: "#1006",
-          items: [{ menuItemId: "m10", name: "Idli", price: 40, qty: 3 }],
-          subtotal: 120,
-          gstAmount: 6,
-          total: 126,
+          items: [{ menuItemId: "m39", name: "Oreo Choco Bowl", price: 160, qty: 3 }],
+          subtotal: 480,
+          gstAmount: 24,
+          total: 504,
           paymentMethod: "card",
           createdAt: createPastDateISO(5),
         },
@@ -357,10 +373,10 @@ async function seedDatabase() {
           orderId: "ord_s7",
           tableId: 8,
           orderNo: "#1007",
-          items: [{ menuItemId: "m9", name: "Dosa", price: 60, qty: 5 }],
-          subtotal: 300,
-          gstAmount: 15,
-          total: 315,
+          items: [{ menuItemId: "m40", name: "French Fries Classic", price: 80, qty: 5 }],
+          subtotal: 400,
+          gstAmount: 20,
+          total: 420,
           paymentMethod: "upi",
           createdAt: createPastDateISO(6),
         },
@@ -380,15 +396,12 @@ async function seedDatabase() {
           guests: 4,
           status: "open",
           items: [
-            { menuItemId: "m1", name: "Tea", price: 10, qty: 2 },
-            { menuItemId: "m2", name: "Coffee", price: 20, qty: 1 },
-            { menuItemId: "m3", name: "Misal", price: 60, qty: 1 },
-            { menuItemId: "m4", name: "Biryani", price: 180, qty: 1 },
-            { menuItemId: "m5", name: "Coke", price: 40, qty: 1 },
+            { menuItemId: "m42", name: "Veg Dum Biryani", price: 180, qty: 1 },
+            { menuItemId: "m38", name: "Tripple Choco Bowl", price: 150, qty: 1 },
           ],
-          subtotal: 310,
-          gstAmount: 16,
-          total: 326,
+          subtotal: 330,
+          gstAmount: 17,
+          total: 347,
           openedAt: new Date().toISOString(),
         },
         {
@@ -398,12 +411,12 @@ async function seedDatabase() {
           guests: 3,
           status: "open",
           items: [
-            { menuItemId: "m9", name: "Dosa", price: 60, qty: 2 },
-            { menuItemId: "m24", name: "Tea", price: 10, qty: 2 },
+            { menuItemId: "m43", name: "Egg Dum Biryani", price: 200, qty: 1 },
+            { menuItemId: "m40", name: "French Fries Classic", price: 80, qty: 1 },
           ],
-          subtotal: 140,
-          gstAmount: 7,
-          total: 147,
+          subtotal: 280,
+          gstAmount: 14,
+          total: 294,
           openedAt: new Date(Date.now() - 11 * 60 * 1000).toISOString(),
         },
         {
@@ -413,13 +426,12 @@ async function seedDatabase() {
           guests: 2,
           status: "billed",
           items: [
-            { menuItemId: "m16", name: "Butter Chicken", price: 180, qty: 1 },
-            { menuItemId: "m20", name: "Biryani", price: 180, qty: 1 },
-            { menuItemId: "m35", name: "Ice Cream", price: 60, qty: 1 },
+            { menuItemId: "m44", name: "Paneer Tikka Biryani", price: 220, qty: 1 },
+            { menuItemId: "m39", name: "Oreo Choco Bowl", price: 160, qty: 1 },
           ],
-          subtotal: 420,
-          gstAmount: 21,
-          total: 441,
+          subtotal: 380,
+          gstAmount: 19,
+          total: 399,
           openedAt: new Date(Date.now() - 26 * 60 * 1000).toISOString(),
         },
       ];
@@ -610,6 +622,7 @@ app.post("/api/tables/:id/clear", authenticateToken, async (req, res) => {
 app.get("/api/categories", authenticateToken, async (req, res) => {
   try {
     const adminId = resolveAdminId(req);
+    await ensureDefaultMenuData(adminId);
     const categories = await Category.find({ adminId }).sort({ sortOrder: 1 });
     res.json(categories);
   } catch (err) {
@@ -621,6 +634,7 @@ app.get("/api/categories", authenticateToken, async (req, res) => {
 app.get("/api/menu", authenticateToken, async (req, res) => {
   try {
     const adminId = resolveAdminId(req);
+    await ensureDefaultMenuData(adminId);
     const menuItems = await MenuItem.find({ adminId });
     // Map to plain objects with a guaranteed 'id' field
     const items = menuItems.map((item) => ({

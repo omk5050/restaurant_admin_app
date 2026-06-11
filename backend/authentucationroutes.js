@@ -128,20 +128,26 @@ router.post("/register-admin", authenticateToken, async (req, res) => {
 
     // Seed Categories
     const defaultCategories = [
-      { id: "popular_" + newAdmin._id, name: "Popular", icon: "★", sortOrder: 0, adminId: newAdmin._id },
-      { id: "breakfast_" + newAdmin._id, name: "Breakfast", icon: "☀", sortOrder: 1, adminId: newAdmin._id },
-      { id: "main_" + newAdmin._id, name: "Main Course", icon: "🍛", sortOrder: 2, adminId: newAdmin._id },
-      { id: "beverages_" + newAdmin._id, name: "Beverages", icon: "🥤", sortOrder: 4, adminId: newAdmin._id },
-      { id: "snacks_" + newAdmin._id, name: "Snacks", icon: "🍟", sortOrder: 5, adminId: newAdmin._id },
+      { id: "popular_" + newAdmin._id, name: "Popular", icon: "★", sortOrder: 0, section: "restaurant", adminId: newAdmin._id },
+      { id: "breakfast_" + newAdmin._id, name: "Breakfast", icon: "☀", sortOrder: 1, section: "restaurant", adminId: newAdmin._id },
+      { id: "main_" + newAdmin._id, name: "Main Course", icon: "🍛", sortOrder: 2, section: "restaurant", adminId: newAdmin._id },
+      { id: "rice_" + newAdmin._id, name: "Rice", icon: "🍚", sortOrder: 3, section: "restaurant", adminId: newAdmin._id },
+      { id: "beverages_" + newAdmin._id, name: "Beverages", icon: "🥤", sortOrder: 0, section: "cafe", adminId: newAdmin._id },
+      { id: "snacks_" + newAdmin._id, name: "Snacks", icon: "🍟", sortOrder: 1, section: "cafe", adminId: newAdmin._id },
+      { id: "desserts_" + newAdmin._id, name: "Desserts", icon: "🍰", sortOrder: 2, section: "cafe", adminId: newAdmin._id },
     ];
     await Category.insertMany(defaultCategories);
 
     // Seed Menu Items
     const defaultMenu = [
-      { id: "m1_" + newAdmin._id, categoryId: "popular_" + newAdmin._id, name: "Tea", price: 10, emoji: "☕", isAvailable: true, isVeg: true, adminId: newAdmin._id },
-      { id: "m2_" + newAdmin._id, categoryId: "popular_" + newAdmin._id, name: "Coffee", price: 20, emoji: "☕", isAvailable: true, isVeg: true, adminId: newAdmin._id },
-      { id: "m3_" + newAdmin._id, categoryId: "breakfast_" + newAdmin._id, name: "Dosa", price: 60, emoji: "🫓", isAvailable: true, isVeg: true, adminId: newAdmin._id },
-      { id: "m4_" + newAdmin._id, categoryId: "main_" + newAdmin._id, name: "Paneer Tikka", price: 120, emoji: "🍢", isAvailable: true, isVeg: true, adminId: newAdmin._id },
+      { id: "m38_" + newAdmin._id, categoryId: "desserts_" + newAdmin._id, name: "Tripple Choco Bowl", price: 150, emoji: "🍫", isAvailable: true, isVeg: true, adminId: newAdmin._id },
+      { id: "m39_" + newAdmin._id, categoryId: "desserts_" + newAdmin._id, name: "Oreo Choco Bowl", price: 160, emoji: "🍪", isAvailable: true, isVeg: true, adminId: newAdmin._id },
+      { id: "m40_" + newAdmin._id, categoryId: "snacks_" + newAdmin._id, name: "French Fries Classic", price: 80, emoji: "🍟", isAvailable: true, isVeg: true, adminId: newAdmin._id },
+      { id: "m41_" + newAdmin._id, categoryId: "snacks_" + newAdmin._id, name: "Peri Peri French Fries", price: 100, emoji: "🌶️", isAvailable: true, isVeg: true, adminId: newAdmin._id },
+      { id: "m42_" + newAdmin._id, categoryId: "rice_" + newAdmin._id, name: "Veg Dum Biryani", price: 180, emoji: "🍛", isAvailable: true, isVeg: true, adminId: newAdmin._id },
+      { id: "m43_" + newAdmin._id, categoryId: "rice_" + newAdmin._id, name: "Egg Dum Biryani", price: 200, emoji: "🍳", isAvailable: true, isVeg: false, adminId: newAdmin._id },
+      { id: "m44_" + newAdmin._id, categoryId: "rice_" + newAdmin._id, name: "Paneer Tikka Biryani", price: 220, emoji: "🍢", isAvailable: true, isVeg: true, adminId: newAdmin._id },
+      { id: "m45_" + newAdmin._id, categoryId: "main_" + newAdmin._id, name: "Paneer Kalimiri Kabab", price: 180, emoji: "🫕", isAvailable: true, isVeg: true, adminId: newAdmin._id },
     ];
     await MenuItem.insertMany(defaultMenu);
 

@@ -1,9 +1,26 @@
-import { StyleSheet, Text, View } from "react-native";
-
 import { QtyControl } from "@/components/ui/QtyControl";
 import { COLORS } from "@/constants/colors";
 import { formatCurrency } from "@/utils/formatters";
 import { MenuItem } from "@/types";
+import { StyleSheet, Text, View, Image } from "react-native";
+
+const menuImages = {
+  "Veg Dum Biryani": require("../../../assets/images/veg-dum-biryani.jpg"),
+
+  "Egg Dum Biryani": require("../../../assets/images/egg-dum-biryani.jpg"),
+
+  "French Fries Classic": require("../../../assets/images/french-fries-classic.jpg"),
+
+  "Peri Peri French Fries": require("../../../assets/images/peri-peri-fries.jpg"),
+
+  "Tripple Choco Bowl": require("../../../assets/images/triple-choco-bowl.jpg"),
+
+  "Oreo Choco Bowl": require("../../../assets/images/oreo-choco-bowl.jpg"),
+
+  "Paneer Tikka Biryani": require("../../../assets/images/paneer-tikka-biryani.jpg"),
+
+  "Paneer Kalimiri Kabab": require("../../../assets/images/paneer-kalimiri-kabab.jpg"),
+};
 
 interface MenuItemCardProps {
   item: MenuItem;
@@ -14,9 +31,11 @@ interface MenuItemCardProps {
 export function MenuItemCard({ item, qty, onChangeQty }: MenuItemCardProps) {
   return (
     <View style={[styles.card, qty > 0 && styles.selected]}>
-      <View style={styles.emojiBox}>
-        <Text style={styles.emoji}>{item.emoji}</Text>
-      </View>
+      <Image
+        source={menuImages[item.name as keyof typeof menuImages]}
+        style={styles.foodImage}
+        resizeMode="cover"
+      />
       <View style={styles.details}>
         <Text numberOfLines={1} style={styles.name}>
           {item.name}
@@ -41,6 +60,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 9,
   },
+  foodImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 12,
+  },
   selected: {
     borderColor: COLORS.primaryMid,
     borderWidth: 1.5,
@@ -63,12 +87,12 @@ const styles = StyleSheet.create({
   },
   name: {
     color: COLORS.text,
-    fontSize: 12,
-    fontWeight: "800",
+    fontSize: 15,
+    fontWeight: "700",
   },
   price: {
     color: COLORS.primary,
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: "800",
     marginTop: 2,
   },

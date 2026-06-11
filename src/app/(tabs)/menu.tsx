@@ -4,31 +4,59 @@ import { FlatList, Pressable, StyleSheet, Text, View, Modal, TextInput, ScrollVi
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { COLORS } from "@/constants/colors";
+import { MENU_SECTIONS, getSubCategories } from "@/constants/menuSections";
 import { useMenu } from "@/hooks/useMenu";
 import { useMenuStore } from "@/store/menuStore";
 import { formatCurrency } from "@/utils/formatters";
-import { Category, MenuItem } from "@/types";
+import { Category, MenuItem, MenuSection } from "@/types";
+import { Image } from "react-native";
+
+const menuImages: Record<string, any> = {
+  "Veg Dum Biryani": require("../../../assets/images/veg-dum-biryani.jpg"),
+
+  "Egg Dum Biryani": require("../../../assets/images/egg-dum-biryani.jpg"),
+
+  "French Fries Classic": require("../../../assets/images/french-fries-classic.jpg"),
+
+  "Peri Peri French Fries": require("../../../assets/images/peri-peri-fries.jpg"),
+
+  "Tripple Choco Bowl": require("../../../assets/images/triple-choco-bowl.jpg"),
+
+  "Oreo Choco Bowl": require("../../../assets/images/oreo-choco-bowl.jpg"),
+
+  "Paneer Tikka Biryani": require("../../../assets/images/paneer-tikka-biryani.jpg"),
+
+  "Paneer Kalimiri Kabab": require("../../../assets/images/paneer-kalimiri-kabab.jpg"),
+};
 
 function Header({
   categories,
   menuItems,
   averagePrice,
+  selectedSection,
   selectedCategoryId,
+  onSelectSection,
   onSelectCategory,
   onAddPress,
 }: {
   categories: Category[];
   menuItems: MenuItem[];
   averagePrice: number;
+  selectedSection: MenuSection;
   selectedCategoryId: string | null;
+  onSelectSection: (section: MenuSection) => void;
   onSelectCategory: (id: string) => void;
   onAddPress: () => void;
 }) {
   const { width } = useWindowDimensions();
   const isSmallScreen = width < 500;
 
+  const subCategories = getSubCategories(categories, selectedSection);
   const activeCategory = categories.find((c) => c.id === selectedCategoryId);
-  const sectionTitle = activeCategory ? `${activeCategory.icon} ${activeCategory.name}` : "All Items";
+  const activeSection = MENU_SECTIONS.find((section) => section.id === selectedSection);
+  const sectionTitle = activeCategory
+    ? `${activeSection?.icon ?? ""} ${activeCategory.icon} ${activeCategory.name}`
+    : `${activeSection?.icon ?? ""} ${activeSection?.name ?? "All Items"}`;
   const visibleCount = menuItems.filter((item) => item.isAvailable).length;
 
   return (
@@ -60,8 +88,29 @@ function Header({
         </Card>
       </View>
 
+      <View style={styles.sectionRail}>
+        {MENU_SECTIONS.map((section) => {
+          const isActive = selectedSection === section.id;
+          return (
+            <Pressable
+              key={section.id}
+              onPress={() => onSelectSection(section.id)}
+              style={[
+                styles.sectionTab,
+                isActive && styles.sectionTabActive,
+              ]}
+            >
+              <Text style={styles.categoryIcon}>{section.icon}</Text>
+              <Text style={[styles.sectionTabText, isActive && { color: COLORS.white }]}>
+                {section.name}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
       <View style={styles.categoryRail}>
-        {categories.map((category) => {
+        {subCategories.map((category) => {
           const isActive = selectedCategoryId === category.id;
           return (
             <Pressable
@@ -110,22 +159,65 @@ function MenuCard({
 }) {
   return (
     <Card style={styles.menuCard}>
-      <View style={styles.menuTop}>
-        <View style={styles.emojiPlate}>
-          <Text style={styles.emoji}>{item.emoji}</Text>
-        </View>
-        <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
-          <TouchableOpacity
-            onPress={() => onDeletePress(item.id, item.name)}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            activeOpacity={0.6}
+      <View style={{ position: "relative" }}>
+
+        <Image
+          source={
+            menuImages[item.name] ||
+            require("../../../assets/images/veg-dum-biryani.jpg")
+          }
+          style={{
+            width: "100%",
+            height: 180,
+            borderRadius: 16,
+          }}
+          resizeMode="cover"
+        />
+
+        <TouchableOpacity
+          onPress={() => onDeletePress(item.id, item.name)}
+          style={{
+            position: "absolute",
+            top: 12,
+            right: 12,
+            backgroundColor: "rgba(255,255,255,0.9)",
+            borderRadius: 20,
+            padding: 8,
+          }}
+        >
+          <Text style={{ fontSize: 18 }}>🗑️</Text>
+        </TouchableOpacity>
+
+        <View
+          style={{
+            position: "absolute",
+            top: 12,
+            left: 12,
+          }}
+        >
+          <View
+            style={[
+              styles.vegDot,
+              {
+                borderColor: item.isVeg
+                  ? COLORS.green
+                  : COLORS.danger,
+              },
+            ]}
           >
-            <Text style={{ fontSize: 18 }}>🗑️</Text>
-          </TouchableOpacity>
-          <View style={[styles.vegDot, { borderColor: item.isVeg ? COLORS.green : COLORS.danger }]}>
-            <View style={[styles.vegInner, { backgroundColor: item.isVeg ? COLORS.green : COLORS.danger }]} />
+            <View
+              style={[
+                styles.vegInner,
+                {
+                  backgroundColor: item.isVeg
+                    ? COLORS.green
+                    : COLORS.danger,
+                },
+              ]}
+            />
           </View>
         </View>
+
       </View>
       <Text numberOfLines={2} style={styles.name}>
         {item.name}
@@ -149,7 +241,8 @@ export default function MenuManagementScreen() {
   const { menuItems, categories } = useMenu();
   const addMenuItem = useMenuStore((state) => state.addMenuItem);
   const deleteMenuItem = useMenuStore((state) => state.deleteMenuItem);
-  
+
+  const [selectedSection, setSelectedSection] = useState<MenuSection>("restaurant");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [formName, setFormName] = useState("");
@@ -162,22 +255,29 @@ export default function MenuManagementScreen() {
   const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<{ id: string; name: string } | null>(null);
 
-  // Toggle category filter — click same pill again to show all
+  function handleSelectSection(section: MenuSection) {
+    setSelectedSection(section);
+    setSelectedCategoryId(null);
+  }
+
+  // Toggle category filter — click same pill again to show all in section
   function handleSelectCategory(id: string) {
     setSelectedCategoryId((prev) => (prev === id ? null : id));
   }
 
+  const sectionCategoryIds = getSubCategories(categories, selectedSection).map((category) => category.id);
+
   const averagePrice = Math.round(menuItems.reduce((sum, item) => sum + item.price, 0) / Math.max(menuItems.length, 1));
 
-  // Apply category filter to the displayed list
-  const filteredItems = selectedCategoryId
-    ? menuItems.filter((item) => item.categoryId === selectedCategoryId)
-    : menuItems;
+  const filteredItems = menuItems.filter((item) => {
+    if (!sectionCategoryIds.includes(item.categoryId)) return false;
+    return !selectedCategoryId || item.categoryId === selectedCategoryId;
+  });
 
   const handleOpenAdd = () => {
     setFormName("");
     setFormPrice("");
-    setFormCategory(categories[0]?.id || "popular");
+    setFormCategory(getSubCategories(categories, selectedSection)[0]?.id || categories[0]?.id || "popular");
     setFormEmoji("🍔");
     setFormIsVeg(true);
     setFormIsAvailable(true);
@@ -230,14 +330,15 @@ export default function MenuManagementScreen() {
         contentContainerStyle={styles.content}
         data={filteredItems}
         keyExtractor={(item) => item.id}
-        numColumns={2}
-        columnWrapperStyle={styles.menuRow}
+        numColumns={1}
         ListHeaderComponent={
           <Header
             categories={categories}
             menuItems={menuItems}
             averagePrice={averagePrice}
+            selectedSection={selectedSection}
             selectedCategoryId={selectedCategoryId}
+            onSelectSection={handleSelectSection}
             onSelectCategory={handleSelectCategory}
             onAddPress={handleOpenAdd}
           />
@@ -263,7 +364,7 @@ export default function MenuManagementScreen() {
         <View style={styles.modalContainer}>
           <ScrollView contentContainerStyle={styles.modalContent}>
             <Text style={styles.modalTitle}>Add Menu Item</Text>
-            
+
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
             <View style={styles.inputGroup}>
@@ -284,7 +385,7 @@ export default function MenuManagementScreen() {
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Category</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: "row", gap: 8, marginVertical: 4 }}>
-                {categories.map((cat) => (
+                {getSubCategories(categories, selectedSection).map((cat) => (
                   <Pressable
                     key={cat.id}
                     onPress={() => setFormCategory(cat.id)}
@@ -496,6 +597,33 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "800",
   },
+  sectionRail: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  sectionTab: {
+    alignItems: "center",
+    backgroundColor: COLORS.white,
+    borderColor: COLORS.border,
+    borderCurve: "continuous",
+    borderRadius: 14,
+    borderWidth: 1,
+    flex: 1,
+    flexDirection: "row",
+    gap: 6,
+    justifyContent: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  sectionTabActive: {
+    backgroundColor: COLORS.espresso,
+    borderColor: COLORS.espresso,
+  },
+  sectionTabText: {
+    color: COLORS.slate,
+    fontSize: 13,
+    fontWeight: "800",
+  },
   categoryRail: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -546,13 +674,12 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   menuItemWrap: {
-    flex: 1,
-    maxWidth: "48.6%",
+    width: "100%",
   },
   menuCard: {
-    gap: 9,
-    minHeight: 158,
-    padding: 13,
+    padding: 16,
+    borderRadius: 24,
+    marginBottom: 18,
   },
   menuTop: {
     alignItems: "flex-start",

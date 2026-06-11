@@ -1,32 +1,61 @@
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { COLORS } from "@/constants/colors";
-import { Category } from "@/types";
+import { MENU_SECTIONS, getSubCategories } from "@/constants/menuSections";
+import { Category, MenuSection } from "@/types";
 
 interface CategorySidebarProps {
   categories: Category[];
+  selectedSection: MenuSection;
   selectedId: string;
+  onSelectSection: (section: MenuSection) => void;
   onSelect: (id: string) => void;
 }
 
-export function CategorySidebar({ categories, selectedId, onSelect }: CategorySidebarProps) {
+export function CategorySidebar({
+  categories,
+  selectedSection,
+  selectedId,
+  onSelectSection,
+  onSelect,
+}: CategorySidebarProps) {
+  const subCategories = getSubCategories(categories, selectedSection);
+
   return (
     <View style={styles.wrap}>
+      <View style={styles.sectionRow}>
+        {MENU_SECTIONS.map((section) => {
+          const selected = section.id === selectedSection;
+          return (
+            <Pressable
+              key={section.id}
+              onPress={() => onSelectSection(section.id)}
+              style={[styles.sectionTab, selected && styles.sectionTabSelected]}
+            >
+              <Text style={styles.sectionIcon}>{section.icon}</Text>
+              <Text style={[styles.sectionName, selected && styles.sectionNameSelected]}>
+                {section.name}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
       <FlatList
-        data={categories}
+        data={subCategories}
         keyExtractor={(item) => item.id}
-        showsVerticalScrollIndicator={false}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.listContent}
         renderItem={({ item }) => {
           const selected = item.id === selectedId;
           return (
             <Pressable
               onPress={() => onSelect(item.id)}
-              style={[styles.category, selected && styles.selectedCategory]}
+              style={[styles.pill, selected && styles.selectedPill]}
             >
-              <View style={[styles.iconBox, selected && styles.selectedIconBox]}>
-                <Text style={styles.icon}>{item.icon}</Text>
-              </View>
-              <Text numberOfLines={2} style={[styles.name, selected && styles.selectedName]}>
+              <Text style={styles.icon}>{item.icon}</Text>
+              <Text numberOfLines={1} style={[styles.name, selected && styles.selectedName]}>
                 {item.name}
               </Text>
             </Pressable>
@@ -40,46 +69,76 @@ export function CategorySidebar({ categories, selectedId, onSelect }: CategorySi
 const styles = StyleSheet.create({
   wrap: {
     backgroundColor: COLORS.white,
-    borderRightColor: COLORS.border,
-    borderRightWidth: 1,
-    width: 72,
+    borderBottomColor: COLORS.border,
+    borderBottomWidth: 1,
+    gap: 8,
+    paddingBottom: 10,
+    paddingTop: 10,
   },
-  category: {
+  sectionRow: {
+    flexDirection: "row",
+    gap: 8,
+    paddingHorizontal: 12,
+  },
+  sectionTab: {
+    flex: 1,
+    flexDirection: "row",
     alignItems: "center",
-    borderLeftColor: "transparent",
-    borderLeftWidth: 3,
-    gap: 4,
-    paddingHorizontal: 4,
-    paddingVertical: 10,
-  },
-  selectedCategory: {
-    backgroundColor: COLORS.primaryLight,
-    borderLeftColor: COLORS.primary,
-  },
-  iconBox: {
-    alignItems: "center",
-    backgroundColor: COLORS.grayLight,
-    borderCurve: "continuous",
-    borderRadius: 10,
-    height: 36,
     justifyContent: "center",
-    width: 36,
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: COLORS.grayLight,
+    borderWidth: 1.5,
+    borderColor: "transparent",
   },
-  selectedIconBox: {
-    backgroundColor: COLORS.primary,
+  sectionTabSelected: {
+    backgroundColor: COLORS.espresso,
+    borderColor: COLORS.espresso,
+  },
+  sectionIcon: {
+    fontSize: 16,
+  },
+  sectionName: {
+    color: COLORS.textSec,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  sectionNameSelected: {
+    color: COLORS.white,
+    fontWeight: "800",
+  },
+  listContent: {
+    paddingHorizontal: 12,
+    gap: 8,
+    alignItems: "center",
+  },
+  pill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 50,
+    backgroundColor: COLORS.grayLight,
+    borderWidth: 1.5,
+    borderColor: "transparent",
+  },
+  selectedPill: {
+    backgroundColor: COLORS.primaryLight,
+    borderColor: COLORS.primary,
   },
   icon: {
-    fontSize: 17,
+    fontSize: 16,
   },
   name: {
     color: COLORS.textSec,
-    fontSize: 8,
-    fontWeight: "700",
-    lineHeight: 11,
-    textAlign: "center",
+    fontSize: 13,
+    fontWeight: "600",
   },
   selectedName: {
     color: COLORS.primary,
-    fontWeight: "900",
+    fontWeight: "800",
   },
 });

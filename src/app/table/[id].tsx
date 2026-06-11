@@ -8,19 +8,29 @@ import { OrderBottomBar } from "@/components/orders/OrderBottomBar";
 import { OrderSummary } from "@/components/orders/OrderSummary";
 import { Button } from "@/components/ui/Button";
 import { COLORS } from "@/constants/colors";
+import { getSubCategories } from "@/constants/menuSections";
 import { useMenu } from "@/hooks/useMenu";
 import { useOrder } from "@/hooks/useOrder";
-import { useOrderStore } from "@/store/orderStore";
 import { useTables } from "@/hooks/useTables";
+import { useOrderStore } from "@/store/orderStore";
+import { MenuItem, MenuSection } from "@/types";
 import { formatCurrency, formatTime } from "@/utils/formatters";
-import { MenuItem } from "@/types";
 
 export default function TableOrderScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const tableId = Number(id);
   const { findTable, ensureOrderForTable, clearTable, setTableStatus } = useTables();
   const { categories } = useMenu();
-  const [selectedCategory, setSelectedCategory] = useState(categories[0]?.id ?? "popular");
+  const [selectedSection, setSelectedSection] = useState<MenuSection>("restaurant");
+  const [selectedCategory, setSelectedCategory] = useState(
+    () => getSubCategories(categories, "restaurant")[0]?.id ?? categories[0]?.id ?? "popular",
+  );
+
+  function handleSelectSection(section: MenuSection) {
+    setSelectedSection(section);
+    const firstCategory = getSubCategories(categories, section)[0];
+    if (firstCategory) setSelectedCategory(firstCategory.id);
+  }
   const { getOrderForTable, updateOrderItem, generateBill } = useOrder();
 
   // KOT success modal state
@@ -139,7 +149,7 @@ export default function TableOrderScreen() {
           <Text style={styles.paidTimer}>
             Table will auto-clear in 2 mins.
           </Text>
-          
+
           <View style={styles.paidActions}>
             <Button
               onPress={async () => {
@@ -151,7 +161,7 @@ export default function TableOrderScreen() {
             >
               Clear Table Now
             </Button>
-            
+
             <Button
               variant="secondary"
               onPress={async () => {
@@ -199,7 +209,13 @@ export default function TableOrderScreen() {
       </View>
 
       <View style={styles.body}>
-        <CategorySidebar categories={categories} selectedId={selectedCategory} onSelect={setSelectedCategory} />
+        <CategorySidebar
+          categories={categories}
+          selectedSection={selectedSection}
+          selectedId={selectedCategory}
+          onSelectSection={handleSelectSection}
+          onSelect={setSelectedCategory}
+        />
         <MenuList
           title={activeCategory?.name ?? "Menu"}
           items={items}
@@ -343,7 +359,7 @@ const styles = StyleSheet.create({
   },
   body: {
     flex: 1,
-    flexDirection: "row",
+    flexDirection: "column",
   },
   clearTableBtn: {
     backgroundColor: "#fef2f2",
