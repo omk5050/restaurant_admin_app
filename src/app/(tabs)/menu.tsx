@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FlatList, Pressable, StyleSheet, Text, View, Modal, TextInput, ScrollView, TouchableOpacity, useWindowDimensions } from "react-native";
+import { FlatList, Pressable, StyleSheet, Text, View, Modal, TextInput, ScrollView, TouchableOpacity, useWindowDimensions, Platform, ActivityIndicator } from "react-native";
 
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -10,6 +10,9 @@ import { useMenuStore } from "@/store/menuStore";
 import { formatCurrency } from "@/utils/formatters";
 import { Category, MenuItem, MenuSection } from "@/types";
 import { Image } from "react-native";
+import * as ImagePicker from "expo-image-picker";
+import { API_URL } from "@/constants/config";
+import { apiFetch } from "@/utils/api";
 
 const menuImages: Record<string, any> = {
   "Veg Dum Biryani": require("../../../assets/images/veg-dum-biryani.jpg"),
@@ -73,16 +76,16 @@ function Header({
         </View>
       </View>
 
-      <View style={[styles.metricRow, isSmallScreen && { flexWrap: "wrap", gap: 10 }]}>
-        <Card style={[styles.metric, isSmallScreen && { minWidth: "47%", flex: 0 }]}>
+      <View style={[styles.metricRow, isSmallScreen ? { flexWrap: "wrap", gap: 10 } : undefined]}>
+        <Card style={[styles.metric, isSmallScreen ? { minWidth: "47%", flex: 0 } : undefined]}>
           <Text style={styles.metricValue}>{categories.length}</Text>
           <Text style={styles.metricLabel}>Categories</Text>
         </Card>
-        <Card style={[styles.metric, isSmallScreen && { minWidth: "47%", flex: 0 }]}>
+        <Card style={[styles.metric, isSmallScreen ? { minWidth: "47%", flex: 0 } : undefined]}>
           <Text style={styles.metricValue}>{formatCurrency(averagePrice)}</Text>
           <Text style={styles.metricLabel}>Avg price</Text>
         </Card>
-        <Card style={[styles.metric, isSmallScreen && { minWidth: "100%", flex: 0, alignItems: "center" }]}>
+        <Card style={[styles.metric, isSmallScreen ? { minWidth: "100%", flex: 0, alignItems: "center" } : undefined]}>
           <Text style={styles.metricValue}>{menuItems.filter((item) => item.isVeg).length}</Text>
           <Text style={styles.metricLabel}>Veg items</Text>
         </Card>
@@ -163,8 +166,9 @@ function MenuCard({
 
         <Image
           source={
-            menuImages[item.name] ||
-            require("../../../assets/images/veg-dum-biryani.jpg")
+            item.imageUrl
+              ? { uri: item.imageUrl }
+              : (menuImages[item.name] || require("../../../assets/images/veg-dum-biryani.jpg"))
           }
           style={{
             width: "100%",
@@ -251,6 +255,9 @@ export default function MenuManagementScreen() {
   const [formEmoji, setFormEmoji] = useState("🍔");
   const [formIsVeg, setFormIsVeg] = useState(true);
   const [formIsAvailable, setFormIsAvailable] = useState(true);
+  const [formSection, setFormSection] = useState<MenuSection>("restaurant");
+  const [formImage, setFormImage] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<{ id: string; name: string } | null>(null);
@@ -274,13 +281,78 @@ export default function MenuManagementScreen() {
     return !selectedCategoryId || item.categoryId === selectedCategoryId;
   });
 
+  const handleFormSectionChange = (section: MenuSection) => {
+    setFormSection(section);
+    const subCats = getSubCategories(categories, section);
+    if (subCats.length > 0) {
+      setFormCategory(subCats[0].id);
+    }
+  };
+
+  const handlePickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      alert("Permission to access library is required to pick an image.");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      setFormImage(result.assets[0].uri);
+    }
+  };
+
+  const uploadImage = async (uri: string): Promise<string> => {
+    const formData = new FormData();
+    const filename = uri.split("/").pop() || "upload.jpg";
+    const match = /\.(\w+)$/.exec(filename);
+    const type = match ? `image/${match[1]}` : `image`;
+
+    let fileData: any;
+    if (Platform.OS === "web") {
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      fileData = blob;
+    } else {
+      fileData = {
+        uri,
+        name: filename,
+        type: type === "image/jpg" ? "image/jpeg" : type,
+      };
+    }
+
+    formData.append("image", fileData);
+
+    const res = await apiFetch(`${API_URL}/api/upload`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || "Image upload failed");
+    }
+
+    const data = await res.json();
+    return data.imageUrl;
+  };
+
   const handleOpenAdd = () => {
     setFormName("");
     setFormPrice("");
+    setFormSection(selectedSection);
     setFormCategory(getSubCategories(categories, selectedSection)[0]?.id || categories[0]?.id || "popular");
     setFormEmoji("🍔");
     setFormIsVeg(true);
     setFormIsAvailable(true);
+    setFormImage(null);
+    setUploading(false);
     setError("");
     setAddModalVisible(true);
   };
@@ -296,7 +368,14 @@ export default function MenuManagementScreen() {
       return;
     }
 
+    setUploading(true);
+    setError("");
     try {
+      let imageUrl = "";
+      if (formImage) {
+        imageUrl = await uploadImage(formImage);
+      }
+
       await addMenuItem({
         name: formName,
         price: priceVal,
@@ -304,10 +383,13 @@ export default function MenuManagementScreen() {
         emoji: formEmoji,
         isVeg: formIsVeg,
         isAvailable: formIsAvailable,
+        imageUrl,
       });
       setAddModalVisible(false);
     } catch (err: any) {
       setError(err.message || "Failed to add menu item");
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -369,23 +451,61 @@ export default function MenuManagementScreen() {
 
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Item Name</Text>
-              <TextInput value={formName} onChangeText={setFormName} style={styles.input} placeholder="e.g. Garlic Bread" />
+              <TextInput value={formName} onChangeText={setFormName} style={styles.input} placeholder="e.g. Garlic Bread" editable={!uploading} />
             </View>
 
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Price</Text>
-              <TextInput value={formPrice} onChangeText={setFormPrice} keyboardType="numeric" style={styles.input} placeholder="e.g. 150" />
+              <TextInput value={formPrice} onChangeText={setFormPrice} keyboardType="numeric" style={styles.input} placeholder="e.g. 150" editable={!uploading} />
             </View>
 
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Emoji Icon</Text>
-              <TextInput value={formEmoji} onChangeText={setFormEmoji} style={styles.input} placeholder="e.g. 🍞" />
+              <TextInput value={formEmoji} onChangeText={setFormEmoji} style={styles.input} placeholder="e.g. 🍞" editable={!uploading} />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Menu Section</Text>
+              <View style={{ flexDirection: "row", gap: 10 }}>
+                <Pressable
+                  onPress={() => handleFormSectionChange("restaurant")}
+                  style={[
+                    styles.categoryPill,
+                    {
+                      flex: 1,
+                      justifyContent: "center",
+                      backgroundColor: formSection === "restaurant" ? COLORS.espresso : COLORS.white,
+                      borderColor: formSection === "restaurant" ? COLORS.espresso : COLORS.border,
+                      paddingVertical: 10,
+                    },
+                  ]}
+                  disabled={uploading}
+                >
+                  <Text style={{ color: formSection === "restaurant" ? COLORS.white : COLORS.slate, fontWeight: "800" }}>🍽️ Restaurant</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => handleFormSectionChange("cafe")}
+                  style={[
+                    styles.categoryPill,
+                    {
+                      flex: 1,
+                      justifyContent: "center",
+                      backgroundColor: formSection === "cafe" ? COLORS.espresso : COLORS.white,
+                      borderColor: formSection === "cafe" ? COLORS.espresso : COLORS.border,
+                      paddingVertical: 10,
+                    },
+                  ]}
+                  disabled={uploading}
+                >
+                  <Text style={{ color: formSection === "cafe" ? COLORS.white : COLORS.slate, fontWeight: "800" }}>☕ Cafe</Text>
+                </Pressable>
+              </View>
             </View>
 
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Category</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: "row", gap: 8, marginVertical: 4 }}>
-                {getSubCategories(categories, selectedSection).map((cat) => (
+                {getSubCategories(categories, formSection).map((cat) => (
                   <Pressable
                     key={cat.id}
                     onPress={() => setFormCategory(cat.id)}
@@ -398,6 +518,7 @@ export default function MenuManagementScreen() {
                         paddingHorizontal: 10,
                       },
                     ]}
+                    disabled={uploading}
                   >
                     <Text style={{ color: formCategory === cat.id ? COLORS.white : COLORS.slate, fontSize: 12, fontWeight: "800" }}>
                       {cat.icon} {cat.name}
@@ -405,6 +526,29 @@ export default function MenuManagementScreen() {
                   </Pressable>
                 ))}
               </ScrollView>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Food Image</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                {formImage ? (
+                  <Image source={{ uri: formImage }} style={{ width: 80, height: 80, borderRadius: 12 }} />
+                ) : (
+                  <View style={{ width: 80, height: 80, borderRadius: 12, backgroundColor: COLORS.bg, borderWidth: 1, borderColor: COLORS.border, justifyContent: "center", alignItems: "center" }}>
+                    <Text style={{ fontSize: 24 }}>📷</Text>
+                  </View>
+                )}
+                <View style={{ flex: 1, gap: 8 }}>
+                  <Button variant="secondary" onPress={handlePickImage} disabled={uploading}>
+                    {formImage ? "Change Image" : "Pick Image"}
+                  </Button>
+                  {formImage && (
+                    <Button variant="secondary" onPress={() => setFormImage(null)} style={{ borderColor: COLORS.danger }} disabled={uploading}>
+                      <Text style={{ color: COLORS.danger }}>Remove Image</Text>
+                    </Button>
+                  )}
+                </View>
+              </View>
             </View>
 
             <View style={styles.inputGroup}>
@@ -422,6 +566,7 @@ export default function MenuManagementScreen() {
                       paddingVertical: 10,
                     },
                   ]}
+                  disabled={uploading}
                 >
                   <Text style={{ color: formIsVeg ? COLORS.green : COLORS.slate, fontWeight: "800" }}>🟢 Veg</Text>
                 </Pressable>
@@ -437,6 +582,7 @@ export default function MenuManagementScreen() {
                       paddingVertical: 10,
                     },
                   ]}
+                  disabled={uploading}
                 >
                   <Text style={{ color: !formIsVeg ? COLORS.danger : COLORS.slate, fontWeight: "800" }}>🔴 Non-Veg</Text>
                 </Pressable>
@@ -458,6 +604,7 @@ export default function MenuManagementScreen() {
                       paddingVertical: 10,
                     },
                   ]}
+                  disabled={uploading}
                 >
                   <Text style={{ color: formIsAvailable ? COLORS.green : COLORS.slate, fontWeight: "800" }}>Live (Available)</Text>
                 </Pressable>
@@ -473,6 +620,7 @@ export default function MenuManagementScreen() {
                       paddingVertical: 10,
                     },
                   ]}
+                  disabled={uploading}
                 >
                   <Text style={{ color: !formIsAvailable ? COLORS.danger : COLORS.slate, fontWeight: "800" }}>Off (Unavailable)</Text>
                 </Pressable>
@@ -481,10 +629,12 @@ export default function MenuManagementScreen() {
 
             <View style={styles.modalActions}>
               <View style={{ flex: 1 }}>
-                <Button variant="secondary" onPress={() => setAddModalVisible(false)}>Cancel</Button>
+                <Button variant="secondary" onPress={() => setAddModalVisible(false)} disabled={uploading}>Cancel</Button>
               </View>
               <View style={{ flex: 1 }}>
-                <Button onPress={handleAddItem}>Save</Button>
+                <Button onPress={handleAddItem} disabled={uploading}>
+                  {uploading ? <ActivityIndicator size="small" color={COLORS.white} /> : "Save"}
+                </Button>
               </View>
             </View>
           </ScrollView>

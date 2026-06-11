@@ -8,6 +8,16 @@ const cors = require("cors");
 const bcrypt = require("bcryptjs");
 const dns = require("dns");
 const authenticateToken = require("./authenticationmiddleware");
+const multer = require("multer");
+const cloudinary = require("cloudinary").v2;
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 
 // Override default DNS servers to Google Public DNS to resolve mongodb+srv SRV records reliably
@@ -96,6 +106,7 @@ const MenuItemSchema = new mongoose.Schema({
   emoji: { type: String, default: "🍔" },
   isAvailable: { type: Boolean, default: true },
   isVeg: { type: Boolean, default: true },
+  imageUrl: { type: String, default: "" },
 });
 MenuItemSchema.index({ adminId: 1, id: 1 }, { unique: true });
 const MenuItem = mongoose.model("MenuItem", MenuItemSchema);
@@ -630,6 +641,29 @@ app.get("/api/categories", authenticateToken, async (req, res) => {
   }
 });
 
+// --- UPLOAD ENDPOINT ---
+app.post("/api/upload", authenticateToken, upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No image file provided" });
+    }
+
+    // Upload to Cloudinary using file buffer
+    cloudinary.uploader.upload_stream(
+      { folder: "menu_items" },
+      (error, result) => {
+        if (error) {
+          console.error("Cloudinary upload error:", error);
+          return res.status(500).json({ error: "Cloudinary upload failed" });
+        }
+        res.json({ imageUrl: result.secure_url });
+      }
+    ).end(req.file.buffer);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // --- MENU ITEMS ---
 app.get("/api/menu", authenticateToken, async (req, res) => {
   try {
@@ -645,6 +679,7 @@ app.get("/api/menu", authenticateToken, async (req, res) => {
       emoji: item.emoji,
       isAvailable: item.isAvailable,
       isVeg: item.isVeg,
+      imageUrl: item.imageUrl || "",
     }));
     res.json(items);
   } catch (err) {
@@ -655,7 +690,7 @@ app.get("/api/menu", authenticateToken, async (req, res) => {
 app.post("/api/menu", authenticateToken, async (req, res) => {
   try {
     const adminId = resolveAdminId(req);
-    const { categoryId, name, price, emoji, isAvailable, isVeg } = req.body;
+    const { categoryId, name, price, emoji, isAvailable, isVeg, imageUrl } = req.body;
     const id = "m_" + Date.now();
     const menuItem = await MenuItem.create({
       adminId,
@@ -666,6 +701,7 @@ app.post("/api/menu", authenticateToken, async (req, res) => {
       emoji: emoji || "🍔",
       isAvailable: isAvailable !== undefined ? isAvailable : true,
       isVeg: isVeg !== undefined ? isVeg : true,
+      imageUrl: imageUrl || "",
     });
     // Return clean mapped object (consistent with GET /api/menu)
     res.json({
@@ -676,6 +712,7 @@ app.post("/api/menu", authenticateToken, async (req, res) => {
       emoji: menuItem.emoji,
       isAvailable: menuItem.isAvailable,
       isVeg: menuItem.isVeg,
+      imageUrl: menuItem.imageUrl || "",
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

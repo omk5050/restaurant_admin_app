@@ -28,6 +28,7 @@ export interface MenuItem {
   emoji?: string;
   isAvailable: boolean;
   isVeg: boolean;
+  imageUrl?: string;
 }
 
 export interface OrderItem {

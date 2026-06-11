@@ -14,8 +14,8 @@ export async function apiFetch(url: string, options: RequestInit = {}): Promise<
     headers.set('X-Selected-Admin-Id', selectedAdminId);
   }
 
-  // Set default JSON headers if not already set and body is present
-  if (options.body && !headers.has('Content-Type')) {
+  // Set default JSON headers if not already set and body is present (except for FormData)
+  if (options.body && !(options.body instanceof FormData) && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
   }
 

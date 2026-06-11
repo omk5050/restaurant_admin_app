@@ -32,7 +32,12 @@ export function MenuItemCard({ item, qty, onChangeQty }: MenuItemCardProps) {
   return (
     <View style={[styles.card, qty > 0 && styles.selected]}>
       <Image
-        source={menuImages[item.name as keyof typeof menuImages]}
+        source={
+          item.imageUrl
+            ? { uri: item.imageUrl }
+            : menuImages[item.name as keyof typeof menuImages] ||
+              require("../../../assets/images/veg-dum-biryani.jpg")
+        }
         style={styles.foodImage}
         resizeMode="cover"
       />
