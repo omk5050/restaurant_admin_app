@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ScrollView, StyleSheet, Text, View, Pressable, Modal, TextInput, TouchableOpacity, useWindowDimensions } from "react-native";
+import { ScrollView, StyleSheet, Text, View, Pressable, Modal, TextInput, TouchableOpacity, useWindowDimensions, Platform } from "react-native";
 
 import { Card } from "@/components/ui/Card";
 import { TableGrid } from "@/components/tables/TableGrid";
@@ -219,6 +219,9 @@ export default function DashboardScreen() {
               onPress={async () => {
                 setSettingsModalVisible(false);
                 await signOut();
+                if (Platform.OS === "web") {
+                  window.location.reload();
+                }
               }}
               activeOpacity={0.8}
             >
