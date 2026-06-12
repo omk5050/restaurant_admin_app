@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  ActivityIndicator, SafeAreaView, StatusBar, Platform,
+  ActivityIndicator, SafeAreaView, StatusBar, Platform, Modal, ScrollView
 } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'expo-router';
@@ -9,6 +9,7 @@ import { apiFetch } from '@/utils/api';
 import { API_URL } from '@/constants/config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CustomAlert } from '@/components/ui/CustomAlert';
+import * as Print from 'expo-print';
 
 export default function SuperAdminDashboard() {
   const { role, signOut } = useAuth();
@@ -18,6 +19,7 @@ export default function SuperAdminDashboard() {
   const [requests, setRequests] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<'admins' | 'requests'>('admins');
   const [loading, setLoading] = useState(true);
+  const [selectedRequest, setSelectedRequest] = useState<any | null>(null);
 
   // Custom Alert state
   const [alertVisible, setAlertVisible] = useState(false);
@@ -69,6 +71,7 @@ export default function SuperAdminDashboard() {
       });
       const data = await res.json();
       if (res.ok) {
+        setSelectedRequest(null); // Close the inspector modal
         if (action === 'approve') {
           triggerAlert(
             'Request Approved',
@@ -96,6 +99,151 @@ export default function SuperAdminDashboard() {
         'Connection error. Please try again.',
         'error'
       );
+    }
+  };
+
+  const handlePrint = async (request: any) => {
+    if (!request) return;
+    const formattedDate = new Date(request.createdAt).toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+    const formattedTime = new Date(request.createdAt).toLocaleTimeString('en-IN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Access Request Details</title>
+          <style>
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+              color: #0f172a;
+              margin: 0;
+              padding: 40px;
+              background-color: #ffffff;
+            }
+            .container {
+              max-width: 600px;
+              margin: 0 auto;
+              border: 1px solid #e2e8f0;
+              border-radius: 16px;
+              padding: 30px;
+              box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+            }
+            .header {
+              border-bottom: 2px solid #f1f5f9;
+              padding-bottom: 20px;
+              margin-bottom: 24px;
+            }
+            .logo {
+              font-size: 20px;
+              font-weight: 800;
+              color: #6366f1;
+              letter-spacing: -0.5px;
+            }
+            .title {
+              font-size: 24px;
+              font-weight: 900;
+              color: #0f172a;
+              margin-top: 8px;
+              margin-bottom: 0;
+            }
+            .badge {
+              display: inline-block;
+              background-color: #fef3c7;
+              color: #d97706;
+              font-size: 12px;
+              font-weight: 700;
+              padding: 4px 10px;
+              border-radius: 9999px;
+              margin-top: 8px;
+            }
+            .grid {
+              display: grid;
+              grid-template-columns: 150px 1fr;
+              gap: 16px 8px;
+              margin-bottom: 30px;
+            }
+            .label {
+              font-size: 13px;
+              font-weight: 700;
+              color: #64748b;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+            }
+            .value {
+              font-size: 15px;
+              font-weight: 500;
+              color: #0f172a;
+            }
+            .footer {
+              border-top: 1px solid #f1f5f9;
+              padding-top: 16px;
+              font-size: 11px;
+              color: #94a3b8;
+              text-align: center;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <div class="logo">RESTAURANT HUB</div>
+              <h1 class="title">Registration Access Request</h1>
+              <div class="badge">PENDING APPROVAL</div>
+            </div>
+            
+            <div class="grid">
+              <div class="label">Restaurant:</div>
+              <div class="value">${request.restaurantName}</div>
+              
+              <div class="label">Admin Name:</div>
+              <div class="value">${request.name}</div>
+              
+              <div class="label">Email:</div>
+              <div class="value">${request.email}</div>
+              
+              <div class="label">Phone:</div>
+              <div class="value">${request.phone}</div>
+              
+              <div class="label">Request Date:</div>
+              <div class="value">${formattedDate}</div>
+              
+              <div class="label">Request Time:</div>
+              <div class="value">${formattedTime}</div>
+            </div>
+            
+            <div class="footer">
+              Generated automatically by Restaurant Hub Admin Panel. Confidential document.
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    try {
+      if (Platform.OS === 'web') {
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+          printWindow.document.write(html);
+          printWindow.document.close();
+          setTimeout(() => {
+            printWindow.print();
+          }, 250);
+        }
+      } else {
+        await Print.printAsync({ html });
+      }
+    } catch (e) {
+      console.error('Failed to print request details:', e);
+      triggerAlert('Print Failed', 'An error occurred while launching print system.', 'error');
     }
   };
 
@@ -218,7 +366,10 @@ export default function SuperAdminDashboard() {
                   </TouchableOpacity>
                 </>
               ) : (
-                <>
+                <TouchableOpacity
+                  onPress={() => setSelectedRequest(item)}
+                  activeOpacity={0.85}
+                >
                   {/* Card header for requests */}
                   <View style={styles.cardTop}>
                     <View style={[styles.cardIconWrap, { backgroundColor: '#fef3c7' }]}>
@@ -240,10 +391,6 @@ export default function SuperAdminDashboard() {
                       <Text style={styles.detailText} numberOfLines={1}>{item.email}</Text>
                     </View>
                     <View style={styles.detailRow}>
-                      <Text style={styles.detailIcon}>📞</Text>
-                      <Text style={styles.detailText} numberOfLines={1}>{item.phone}</Text>
-                    </View>
-                    <View style={styles.detailRow}>
                       <Text style={styles.detailIcon}>📅</Text>
                       <Text style={styles.detailText}>
                         Requested {new Date(item.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
@@ -251,28 +398,119 @@ export default function SuperAdminDashboard() {
                     </View>
                   </View>
 
-                  {/* Actions Row */}
-                  <View style={styles.actionRow}>
-                    <TouchableOpacity
-                      style={[styles.actionBtn, styles.rejectBtn]}
-                      onPress={() => handleAction(item._id, 'reject')}
-                      activeOpacity={0.85}
-                    >
-                      <Text style={styles.rejectBtnText}>Reject</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.actionBtn, styles.approveBtn]}
-                      onPress={() => handleAction(item._id, 'approve')}
-                      activeOpacity={0.85}
-                    >
-                      <Text style={styles.approveBtnText}>Approve & Create</Text>
-                    </TouchableOpacity>
+                  <View style={styles.inspectCardBtn}>
+                    <Text style={styles.inspectCardBtnText}>Inspect Details & Decide  →</Text>
                   </View>
-                </>
+                </TouchableOpacity>
               )}
             </View>
           )}
         />
+      )}
+
+      {/* Inspect Request Modal */}
+      {selectedRequest && (
+        <Modal
+          visible={!!selectedRequest}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setSelectedRequest(null)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              {/* Header */}
+              <View style={styles.modalHeader}>
+                <View>
+                  <Text style={styles.modalHeaderLabel}>PENDING REGISTRATION</Text>
+                  <Text style={styles.modalHeaderTitle} numberOfLines={1}>
+                    {selectedRequest.restaurantName}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.modalCloseIcon}
+                  onPress={() => setSelectedRequest(null)}
+                >
+                  <Text style={styles.modalCloseIconText}>×</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Scrollable details wrapper for diverse aspect ratios */}
+              <ScrollView 
+                showsVerticalScrollIndicator={false}
+                style={styles.modalScroll}
+                contentContainerStyle={styles.modalScrollContent}
+              >
+                <View style={styles.inspectSection}>
+                  <View style={styles.inspectRow}>
+                    <Text style={styles.inspectLabel}>Admin Name</Text>
+                    <Text style={styles.inspectValue}>{selectedRequest.name}</Text>
+                  </View>
+
+                  <View style={styles.inspectRow}>
+                    <Text style={styles.inspectLabel}>Email Address</Text>
+                    <Text style={styles.inspectValue}>{selectedRequest.email}</Text>
+                  </View>
+
+                  <View style={styles.inspectRow}>
+                    <Text style={styles.inspectLabel}>Phone Number</Text>
+                    <Text style={styles.inspectValue}>{selectedRequest.phone}</Text>
+                  </View>
+
+                  <View style={styles.inspectRow}>
+                    <Text style={styles.inspectLabel}>Date Requested</Text>
+                    <Text style={styles.inspectValue}>
+                      {new Date(selectedRequest.createdAt).toLocaleDateString('en-IN', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric',
+                      })}
+                    </Text>
+                  </View>
+
+                  <View style={styles.inspectRow}>
+                    <Text style={styles.inspectLabel}>Time Requested</Text>
+                    <Text style={styles.inspectValue}>
+                      {new Date(selectedRequest.createdAt).toLocaleTimeString('en-IN', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true,
+                      })}
+                    </Text>
+                  </View>
+                </View>
+              </ScrollView>
+
+              {/* Action buttons footer */}
+              <View style={styles.modalFooter}>
+                <TouchableOpacity
+                  style={[styles.modalBtn, styles.modalPrintBtn]}
+                  onPress={() => handlePrint(selectedRequest)}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.modalPrintBtnText}>🖨️ Print Request</Text>
+                </TouchableOpacity>
+
+                <View style={styles.modalDecideRow}>
+                  <TouchableOpacity
+                    style={[styles.modalBtn, styles.modalRejectBtn]}
+                    onPress={() => handleAction(selectedRequest._id, 'reject')}
+                    activeOpacity={0.85}
+                  >
+                    <Text style={styles.modalRejectBtnText}>Reject</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.modalBtn, styles.modalApproveBtn]}
+                    onPress={() => handleAction(selectedRequest._id, 'approve')}
+                    activeOpacity={0.85}
+                  >
+                    <Text style={styles.modalApproveBtnText}>Approve & Create</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </View>
+        </Modal>
       )}
 
       <CustomAlert
@@ -479,32 +717,156 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 14,
   },
-  actionRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 8,
-  },
-  actionBtn: {
-    flex: 1,
+  inspectCardBtn: {
+    backgroundColor: '#f1f5f9',
     borderRadius: 12,
-    paddingVertical: 12,
+    paddingVertical: 10,
+    alignItems: 'center',
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  inspectCardBtnText: {
+    color: '#6366f1',
+    fontWeight: '800',
+    fontSize: 13,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.75)', // Elegant semi-transparent dark overlay
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 500,
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
+    padding: 24,
+    maxHeight: '85%',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.2,
+        shadowRadius: 20,
+      },
+      android: {
+        elevation: 12,
+      },
+      web: {
+        boxShadow: '0px 10px 40px rgba(0, 0, 0, 0.15)',
+      }
+    })
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+    paddingBottom: 16,
+    marginBottom: 16,
+  },
+  modalHeaderLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#6366f1',
+    letterSpacing: 1.5,
+  },
+  modalHeaderTitle: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#0f172a',
+    marginTop: 2,
+    maxWidth: 360,
+  },
+  modalCloseIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#f1f5f9',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalCloseIconText: {
+    fontSize: 20,
+    color: '#64748b',
+    fontWeight: '600',
+    lineHeight: 22,
+  },
+  modalScroll: {
+    maxHeight: 300,
+  },
+  modalScrollContent: {
+    paddingVertical: 4,
+  },
+  inspectSection: {
+    gap: 14,
+  },
+  inspectRow: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#f8fafc',
+    paddingBottom: 10,
+  },
+  inspectLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#64748b',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  inspectValue: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#0f172a',
+    marginTop: 4,
+  },
+  modalFooter: {
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
+    paddingTop: 16,
+    marginTop: 16,
+    gap: 12,
+  },
+  modalBtn: {
+    paddingVertical: 14,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    minHeight: 48,
   },
-  rejectBtn: {
+  modalPrintBtn: {
+    backgroundColor: '#f1f5f9',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  modalPrintBtnText: {
+    color: '#475569',
+    fontWeight: '800',
+    fontSize: 14,
+  },
+  modalDecideRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalRejectBtn: {
+    flex: 1,
     backgroundColor: '#fef2f2',
     borderWidth: 1,
     borderColor: '#fca5a5',
   },
-  rejectBtnText: {
+  modalRejectBtnText: {
     color: '#ef4444',
     fontWeight: '800',
     fontSize: 14,
   },
-  approveBtn: {
+  modalApproveBtn: {
+    flex: 2,
     backgroundColor: '#10b981',
   },
-  approveBtnText: {
+  modalApproveBtnText: {
     color: '#fff',
     fontWeight: '800',
     fontSize: 14,
