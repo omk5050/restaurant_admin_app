@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { LinearGradient } from 'expo-linear-gradient';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ImageBackground, ScrollView } from 'react-native';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useRouter } from "expo-router";
 import { API_URL } from '@/constants/config';
+import { CustomAlert } from '@/components/ui/CustomAlert';
 
 export default function SuperAdminLoginScreen() {
   const { signIn } = useAuth();
@@ -15,25 +15,68 @@ export default function SuperAdminLoginScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const router = useRouter();
 
+  // Custom Alert state
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertTitle, setAlertTitle] = useState('');
+  const [alertMessage, setAlertMessage] = useState('');
+  const [alertType, setAlertType] = useState<'success' | 'error' | 'warning' | 'info'>('info');
+  const [redirectOnClose, setRedirectOnClose] = useState(false);
+
+  const triggerAlert = (
+    title: string,
+    message: string,
+    type: 'success' | 'error' | 'warning' | 'info',
+    shouldRedirect = false
+  ) => {
+    setAlertTitle(title);
+    setAlertMessage(message);
+    setAlertType(type);
+    setRedirectOnClose(shouldRedirect);
+    setAlertVisible(true);
+  };
+
+  const handleCloseAlert = () => {
+    setAlertVisible(false);
+    if (redirectOnClose) {
+      router.push('/(auth)/admin/login');
+    }
+  };
+
   const handleSubmit = async () => {
     if (!name.trim() || !companyName.trim() || !email.trim() || !phone.trim() || !password || !confirmPassword) {
-      Alert.alert('Validation Error', 'All fields are mandatory.');
+      triggerAlert(
+        'Incomplete Details',
+        'Please fill in all mandatory fields to request access.',
+        'warning'
+      );
       return;
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email.trim())) {
-      Alert.alert('Validation Error', 'Please enter a valid email address.');
+      triggerAlert(
+        'Invalid Email',
+        'Please enter a valid email address.',
+        'warning'
+      );
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Validation Error', 'Passwords do not match.');
+      triggerAlert(
+        'Mismatched Passwords',
+        'Passwords do not match. Please verify.',
+        'warning'
+      );
       return;
     }
 
     if (password.length < 6) {
-      Alert.alert('Validation Error', 'Password must be at least 6 characters long.');
+      triggerAlert(
+        'Weak Password',
+        'Password must be at least 6 characters long.',
+        'warning'
+      );
       return;
     }
 
@@ -57,142 +100,172 @@ export default function SuperAdminLoginScreen() {
         throw new Error(data.error || 'Registration failed.');
       }
 
-      Alert.alert(
-        'Success',
-        'Your registration request has been submitted. The super admin will review it.',
-        [{ text: 'OK', onPress: () => router.push('/(auth)/admin/login') }]
+      triggerAlert(
+        'Request Submitted',
+        'Signed up successfully. The dispatcher will contact you soon.',
+        'success',
+        true // Redirect back to login on close
       );
     } catch (e: any) {
-      Alert.alert('Registration Failed', e.message);
+      triggerAlert(
+        'Registration Failed',
+        e.message || 'Failed to submit registration request. Please try again.',
+        'error'
+      );
     }
   };
 
   return (
-    <LinearGradient colors={['#f3e5f5', '#ce93d8']} style={styles.container}>
-      <View style={styles.card}>
-        <Text style={styles.title}>Sign Up</Text>
-        <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 400 }}>
-          <TextInput
-            placeholder="Full Name"
-            placeholderTextColor="#aaa"
-            style={styles.input}
-            value={name}
-            onChangeText={setName}
-          />
+    <ImageBackground
+      source={require('../../../assets/images/background-image.png')}
+      style={styles.container}
+      resizeMode="cover"
+    >
+      <View style={styles.overlay}>
+        <View style={styles.card}>
+          <Text style={styles.title}>Sign Up</Text>
+          <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 320 }}>
+            <TextInput
+              placeholder="Full Name"
+              placeholderTextColor="#aaa"
+              style={styles.input}
+              value={name}
+              onChangeText={setName}
+            />
 
-          <TextInput
-            placeholder="Company Name"
-            placeholderTextColor="#aaa"
-            style={styles.input}
-            value={companyName}
-            onChangeText={setCompanyName}
-          />
+            <TextInput
+              placeholder="Company Name"
+              placeholderTextColor="#aaa"
+              style={styles.input}
+              value={companyName}
+              onChangeText={setCompanyName}
+            />
 
-          <TextInput
-            placeholder="Email Address"
-            placeholderTextColor="#aaa"
-            style={styles.input}
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
+            <TextInput
+              placeholder="Email Address"
+              placeholderTextColor="#aaa"
+              style={styles.input}
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
 
-          <TextInput
-            placeholder="Phone Number"
-            placeholderTextColor="#aaa"
-            style={styles.input}
-            value={phone}
-            onChangeText={setPhone}
-            keyboardType="phone-pad"
-          />
+            <TextInput
+              placeholder="Phone Number"
+              placeholderTextColor="#aaa"
+              style={styles.input}
+              value={phone}
+              onChangeText={setPhone}
+              keyboardType="phone-pad"
+            />
 
-          <TextInput
-            placeholder="Password"
-            placeholderTextColor="#aaa"
-            secureTextEntry
-            style={styles.input}
-            value={password}
-            onChangeText={setPassword}
-          />
+            <TextInput
+              placeholder="Password"
+              placeholderTextColor="#aaa"
+              secureTextEntry
+              style={styles.input}
+              value={password}
+              onChangeText={setPassword}
+            />
 
-          <TextInput
-            placeholder="Confirm Password"
-            placeholderTextColor="#aaa"
-            secureTextEntry
-            style={styles.input}
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-          />
-        </ScrollView>
-        <TouchableOpacity style={styles.button} onPress={handleSubmit} activeOpacity={0.8}>
-          <Text style={styles.buttonText}>Create Account & Request Access</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => router.push("/(auth)/admin/login")}
-          style={{
-            marginTop: 20,
-            alignItems: "center",
-          }}
-        >
-          <Text
+            <TextInput
+              placeholder="Confirm Password"
+              placeholderTextColor="#aaa"
+              secureTextEntry
+              style={styles.input}
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+            />
+          </ScrollView>
+          <TouchableOpacity style={styles.button} onPress={handleSubmit} activeOpacity={0.8}>
+            <Text style={styles.buttonText}>Create Account & Request Access</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => router.push("/(auth)/admin/login")}
             style={{
-              fontSize: 16,
-              fontWeight: "700",
-              color: "#2563EB",
+              marginTop: 18,
+              alignItems: "center",
             }}
           >
-            Log In
-          </Text>
-        </TouchableOpacity>
+            <Text
+              style={{
+                fontSize: 16,
+                fontWeight: "700",
+                color: "#ff7043",
+              }}
+            >
+              Log In
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </LinearGradient>
+
+      <CustomAlert
+        visible={alertVisible}
+        title={alertTitle}
+        message={alertMessage}
+        type={alertType}
+        onClose={handleCloseAlert}
+      />
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  overlay: {
+    flex: 1,
+    width: '100%',
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
   },
   card: {
     width: '85%',
+    maxWidth: 400,
     padding: 24,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.85)',
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
     elevation: 10,
   },
   title: {
-    fontSize: 26,
-    fontWeight: '600',
-    marginBottom: 24,
+    fontSize: 28,
+    fontWeight: '900',
+    marginBottom: 20,
     textAlign: 'center',
-    color: '#222',
+    color: '#0f172a',
+    letterSpacing: -0.5,
   },
   input: {
     height: 48,
-    borderColor: '#ccc',
+    borderColor: '#e2e8f0',
     borderWidth: 1,
-    borderRadius: 8,
-    marginBottom: 16,
-    paddingHorizontal: 12,
+    borderRadius: 12,
+    marginBottom: 14,
+    paddingHorizontal: 14,
     backgroundColor: '#fff',
-    color: '#000',
+    color: '#0f172a',
+    fontSize: 15,
   },
   button: {
-    backgroundColor: '#7e57c2',
+    backgroundColor: '#ff7043',
     paddingVertical: 14,
-    borderRadius: 8,
+    borderRadius: 12,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+    marginTop: 16,
   },
   buttonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '800',
   },
 });

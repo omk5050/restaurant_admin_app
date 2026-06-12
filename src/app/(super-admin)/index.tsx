@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  ActivityIndicator, Alert, SafeAreaView, StatusBar, Platform,
+  ActivityIndicator, SafeAreaView, StatusBar, Platform,
 } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'expo-router';
 import { apiFetch } from '@/utils/api';
 import { API_URL } from '@/constants/config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { CustomAlert } from '@/components/ui/CustomAlert';
 
 export default function SuperAdminDashboard() {
   const { role, signOut } = useAuth();
@@ -17,6 +18,19 @@ export default function SuperAdminDashboard() {
   const [requests, setRequests] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<'admins' | 'requests'>('admins');
   const [loading, setLoading] = useState(true);
+
+  // Custom Alert state
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertTitle, setAlertTitle] = useState('');
+  const [alertMessage, setAlertMessage] = useState('');
+  const [alertType, setAlertType] = useState<'success' | 'error' | 'warning' | 'info'>('info');
+
+  const triggerAlert = (title: string, message: string, type: 'success' | 'error' | 'warning' | 'info') => {
+    setAlertTitle(title);
+    setAlertMessage(message);
+    setAlertType(type);
+    setAlertVisible(true);
+  };
 
   const fetchAdminsAndRequests = async () => {
     setLoading(true);
@@ -55,13 +69,33 @@ export default function SuperAdminDashboard() {
       });
       const data = await res.json();
       if (res.ok) {
-        Alert.alert('Success', `Request has been successfully ${action}ed.`);
+        if (action === 'approve') {
+          triggerAlert(
+            'Request Approved',
+            'Registration request approved and admin account created.',
+            'success'
+          );
+        } else {
+          triggerAlert(
+            'Request Rejected',
+            'Registration request has been successfully rejected.',
+            'success'
+          );
+        }
         fetchAdminsAndRequests();
       } else {
-        Alert.alert('Error', data.error || `Failed to ${action} request.`);
+        triggerAlert(
+          'Action Failed',
+          data.error || `Failed to ${action} request.`,
+          'error'
+        );
       }
     } catch (e) {
-      Alert.alert('Error', 'Connection error. Please try again.');
+      triggerAlert(
+        'Connection Error',
+        'Connection error. Please try again.',
+        'error'
+      );
     }
   };
 
@@ -240,6 +274,14 @@ export default function SuperAdminDashboard() {
           )}
         />
       )}
+
+      <CustomAlert
+        visible={alertVisible}
+        title={alertTitle}
+        message={alertMessage}
+        type={alertType}
+        onClose={() => setAlertVisible(false)}
+      />
     </SafeAreaView>
   );
 }
