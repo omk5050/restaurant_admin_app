@@ -117,7 +117,7 @@ export default function SuperAdminLoginScreen() {
 
   return (
     <ImageBackground
-      source={require('../../../assets/images/background-image.png')}
+      source={require('../../../../assets/images/background-image.png')}
       style={styles.container}
       resizeMode="cover"
     >
