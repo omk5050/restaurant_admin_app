@@ -1,11 +1,9 @@
 import { Tabs } from "expo-router";
-import { ColorValue, Text } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
-import { COLORS } from "@/constants/colors";
+import { COLORS } from "./../../constants/colors";
+import React from "react";
 
-function TabIcon({ icon, color }: { icon: string; color: ColorValue }) {
-  return <Text style={{ color, fontSize: 19 }}>{icon}</Text>;
-}
 
 export default function TabsLayout() {
   return (
@@ -43,34 +41,45 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen
-        name="index"
-        options={{
-          title: "Dashboard",
-          headerShown: false,
-          tabBarIcon: ({ color }) => <TabIcon icon="⊞" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="menu"
-        options={{
-          title: "Menu",
-          tabBarIcon: ({ color }) => <TabIcon icon="🍽" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="orders"
-        options={{
-          title: "Orders",
-          tabBarIcon: ({ color }) => <TabIcon icon="☷" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="reports"
-        options={{
-          title: "Reports",
-          tabBarIcon: ({ color }) => <TabIcon icon="▥" color={color} />,
-        }}
-      />
+  name="index"
+  options={{
+    title: "Home",
+    headerShown: false,
+    tabBarIcon: ({ color, size }) => (
+      <Ionicons name="home" size={size} color={color} />
+    ),
+  }}
+/>
+
+<Tabs.Screen
+  name="menu"
+  options={{
+    title: "Menu",
+    tabBarIcon: ({ color, size }) => (
+      <Ionicons name="restaurant" size={size} color={color} />
+    ),
+  }}
+/>
+
+<Tabs.Screen
+  name="orders"
+  options={{
+    title: "Orders",
+    tabBarIcon: ({ color, size }) => (
+      <Ionicons name="receipt" size={size} color={color} />
+    ),
+  }}
+/>
+
+<Tabs.Screen
+  name="reports"
+  options={{
+    title: "Reports",
+    tabBarIcon: ({ color, size }) => (
+      <Ionicons name="bar-chart" size={size} color={color} />
+    ),
+  }}
+/>
     </Tabs>
   );
 }

@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '../../../contexts/AuthContext';
+import { useRouter } from "expo-router";
+
 
 export default function AdminLoginScreen() {
   const { signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const router = useRouter();
 
   const handleSubmit = async () => {
     try {
@@ -36,7 +39,24 @@ export default function AdminLoginScreen() {
           onChangeText={setPassword}
         />
         <TouchableOpacity style={styles.button} onPress={handleSubmit} activeOpacity={0.8}>
-          <Text style={styles.buttonText}>Sign In</Text>
+          <Text style={styles.buttonText}>Log In</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => router.push("/(auth)/super-admin/login")}
+          style={{
+            marginTop: 20,
+            alignItems: "center",
+          }}
+        >
+          <Text
+            style={{
+              fontSize: 16,
+              fontWeight: "700",
+              color: "#2563EB",
+            }}
+          >
+            Sign Up
+          </Text>
         </TouchableOpacity>
       </View>
     </LinearGradient>
