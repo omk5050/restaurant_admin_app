@@ -162,6 +162,17 @@ const UserSchema = new mongoose.Schema({
 });
 const User = mongoose.model("User", UserSchema);
 
+const RegistrationRequestSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  phone: { type: String, required: true },
+  password: { type: String, required: true },
+  restaurantName: { type: String, required: true },
+  status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
+  createdAt: { type: String, required: true },
+});
+const RegistrationRequest = mongoose.model("RegistrationRequest", RegistrationRequestSchema);
+
 const REQUIRED_CATEGORIES = [
   { id: "popular", name: "Popular", icon: "★", sortOrder: 0, section: "restaurant" },
   { id: "breakfast", name: "Breakfast", icon: "☀", sortOrder: 1, section: "restaurant" },

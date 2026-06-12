@@ -23,8 +23,8 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ error: "Invalid email or password." });
     }
 
-    // Check role
-    if (user.role !== role) {
+    // Check role: allow super-admin to bypass requested role constraint (so they can login through the admin login page)
+    if (user.role !== "super-admin" && user.role !== role) {
       return res.status(401).json({ error: "Unauthorized access for this role." });
     }
 
@@ -177,6 +177,174 @@ router.post("/register-admin", authenticateToken, async (req, res) => {
 
   } catch (err) {
     console.error("Register admin error:", err);
+    res.status(500).json({ error: "Internal server error." });
+  }
+});
+
+// --- SIGNUP / REGISTRATION REQUEST ---
+router.post("/signup", async (req, res) => {
+  try {
+    const { name, email, phone, password, restaurantName } = req.body;
+    if (!name || !email || !phone || !password || !restaurantName) {
+      return res.status(400).json({ error: "All fields are mandatory." });
+    }
+
+    const User = mongoose.model("User");
+    const RegistrationRequest = mongoose.model("RegistrationRequest");
+
+    // Check if email already registered as user
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      return res.status(400).json({ error: "Email is already registered as an admin." });
+    }
+
+    // Check if pending request already exists
+    const requestExists = await RegistrationRequest.findOne({ email, status: "pending" });
+    if (requestExists) {
+      return res.status(400).json({ error: "A registration request for this email is already pending approval." });
+    }
+
+    const hashedPassword = bcrypt.hashSync(password, 10);
+    
+    // Upsert or create request (reset to pending if previously rejected/approved)
+    await RegistrationRequest.findOneAndUpdate(
+      { email },
+      {
+        name,
+        phone,
+        password: hashedPassword,
+        restaurantName,
+        status: "pending",
+        createdAt: new Date().toISOString()
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+
+    res.json({ success: true, message: "Registration request submitted successfully." });
+  } catch (err) {
+    console.error("Signup request error:", err);
+    res.status(500).json({ error: "Internal server error." });
+  }
+});
+
+// --- GET REGISTRATION REQUESTS (Super Admin only) ---
+router.get("/registration-requests", authenticateToken, async (req, res) => {
+  if (req.user.role !== "super-admin") {
+    return res.status(403).json({ error: "Access denied." });
+  }
+  try {
+    const RegistrationRequest = mongoose.model("RegistrationRequest");
+    const requests = await RegistrationRequest.find({ status: "pending" }).sort({ createdAt: -1 });
+    res.json(requests);
+  } catch (err) {
+    console.error("Fetch requests error:", err);
+    res.status(500).json({ error: "Internal server error." });
+  }
+});
+
+// --- DECIDE REGISTRATION REQUEST (Super Admin only) ---
+router.post("/registration-requests/:id/action", authenticateToken, async (req, res) => {
+  if (req.user.role !== "super-admin") {
+    return res.status(403).json({ error: "Access denied." });
+  }
+  try {
+    const { action } = req.body;
+    if (action !== "approve" && action !== "reject") {
+      return res.status(400).json({ error: "Invalid action. Must be approve or reject." });
+    }
+
+    const RegistrationRequest = mongoose.model("RegistrationRequest");
+    const request = await RegistrationRequest.findById(req.params.id);
+
+    if (!request || request.status !== "pending") {
+      return res.status(404).json({ error: "Pending registration request not found." });
+    }
+
+    if (action === "reject") {
+      request.status = "rejected";
+      await request.save();
+      return res.json({ success: true, message: "Registration request rejected." });
+    }
+
+    // Approve: Create admin user and seed restaurant data
+    const User = mongoose.model("User");
+    const userExists = await User.findOne({ email: request.email });
+    if (userExists) {
+      request.status = "approved"; // Set request to approved since user exists
+      await request.save();
+      return res.status(400).json({ error: "This email is already registered." });
+    }
+
+    const newAdmin = await User.create({
+      name: request.name,
+      email: request.email,
+      password: request.password, // Pre-hashed password
+      role: "admin",
+      createdAt: new Date().toISOString(),
+    });
+
+    const Settings = mongoose.model("Settings");
+    const Category = mongoose.model("Category");
+    const MenuItem = mongoose.model("MenuItem");
+    const Table = mongoose.model("Table");
+
+    // Create Settings
+    await Settings.create({
+      adminId: newAdmin._id,
+      restaurantName: request.restaurantName,
+      address: "123 MG Road, Your City",
+      gstNumber: "07AABC1234D1Z5",
+      gstPercent: 5,
+      currency: "₹",
+      tableCount: 12,
+    });
+
+    // Seed Categories
+    const defaultCategories = [
+      { id: "popular_" + newAdmin._id, name: "Popular", icon: "★", sortOrder: 0, section: "restaurant", adminId: newAdmin._id },
+      { id: "breakfast_" + newAdmin._id, name: "Breakfast", icon: "☀", sortOrder: 1, section: "restaurant", adminId: newAdmin._id },
+      { id: "main_" + newAdmin._id, name: "Main Course", icon: "🍛", sortOrder: 2, section: "restaurant", adminId: newAdmin._id },
+      { id: "rice_" + newAdmin._id, name: "Rice", icon: "🍚", sortOrder: 3, section: "restaurant", adminId: newAdmin._id },
+      { id: "beverages_" + newAdmin._id, name: "Beverages", icon: "🥤", sortOrder: 0, section: "cafe", adminId: newAdmin._id },
+      { id: "snacks_" + newAdmin._id, name: "Snacks", icon: "🍟", sortOrder: 1, section: "cafe", adminId: newAdmin._id },
+      { id: "desserts_" + newAdmin._id, name: "Desserts", icon: "🍰", sortOrder: 2, section: "cafe", adminId: newAdmin._id },
+    ];
+    await Category.insertMany(defaultCategories);
+
+    // Seed Menu Items
+    const defaultMenu = [
+      { id: "m38_" + newAdmin._id, categoryId: "desserts_" + newAdmin._id, name: "Tripple Choco Bowl", price: 150, emoji: "🍫", isAvailable: true, isVeg: true, adminId: newAdmin._id },
+      { id: "m39_" + newAdmin._id, categoryId: "desserts_" + newAdmin._id, name: "Oreo Choco Bowl", price: 160, emoji: "🍪", isAvailable: true, isVeg: true, adminId: newAdmin._id },
+      { id: "m40_" + newAdmin._id, categoryId: "snacks_" + newAdmin._id, name: "French Fries Classic", price: 80, emoji: "🍟", isAvailable: true, isVeg: true, adminId: newAdmin._id },
+      { id: "m41_" + newAdmin._id, categoryId: "snacks_" + newAdmin._id, name: "Peri Peri French Fries", price: 100, emoji: "🌶️", isAvailable: true, isVeg: true, adminId: newAdmin._id },
+      { id: "m42_" + newAdmin._id, categoryId: "rice_" + newAdmin._id, name: "Veg Dum Biryani", price: 180, emoji: "🍛", isAvailable: true, isVeg: true, adminId: newAdmin._id },
+      { id: "m43_" + newAdmin._id, categoryId: "rice_" + newAdmin._id, name: "Egg Dum Biryani", price: 200, emoji: "🍳", isAvailable: true, isVeg: false, adminId: newAdmin._id },
+      { id: "m44_" + newAdmin._id, categoryId: "rice_" + newAdmin._id, name: "Paneer Tikka Biryani", price: 220, emoji: "🍢", isAvailable: true, isVeg: true, adminId: newAdmin._id },
+      { id: "m45_" + newAdmin._id, categoryId: "main_" + newAdmin._id, name: "Paneer Kalimiri Kabab", price: 180, emoji: "🫕", isAvailable: true, isVeg: true, adminId: newAdmin._id },
+    ];
+    await MenuItem.insertMany(defaultMenu);
+
+    // Seed Tables
+    const defaultTables = Array.from({ length: 12 }, (_, index) => {
+      const id = index + 1;
+      return {
+        id,
+        name: `T${id}`,
+        seats: 4,
+        status: "empty",
+        currentOrderId: null,
+        adminId: newAdmin._id,
+      };
+    });
+    await Table.insertMany(defaultTables);
+
+    request.status = "approved";
+    await request.save();
+
+    res.json({ success: true, message: "Registration request approved and admin account created." });
+
+  } catch (err) {
+    console.error("Action request error:", err);
     res.status(500).json({ error: "Internal server error." });
   }
 });

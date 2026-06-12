@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  Modal, TextInput, ActivityIndicator, Alert, ScrollView,
-  SafeAreaView, StatusBar, Platform,
+  ActivityIndicator, Alert, SafeAreaView, StatusBar, Platform,
 } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'expo-router';
@@ -15,30 +14,25 @@ export default function SuperAdminDashboard() {
   const router = useRouter();
 
   const [admins, setAdmins] = useState<any[]>([]);
+  const [requests, setRequests] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<'admins' | 'requests'>('admins');
   const [loading, setLoading] = useState(true);
-  const [modalVisible, setModalVisible] = useState(false);
 
-  // Form state
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [restaurantName, setRestaurantName] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
-
-  const fetchAdmins = async () => {
+  const fetchAdminsAndRequests = async () => {
     setLoading(true);
     try {
-      const res = await apiFetch(`${API_URL}/api/auth/admins`);
-      if (res.ok) {
-        const data = await res.json();
+      const adminsRes = await apiFetch(`${API_URL}/api/auth/admins`);
+      if (adminsRes.ok) {
+        const data = await adminsRes.json();
         setAdmins(data);
-      } else {
-        const err = await res.json();
-        console.error('Failed to fetch admins:', err.error);
+      }
+      const requestsRes = await apiFetch(`${API_URL}/api/auth/registration-requests`);
+      if (requestsRes.ok) {
+        const data = await requestsRes.json();
+        setRequests(data);
       }
     } catch (e) {
-      console.error('Failed to fetch admins:', e);
+      console.error('Failed to fetch dashboard data:', e);
     } finally {
       setLoading(false);
     }
@@ -46,50 +40,34 @@ export default function SuperAdminDashboard() {
 
   useEffect(() => {
     if (role !== 'super-admin') {
-      router.replace('/(auth)/super-admin/login');
+      router.replace('/(auth)/admin/login');
       return;
     }
-    fetchAdmins();
+    fetchAdminsAndRequests();
   }, [role]);
 
-  const handleRegister = async () => {
-    if (!name.trim() || !email.trim() || !password.trim() || !restaurantName.trim()) {
-      setError('Please fill in all fields.');
-      return;
-    }
-    setSubmitting(true);
-    setError('');
+  const handleAction = async (requestId: string, action: 'approve' | 'reject') => {
     try {
-      const res = await apiFetch(`${API_URL}/api/auth/register-admin`, {
+      const res = await apiFetch(`${API_URL}/api/auth/registration-requests/${requestId}/action`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, restaurantName }),
+        body: JSON.stringify({ action }),
       });
       const data = await res.json();
       if (res.ok) {
-        setModalVisible(false);
-        setName(''); setEmail(''); setPassword(''); setRestaurantName('');
-        fetchAdmins();
-        Alert.alert('✅ Success', `${restaurantName} has been registered!`);
+        Alert.alert('Success', `Request has been successfully ${action}ed.`);
+        fetchAdminsAndRequests();
       } else {
-        setError(data.error || 'Failed to register admin.');
+        Alert.alert('Error', data.error || `Failed to ${action} request.`);
       }
     } catch (e) {
-      setError('Connection error. Please try again.');
-    } finally {
-      setSubmitting(false);
+      Alert.alert('Error', 'Connection error. Please try again.');
     }
   };
 
   const handleInspect = async (adminId: string, restName: string) => {
     await AsyncStorage.setItem('selectedAdminId', adminId);
     router.replace('/(tabs)');
-  };
-
-  const handleCloseModal = () => {
-    setModalVisible(false);
-    setName(''); setEmail(''); setPassword(''); setRestaurantName('');
-    setError('');
   };
 
   if (role !== 'super-admin') return null;
@@ -111,142 +89,157 @@ export default function SuperAdminDashboard() {
 
       {/* Stats bar */}
       <View style={styles.statsBar}>
-        <View style={styles.statItem}>
-          <Text style={styles.statValue}>{admins.length}</Text>
-          <Text style={styles.statLabel}>Total Admins</Text>
-        </View>
+        <TouchableOpacity 
+          style={[styles.statItem, activeTab === 'admins' && styles.activeStatItem]} 
+          onPress={() => setActiveTab('admins')}
+        >
+          <Text style={[styles.statValue, activeTab === 'admins' && styles.activeStatValue]}>{admins.length}</Text>
+          <Text style={[styles.statLabel, activeTab === 'admins' && styles.activeStatLabel]}>Active Admins</Text>
+        </TouchableOpacity>
+        
         <View style={styles.statDivider} />
-        <View style={styles.statItem}>
-          <Text style={styles.statValue}>{admins.length}</Text>
-          <Text style={styles.statLabel}>Restaurants</Text>
-        </View>
-        <View style={styles.statDivider} />
-        <TouchableOpacity style={[styles.statItem, styles.registerStat]} onPress={() => setModalVisible(true)}>
-          <Text style={styles.registerStatText}>＋ Register Admin</Text>
+        
+        <TouchableOpacity 
+          style={[styles.statItem, activeTab === 'requests' && styles.activeStatItem]} 
+          onPress={() => setActiveTab('requests')}
+        >
+          <Text style={[styles.statValue, activeTab === 'requests' && styles.activeStatValue, requests.length > 0 && activeTab !== 'requests' && { color: '#fbbf24' }]}>
+            {requests.length}
+          </Text>
+          <Text style={[styles.statLabel, activeTab === 'requests' && styles.activeStatLabel, requests.length > 0 && activeTab !== 'requests' && { color: '#fbbf24' }]}>
+            Pending Requests
+          </Text>
         </TouchableOpacity>
       </View>
 
-      {/* Admin List */}
+      {/* Admin / Requests List */}
       {loading ? (
         <View style={styles.centerBox}>
           <ActivityIndicator size="large" color="#7c3aed" />
-          <Text style={styles.loadingText}>Loading restaurants...</Text>
+          <Text style={styles.loadingText}>Loading data...</Text>
         </View>
       ) : (
         <FlatList
-          data={admins}
+          data={activeTab === 'admins' ? admins : requests}
           keyExtractor={(item) => item._id}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           ListHeaderComponent={
-            <Text style={styles.sectionTitle}>Registered Restaurants</Text>
+            <Text style={styles.sectionTitle}>
+              {activeTab === 'admins' ? 'Registered Restaurants' : 'Pending Registration Requests'}
+            </Text>
           }
           ListEmptyComponent={
             <View style={styles.emptyBox}>
-              <Text style={styles.emptyEmoji}>🏪</Text>
-              <Text style={styles.emptyTitle}>No admins yet</Text>
-              <Text style={styles.emptySubtitle}>Tap "Register Admin" to add your first restaurant</Text>
-              <TouchableOpacity style={styles.emptyBtn} onPress={() => setModalVisible(true)}>
-                <Text style={styles.emptyBtnText}>＋ Register Admin</Text>
-              </TouchableOpacity>
+              <Text style={styles.emptyEmoji}>{activeTab === 'admins' ? '🏪' : '📥'}</Text>
+              <Text style={styles.emptyTitle}>
+                {activeTab === 'admins' ? 'No admins yet' : 'No requests yet'}
+              </Text>
+              <Text style={styles.emptySubtitle}>
+                {activeTab === 'admins' 
+                  ? 'Active restaurants will appear here.' 
+                  : 'Pending restaurant registration requests will appear here.'}
+              </Text>
             </View>
           }
           renderItem={({ item }) => (
             <View style={styles.card}>
-              {/* Card header */}
-              <View style={styles.cardTop}>
-                <View style={styles.cardIconWrap}>
-                  <Text style={styles.cardIcon}>🏪</Text>
-                </View>
-                <View style={styles.cardInfo}>
-                  <Text style={styles.cardRestaurant} numberOfLines={1}>{item.restaurantName}</Text>
-                  <Text style={styles.cardAdmin} numberOfLines={1}>{item.name}</Text>
-                </View>
-                <View style={styles.activeBadge}>
-                  <Text style={styles.activeBadgeText}>Active</Text>
-                </View>
-              </View>
+              {activeTab === 'admins' ? (
+                <>
+                  {/* Card header */}
+                  <View style={styles.cardTop}>
+                    <View style={styles.cardIconWrap}>
+                      <Text style={styles.cardIcon}>🏪</Text>
+                    </View>
+                    <View style={styles.cardInfo}>
+                      <Text style={styles.cardRestaurant} numberOfLines={1}>{item.restaurantName}</Text>
+                      <Text style={styles.cardAdmin} numberOfLines={1}>{item.name}</Text>
+                    </View>
+                    <View style={styles.activeBadge}>
+                      <Text style={styles.activeBadgeText}>Active</Text>
+                    </View>
+                  </View>
 
-              {/* Card details */}
-              <View style={styles.cardDetails}>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailIcon}>✉️</Text>
-                  <Text style={styles.detailText} numberOfLines={1}>{item.email}</Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailIcon}>📅</Text>
-                  <Text style={styles.detailText}>
-                    Joined {new Date(item.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                  </Text>
-                </View>
-              </View>
+                  {/* Card details */}
+                  <View style={styles.cardDetails}>
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailIcon}>✉️</Text>
+                      <Text style={styles.detailText} numberOfLines={1}>{item.email}</Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailIcon}>📅</Text>
+                      <Text style={styles.detailText}>
+                        Joined {new Date(item.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </Text>
+                    </View>
+                  </View>
 
-              {/* Inspect button */}
-              <TouchableOpacity
-                style={styles.inspectBtn}
-                onPress={() => handleInspect(item._id, item.restaurantName)}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.inspectBtnText}>View Portal  →</Text>
-              </TouchableOpacity>
+                  {/* Inspect button */}
+                  <TouchableOpacity
+                    style={styles.inspectBtn}
+                    onPress={() => handleInspect(item._id, item.restaurantName)}
+                    activeOpacity={0.85}
+                  >
+                    <Text style={styles.inspectBtnText}>View Portal  →</Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <>
+                  {/* Card header for requests */}
+                  <View style={styles.cardTop}>
+                    <View style={[styles.cardIconWrap, { backgroundColor: '#fef3c7' }]}>
+                      <Text style={styles.cardIcon}>🔑</Text>
+                    </View>
+                    <View style={styles.cardInfo}>
+                      <Text style={styles.cardRestaurant} numberOfLines={1}>{item.restaurantName}</Text>
+                      <Text style={styles.cardAdmin} numberOfLines={1}>{item.name}</Text>
+                    </View>
+                    <View style={[styles.activeBadge, { backgroundColor: '#fef3c7' }]}>
+                      <Text style={[styles.activeBadgeText, { color: '#d97706' }]}>Pending</Text>
+                    </View>
+                  </View>
+
+                  {/* Card details */}
+                  <View style={styles.cardDetails}>
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailIcon}>✉️</Text>
+                      <Text style={styles.detailText} numberOfLines={1}>{item.email}</Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailIcon}>📞</Text>
+                      <Text style={styles.detailText} numberOfLines={1}>{item.phone}</Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailIcon}>📅</Text>
+                      <Text style={styles.detailText}>
+                        Requested {new Date(item.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Actions Row */}
+                  <View style={styles.actionRow}>
+                    <TouchableOpacity
+                      style={[styles.actionBtn, styles.rejectBtn]}
+                      onPress={() => handleAction(item._id, 'reject')}
+                      activeOpacity={0.85}
+                    >
+                      <Text style={styles.rejectBtnText}>Reject</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.actionBtn, styles.approveBtn]}
+                      onPress={() => handleAction(item._id, 'approve')}
+                      activeOpacity={0.85}
+                    >
+                      <Text style={styles.approveBtnText}>Approve & Create</Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              )}
             </View>
           )}
         />
       )}
-
-      {/* Register Admin Modal */}
-      <Modal visible={modalVisible} animationType="slide" transparent onRequestClose={handleCloseModal}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalSheet}>
-            {/* Pull indicator */}
-            <View style={styles.modalHandle} />
-
-            <Text style={styles.modalTitle}>Register New Admin</Text>
-            <Text style={styles.modalSubtitle}>A restaurant will be auto-created with demo data.</Text>
-
-            {error ? (
-              <View style={styles.errorBanner}>
-                <Text style={styles.errorText}>⚠️  {error}</Text>
-              </View>
-            ) : null}
-
-            <ScrollView showsVerticalScrollIndicator={false} style={styles.modalScroll}>
-              {[
-                { label: 'Admin Full Name', value: name, setter: setName, placeholder: 'e.g. Jane Doe', keyboard: 'default' as const },
-                { label: 'Email Address', value: email, setter: setEmail, placeholder: 'e.g. jane@restaurant.com', keyboard: 'email-address' as const },
-                { label: 'Password', value: password, setter: setPassword, placeholder: 'Minimum 6 characters', keyboard: 'default' as const, secure: true },
-                { label: 'Restaurant Name', value: restaurantName, setter: setRestaurantName, placeholder: "e.g. Jane's Pizzeria", keyboard: 'default' as const },
-              ].map((field) => (
-                <View key={field.label} style={styles.fieldGroup}>
-                  <Text style={styles.fieldLabel}>{field.label}</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder={field.placeholder}
-                    placeholderTextColor="#aaa"
-                    value={field.value}
-                    onChangeText={field.setter}
-                    keyboardType={field.keyboard}
-                    secureTextEntry={field.secure}
-                    autoCapitalize={field.keyboard === 'email-address' || field.secure ? 'none' : 'words'}
-                  />
-                </View>
-              ))}
-            </ScrollView>
-
-            <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.cancelBtn} onPress={handleCloseModal} disabled={submitting}>
-                <Text style={styles.cancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.submitBtn} onPress={handleRegister} disabled={submitting} activeOpacity={0.85}>
-                {submitting
-                  ? <ActivityIndicator color="#fff" />
-                  : <Text style={styles.submitText}>Register</Text>
-                }
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 }
@@ -296,41 +289,40 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginBottom: 16,
     borderRadius: 16,
-    padding: 16,
+    padding: 8,
     alignItems: 'center',
   },
   statItem: {
     flex: 1,
     alignItems: 'center',
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  activeStatItem: {
+    backgroundColor: '#4338ca',
   },
   statValue: {
-    fontSize: 26,
+    fontSize: 22,
     fontWeight: '900',
+    color: '#a5b4fc',
+  },
+  activeStatValue: {
     color: '#fff',
   },
   statLabel: {
     fontSize: 11,
-    color: '#a5b4fc',
+    color: '#818cf8',
     fontWeight: '600',
     marginTop: 2,
+  },
+  activeStatLabel: {
+    color: '#c7d2fe',
   },
   statDivider: {
     width: 1,
     height: 36,
     backgroundColor: 'rgba(165,180,252,0.2)',
-    marginHorizontal: 8,
-  },
-  registerStat: {
-    backgroundColor: '#7c3aed',
-    borderRadius: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-  },
-  registerStatText: {
-    color: '#fff',
-    fontWeight: '800',
-    fontSize: 13,
-    textAlign: 'center',
+    marginHorizontal: 4,
   },
   centerBox: {
     flex: 1,
@@ -368,14 +360,6 @@ const styles = StyleSheet.create({
   emptyEmoji: { fontSize: 52 },
   emptyTitle: { fontSize: 20, fontWeight: '800', color: '#1e1b4b' },
   emptySubtitle: { fontSize: 13, color: '#6b7280', textAlign: 'center', maxWidth: 260 },
-  emptyBtn: {
-    marginTop: 8,
-    backgroundColor: '#7c3aed',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-  },
-  emptyBtnText: { color: '#fff', fontWeight: '800', fontSize: 14 },
   card: {
     backgroundColor: '#fff',
     borderRadius: 20,
@@ -453,106 +437,34 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 14,
   },
-  // Modal styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalSheet: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    padding: 24,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
-    maxHeight: '90%',
-  },
-  modalHandle: {
-    width: 40,
-    height: 4,
-    backgroundColor: '#e5e7eb',
-    borderRadius: 99,
-    alignSelf: 'center',
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontSize: 22,
-    fontWeight: '900',
-    color: '#1e1b4b',
-    textAlign: 'center',
-  },
-  modalSubtitle: {
-    fontSize: 13,
-    color: '#6b7280',
-    textAlign: 'center',
-    marginTop: 4,
-    marginBottom: 16,
-  },
-  errorBanner: {
-    backgroundColor: '#fef2f2',
-    borderWidth: 1,
-    borderColor: '#fecaca',
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 12,
-  },
-  errorText: {
-    color: '#dc2626',
-    fontWeight: '600',
-    fontSize: 13,
-  },
-  modalScroll: {
-    maxHeight: 340,
-  },
-  fieldGroup: {
-    marginBottom: 14,
-  },
-  fieldLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#374151',
-    marginBottom: 6,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
-    fontSize: 15,
-    color: '#111',
-    backgroundColor: '#fafafa',
-  },
-  modalActions: {
+  actionRow: {
     flexDirection: 'row',
     gap: 12,
-    marginTop: 16,
+    marginTop: 8,
   },
-  cancelBtn: {
+  actionBtn: {
     flex: 1,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  cancelText: {
-    color: '#6b7280',
-    fontWeight: '700',
-    fontSize: 15,
-  },
-  submitBtn: {
-    flex: 2,
-    borderRadius: 12,
-    backgroundColor: '#7c3aed',
-    paddingVertical: 14,
+    paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 50,
   },
-  submitText: {
+  rejectBtn: {
+    backgroundColor: '#fef2f2',
+    borderWidth: 1,
+    borderColor: '#fca5a5',
+  },
+  rejectBtnText: {
+    color: '#ef4444',
+    fontWeight: '800',
+    fontSize: 14,
+  },
+  approveBtn: {
+    backgroundColor: '#10b981',
+  },
+  approveBtnText: {
     color: '#fff',
     fontWeight: '800',
-    fontSize: 15,
+    fontSize: 14,
   },
 });
