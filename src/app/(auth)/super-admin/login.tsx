@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ImageBackground, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useRouter } from "expo-router";
 import { API_URL } from '@/constants/config';
 import { CustomAlert } from '@/components/ui/CustomAlert';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function SuperAdminLoginScreen() {
   const { signIn } = useAuth();
@@ -116,90 +117,94 @@ export default function SuperAdminLoginScreen() {
   };
 
   return (
-    <ImageBackground
-      source={require('../../../../assets/images/background-image.png')}
+    <LinearGradient
+      colors={['#0f172a', '#1e1b4b']} // Premium dark slate to deep indigo gradient matching Admin Login
       style={styles.container}
-      resizeMode="cover"
     >
-      <View style={styles.overlay}>
-        <View style={styles.card}>
-          <Text style={styles.title}>Sign Up</Text>
-          <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 320 }}>
-            <TextInput
-              placeholder="Full Name"
-              placeholderTextColor="#aaa"
-              style={styles.input}
-              value={name}
-              onChangeText={setName}
-            />
-
-            <TextInput
-              placeholder="Company Name"
-              placeholderTextColor="#aaa"
-              style={styles.input}
-              value={companyName}
-              onChangeText={setCompanyName}
-            />
-
-            <TextInput
-              placeholder="Email Address"
-              placeholderTextColor="#aaa"
-              style={styles.input}
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-
-            <TextInput
-              placeholder="Phone Number"
-              placeholderTextColor="#aaa"
-              style={styles.input}
-              value={phone}
-              onChangeText={setPhone}
-              keyboardType="phone-pad"
-            />
-
-            <TextInput
-              placeholder="Password"
-              placeholderTextColor="#aaa"
-              secureTextEntry
-              style={styles.input}
-              value={password}
-              onChangeText={setPassword}
-            />
-
-            <TextInput
-              placeholder="Confirm Password"
-              placeholderTextColor="#aaa"
-              secureTextEntry
-              style={styles.input}
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-            />
-          </ScrollView>
-          <TouchableOpacity style={styles.button} onPress={handleSubmit} activeOpacity={0.8}>
-            <Text style={styles.buttonText}>Create Account & Request Access</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => router.push("/(auth)/admin/login")}
-            style={{
-              marginTop: 18,
-              alignItems: "center",
-            }}
+      <SafeAreaView style={{ flex: 1 }}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1 }}
+        >
+          <ScrollView
+            contentContainerStyle={styles.scrollContainer}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
           >
-            <Text
-              style={{
-                fontSize: 16,
-                fontWeight: "700",
-                color: "#ff7043",
-              }}
-            >
-              Log In
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+            <View style={styles.card}>
+              <Text style={styles.title}>Sign Up</Text>
+              
+              <TextInput
+                placeholder="Full Name"
+                placeholderTextColor="#94a3b8"
+                style={styles.input}
+                value={name}
+                onChangeText={setName}
+              />
+
+              <TextInput
+                placeholder="Company Name"
+                placeholderTextColor="#94a3b8"
+                style={styles.input}
+                value={companyName}
+                onChangeText={setCompanyName}
+              />
+
+              <TextInput
+                placeholder="Email Address"
+                placeholderTextColor="#94a3b8"
+                style={styles.input}
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+
+              <TextInput
+                placeholder="Phone Number"
+                placeholderTextColor="#94a3b8"
+                style={styles.input}
+                value={phone}
+                onChangeText={setPhone}
+                keyboardType="phone-pad"
+              />
+
+              <TextInput
+                placeholder="Password"
+                placeholderTextColor="#94a3b8"
+                secureTextEntry
+                style={styles.input}
+                value={password}
+                onChangeText={setPassword}
+              />
+
+              <TextInput
+                placeholder="Confirm Password"
+                placeholderTextColor="#94a3b8"
+                secureTextEntry
+                style={styles.input}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+              />
+
+              <TouchableOpacity style={styles.button} onPress={handleSubmit} activeOpacity={0.85}>
+                <Text style={styles.buttonText} numberOfLines={2}>
+                  Create Account & Request Access
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                onPress={() => router.push("/(auth)/admin/login")}
+                style={styles.loginLink}
+              >
+                <Text style={styles.loginLinkText}>
+                  Log In
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
 
       <CustomAlert
         visible={alertVisible}
@@ -208,7 +213,7 @@ export default function SuperAdminLoginScreen() {
         type={alertType}
         onClose={handleCloseAlert}
       />
-    </ImageBackground>
+    </LinearGradient>
   );
 }
 
@@ -216,40 +221,45 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  overlay: {
-    flex: 1,
-    width: '100%',
+  scrollContainer: {
+    flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    padding: 24,
   },
   card: {
-    width: '85%',
+    width: '100%',
     maxWidth: 400,
-    padding: 24,
+    paddingHorizontal: 28,
+    paddingVertical: 36,
     borderRadius: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 10,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 15,
+    ...Platform.select({
+      web: {
+        boxShadow: '0 20px 40px rgba(0, 0, 0, 0.25)',
+      },
+    }),
   },
   title: {
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: '900',
-    marginBottom: 20,
+    marginBottom: 24,
     textAlign: 'center',
     color: '#0f172a',
     letterSpacing: -0.5,
   },
   input: {
-    height: 48,
+    height: 50,
     borderColor: '#e2e8f0',
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: 14,
     marginBottom: 14,
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     backgroundColor: '#fff',
     color: '#0f172a',
     fontSize: 15,
@@ -257,15 +267,32 @@ const styles = StyleSheet.create({
   button: {
     backgroundColor: '#ff7043',
     paddingVertical: 14,
-    borderRadius: 12,
+    paddingHorizontal: 16,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 48,
+    minHeight: 52,
     marginTop: 16,
+    shadowColor: '#ff7043',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 3,
   },
   buttonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '800',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  loginLink: {
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  loginLinkText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#ff7043',
   },
 });
