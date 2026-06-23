@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View, Platform } from "react-native";
 
 import { COLORS, TABLE_STATUS_ACCENTS, TABLE_STATUS_COLORS } from "@/constants/colors";
 import { formatCurrency } from "@/utils/formatters";
@@ -80,7 +80,20 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     padding: 11,
     position: "relative",
-    boxShadow: "0 8px 22px rgba(35, 27, 19, 0.08)",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#231B13",
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.08,
+        shadowRadius: 22,
+      },
+      android: {
+        elevation: 3,
+      },
+      web: {
+        boxShadow: "0 8px 22px rgba(35, 27, 19, 0.08)",
+      },
+    }),
   },
   pressed: {
     transform: [{ scale: 0.96 }],

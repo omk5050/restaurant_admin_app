@@ -35,6 +35,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
   gstNumber: "07AABC1234D1Z5",
   gstPercent: APP_CONFIG.gstPercent,
   currency: "₹",
-  tableCount: 12,
+  tableCount: 14,
+  restaurantTableCount: 6,
+  familyTableCount: 4,
+  takeawayTableCount: 4,
 };
 

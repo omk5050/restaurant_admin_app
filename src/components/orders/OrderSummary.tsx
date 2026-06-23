@@ -4,6 +4,7 @@ import { StyleSheet, Text, View, Pressable, ScrollView } from "react-native";
 import { Button } from "@/components/ui/Button";
 import { COLORS } from "@/constants/colors";
 import { formatCurrency } from "@/utils/formatters";
+import { useSettingsStore } from "@/store/settingsStore";
 import { Order } from "@/types";
 
 interface OrderSummaryProps {
@@ -12,6 +13,7 @@ interface OrderSummaryProps {
 }
 
 export function OrderSummary({ order, onReviewBill }: OrderSummaryProps) {
+  const settings = useSettingsStore((state) => state.settings);
   const [isExpanded, setIsExpanded] = useState(false);
 
   const totalItemsCount = order.items.reduce((sum, item) => sum + item.qty, 0);
@@ -63,7 +65,7 @@ export function OrderSummary({ order, onReviewBill }: OrderSummaryProps) {
               <Text style={styles.totalValue}>{formatCurrency(order.subtotal)}</Text>
             </View>
             <View style={styles.totalRow}>
-              <Text style={styles.totalLabel}>GST (5%)</Text>
+              <Text style={styles.totalLabel}>GST ({settings.gstPercent}%)</Text>
               <Text style={styles.totalValue}>{formatCurrency(order.gstAmount)}</Text>
             </View>
             <View style={styles.grandRow}>

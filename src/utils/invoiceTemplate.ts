@@ -1,4 +1,5 @@
 import { AppSettings, Invoice } from "@/types";
+import { getTableName } from "./formatters";
 
 export function generateInvoiceHTML(invoice: Invoice, settings: AppSettings) {
   const rows = invoice.items
@@ -12,16 +13,22 @@ export function generateInvoiceHTML(invoice: Invoice, settings: AppSettings) {
     )
     .join("");
 
+  const tableRow = invoice.isTakeaway
+    ? `<p>Type    : Takeaway (${getTableName(invoice.tableId, settings)})</p>
+  <p>Customer: ${invoice.customerName}</p>
+  <p>Phone   : ${invoice.customerPhone}</p>`
+    : `<p>Table   : ${getTableName(invoice.tableId, settings)}</p>`;
+
   return `<!DOCTYPE html>
 <html>
 <head>
   <style>
-    body { font-family:'Courier New',monospace; width:300px; margin:auto; font-size:13px; }
-    h1 { text-align:center; font-size:16px; letter-spacing:3px; margin-bottom:4px; }
-    .sub { text-align:center; font-size:11px; color:#666; margin:2px 0; }
+    body { font-family:'Courier New',monospace; width:320px; margin:auto; font-size:15px; }
+    h1 { text-align:center; font-size:19px; letter-spacing:3px; margin-bottom:4px; }
+    .sub { text-align:center; font-size:12px; color:#666; margin:2px 0; }
     .dash { border-top:2px dashed #333; margin:10px 0; }
     table { width:100%; border-collapse:collapse; }
-    .total { font-size:16px; font-weight:bold; }
+    .total { font-size:19px; font-weight:bold; }
     .center { text-align:center; }
   </style>
 </head>
@@ -30,7 +37,7 @@ export function generateInvoiceHTML(invoice: Invoice, settings: AppSettings) {
   <p class="sub">${settings.address}</p>
   <p class="sub">GST: ${settings.gstNumber}</p>
   <div class="dash"></div>
-  <p>Table   : ${invoice.tableId}</p>
+  ${tableRow}
   <p>Bill No : ${invoice.orderNo}</p>
   <p>Date    : ${new Date(invoice.createdAt).toLocaleString("en-IN")}</p>
   <p>Payment : ${invoice.paymentMethod.toUpperCase()}</p>

@@ -1,5 +1,7 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, View, Pressable, Modal, TextInput, TouchableOpacity, useWindowDimensions, Platform } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { MaterialIcons, MaterialCommunityIcons } from "@expo/vector-icons";
 
 import { Card } from "@/components/ui/Card";
 import { TableGrid } from "@/components/tables/TableGrid";
@@ -44,8 +46,12 @@ export default function DashboardScreen() {
   const [formGstNumber, setFormGstNumber] = useState(settings.gstNumber);
   const [formGstPercent, setFormGstPercent] = useState(String(settings.gstPercent));
   const [formCurrency, setFormCurrency] = useState(settings.currency);
-  const [formTableCount, setFormTableCount] = useState(String(settings.tableCount));
+  const [formRestaurantTableCount, setFormRestaurantTableCount] = useState(String(settings.restaurantTableCount ?? 6));
+  const [formFamilyTableCount, setFormFamilyTableCount] = useState(String(settings.familyTableCount ?? 4));
+  const [formTakeawayTableCount, setFormTakeawayTableCount] = useState(String(settings.takeawayTableCount ?? 4));
   const [error, setError] = useState("");
+
+  const hasActiveTables = tables.some((table) => table.status === "active" || table.status === "bill");
 
   const todaysSales = analytics.todaySales;
   const totalOrdersCount = analytics.paidCount + analytics.openOrdersCount;
@@ -60,19 +66,28 @@ export default function DashboardScreen() {
     setFormGstNumber(settings.gstNumber);
     setFormGstPercent(String(settings.gstPercent));
     setFormCurrency(settings.currency);
-    setFormTableCount(String(settings.tableCount));
+    setFormRestaurantTableCount(String(settings.restaurantTableCount ?? 6));
+    setFormFamilyTableCount(String(settings.familyTableCount ?? 4));
+    setFormTakeawayTableCount(String(settings.takeawayTableCount ?? 4));
     setError("");
     setSettingsModalVisible(true);
   };
 
   const handleSaveSettings = async () => {
-    if (!formName.trim() || !formTableCount.trim()) {
-      setError("Restaurant Name and Table Count are required.");
+    if (
+      !formName.trim() ||
+      !formRestaurantTableCount.trim() ||
+      !formFamilyTableCount.trim() ||
+      !formTakeawayTableCount.trim()
+    ) {
+      setError("Restaurant Name and all Table Counts are required.");
       return;
     }
-    const countVal = Number(formTableCount);
-    if (isNaN(countVal) || countVal <= 0) {
-      setError("Table count must be a positive number.");
+    const rVal = Number(formRestaurantTableCount);
+    const fVal = Number(formFamilyTableCount);
+    const tVal = Number(formTakeawayTableCount);
+    if (isNaN(rVal) || rVal < 0 || isNaN(fVal) || fVal < 0 || isNaN(tVal) || tVal < 0) {
+      setError("Table counts must be non-negative numbers.");
       return;
     }
 
@@ -83,7 +98,9 @@ export default function DashboardScreen() {
         gstNumber: formGstNumber,
         gstPercent: Number(formGstPercent),
         currency: formCurrency,
-        tableCount: countVal,
+        restaurantTableCount: rVal,
+        familyTableCount: fVal,
+        takeawayTableCount: tVal,
       });
       setSettingsModalVisible(false);
       setError("");
@@ -95,7 +112,8 @@ export default function DashboardScreen() {
   };
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content} contentInsetAdjustmentBehavior="automatic">
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <ScrollView style={styles.screen} contentContainerStyle={styles.content} contentInsetAdjustmentBehavior="automatic">
       <View style={styles.hero}>
         <View style={[styles.heroTop, isSmallScreen && { flexWrap: "wrap", gap: 12 }]}>
           <View style={{ flex: 1, flexShrink: 1, minWidth: 150 }}>
@@ -104,7 +122,7 @@ export default function DashboardScreen() {
           </View>
           <View style={{ flexDirection: "row", gap: 8, alignItems: "center", flexShrink: 0 }}>
             <Pressable onPress={handleOpenSettings} style={styles.servicePill}>
-              <Text style={{ color: "#F8FAFC", fontSize: 13 }}>⚙️</Text>
+              <MaterialIcons name="settings" size={16} color="#F8FAFC" />
             </Pressable>
             <View style={styles.servicePill}>
               <View style={styles.liveDot} />
@@ -129,19 +147,31 @@ export default function DashboardScreen() {
 
       <View style={[styles.metricsRow, isSmallScreen && { flexWrap: "wrap", gap: 10 }]}>
         <Card style={[styles.metricCard, isSmallScreen && { minWidth: "47%", flex: 0 }]}>
-          <Text style={styles.metricValue}>{activeTables}</Text>
+          <View style={[styles.metricIconPlate, { backgroundColor: "#FFF1E7" }]}>
+            <MaterialIcons name="chair" size={20} color="#FF8A00" />
+          </View>
+          <Text style={[styles.metricValue, { color: "#FF8A00" }]}>{activeTables}</Text>
           <Text style={styles.metricLabel}>Active</Text>
         </Card>
         <Card style={[styles.metricCard, isSmallScreen && { minWidth: "47%", flex: 0 }]}>
+          <View style={[styles.metricIconPlate, { backgroundColor: "#EFF6FF" }]}>
+            <MaterialIcons name="receipt-long" size={20} color={COLORS.blue} />
+          </View>
           <Text style={[styles.metricValue, styles.billMetric]}>{billedTables}</Text>
           <Text style={styles.metricLabel}>Bills</Text>
         </Card>
         <Card style={[styles.metricCard, isSmallScreen && { minWidth: "47%", flex: 0 }]}>
-          <Text style={[styles.metricValue, styles.paidMetric]}>{paidTables}</Text>
+          <View style={[styles.metricIconPlate, { backgroundColor: "#ECFDF3" }]}>
+            <MaterialIcons name="credit-card" size={20} color="#22C55E" />
+          </View>
+          <Text style={[styles.metricValue, styles.paidMetric, { color: "#22C55E" }]}>{paidTables}</Text>
           <Text style={styles.metricLabel}>Paid</Text>
         </Card>
         <Card style={[styles.metricCard, isSmallScreen && { minWidth: "47%", flex: 0 }]}>
-          <Text style={styles.metricValue}>{emptyTables}</Text>
+          <View style={[styles.metricIconPlate, { backgroundColor: "#F5F3FF" }]}>
+            <MaterialCommunityIcons name="door-open" size={20} color={COLORS.purple} />
+          </View>
+          <Text style={[styles.metricValue, { color: COLORS.purple }]}>{emptyTables}</Text>
           <Text style={styles.metricLabel}>Open</Text>
         </Card>
       </View>
@@ -200,9 +230,54 @@ export default function DashboardScreen() {
               <TextInput value={formCurrency} onChangeText={setFormCurrency} style={styles.input} />
             </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Amount of Tables</Text>
-              <TextInput value={formTableCount} onChangeText={setFormTableCount} keyboardType="numeric" style={styles.input} />
+            {hasActiveTables && (
+              <View style={styles.flashcard}>
+                <View style={styles.flashcardHeader}>
+                  <MaterialIcons name="lock" size={18} color="#EA580C" />
+                  <Text style={styles.flashcardTitle}>Table Layout Locked</Text>
+                </View>
+                <Text style={styles.flashcardText}>
+                  Active or billed tables are present in the dining room. Clear or settle all active orders before changing table counts.
+                </Text>
+              </View>
+            )}
+
+            <View style={styles.tableConfigSection}>
+              <Text style={styles.tableConfigSectionTitle}>Amount of Tables per Section</Text>
+              <View style={styles.inputRow}>
+                <View style={[styles.inputGroup, { flex: 1 }]}>
+                  <Text style={styles.inputLabel}>Restaurant</Text>
+                  <TextInput
+                    value={formRestaurantTableCount}
+                    onChangeText={setFormRestaurantTableCount}
+                    keyboardType="numeric"
+                    editable={!hasActiveTables}
+                    style={[styles.input, hasActiveTables && styles.inputDisabled]}
+                  />
+                </View>
+
+                <View style={[styles.inputGroup, { flex: 1 }]}>
+                  <Text style={styles.inputLabel}>Family</Text>
+                  <TextInput
+                    value={formFamilyTableCount}
+                    onChangeText={setFormFamilyTableCount}
+                    keyboardType="numeric"
+                    editable={!hasActiveTables}
+                    style={[styles.input, hasActiveTables && styles.inputDisabled]}
+                  />
+                </View>
+
+                <View style={[styles.inputGroup, { flex: 1 }]}>
+                  <Text style={styles.inputLabel}>Takeaway</Text>
+                  <TextInput
+                    value={formTakeawayTableCount}
+                    onChangeText={setFormTakeawayTableCount}
+                    keyboardType="numeric"
+                    editable={!hasActiveTables}
+                    style={[styles.input, hasActiveTables && styles.inputDisabled]}
+                  />
+                </View>
+              </View>
             </View>
 
             <View style={styles.modalActions}>
@@ -219,9 +294,6 @@ export default function DashboardScreen() {
               onPress={async () => {
                 setSettingsModalVisible(false);
                 await signOut();
-                if (Platform.OS === "web") {
-                  window.location.reload();
-                }
               }}
               activeOpacity={0.8}
             >
@@ -230,11 +302,16 @@ export default function DashboardScreen() {
           </ScrollView>
         </View>
       </Modal>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: COLORS.bg,
+  },
   screen: {
     backgroundColor: COLORS.bg,
     flex: 1,
@@ -251,7 +328,20 @@ const styles = StyleSheet.create({
     gap: 24,
     overflow: "hidden",
     padding: 22,
-    boxShadow: "0 18px 38px rgba(43, 33, 24, 0.20)",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#2b2118",
+        shadowOffset: { width: 0, height: 18 },
+        shadowOpacity: 0.20,
+        shadowRadius: 38,
+      },
+      android: {
+        elevation: 8,
+      },
+      web: {
+        boxShadow: "0 18px 38px rgba(43, 33, 24, 0.20)",
+      },
+    }),
   },
   heroTop: {
     alignItems: "flex-start",
@@ -343,13 +433,34 @@ const styles = StyleSheet.create({
   metricCard: {
     alignItems: "center",
     flex: 1,
-    gap: 3,
     paddingHorizontal: 8,
     paddingVertical: 13,
-    boxShadow: "0 8px 22px rgba(35, 27, 19, 0.07)",
+    borderRadius: 18,
+    gap: 3,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#231B13",
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.07,
+        shadowRadius: 22,
+      },
+      android: {
+        elevation: 3,
+      },
+      web: {
+        boxShadow: "0 8px 22px rgba(35, 27, 19, 0.07)",
+      },
+    }),
+  },
+  metricIconPlate: {
+    alignItems: "center",
+    borderRadius: 999,
+    height: 36,
+    justifyContent: "center",
+    width: 36,
+    marginBottom: 4,
   },
   metricValue: {
-    color: COLORS.primaryDark,
     fontSize: 22,
     fontVariant: ["tabular-nums"],
     fontWeight: "900",
@@ -462,12 +573,6 @@ const styles = StyleSheet.create({
     gap: 12,
     marginTop: 12,
   },
-  errorText: {
-    color: COLORS.danger,
-    fontSize: 13,
-    fontWeight: "800",
-    marginBottom: 4,
-  },
   logoutBtn: {
     alignItems: "center",
     borderTopColor: COLORS.border,
@@ -479,6 +584,52 @@ const styles = StyleSheet.create({
     color: "#ef4444",
     fontSize: 14,
     fontWeight: "800",
+  },
+  flashcard: {
+    backgroundColor: "#FFF7ED",
+    borderColor: "#FED7AA",
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 12,
+    gap: 4,
+  },
+  flashcardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  flashcardTitle: {
+    color: "#C2410C",
+    fontSize: 13,
+    fontWeight: "900",
+  },
+  flashcardText: {
+    color: "#7C2D12",
+    fontSize: 11,
+    lineHeight: 16,
+    fontWeight: "700",
+  },
+  tableConfigSection: {
+    backgroundColor: "#F8FAFC",
+    borderRadius: 16,
+    padding: 12,
+    borderColor: "#E2E8F0",
+    borderWidth: 1,
+    gap: 8,
+  },
+  tableConfigSectionTitle: {
+    fontSize: 12,
+    fontWeight: "900",
+    color: COLORS.text,
+  },
+  inputRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  inputDisabled: {
+    backgroundColor: "#F1F5F9",
+    color: "#94A3B8",
+    borderColor: "#E2E8F0",
   },
 });
 

@@ -2,7 +2,6 @@ import { Category, MenuSection } from "@/types";
 
 export const MENU_SECTIONS: { id: MenuSection; name: string; icon: string }[] = [
   { id: "restaurant", name: "Restaurant", icon: "🍽️" },
-  { id: "cafe", name: "Cafe", icon: "☕" },
 ];
 
 const RESTAURANT_CATEGORY_KEYS = new Set(["popular", "breakfast", "main", "rice"]);

@@ -16,3 +16,11 @@ export function formatDate(value: string) {
     year: "numeric",
   }).format(new Date(value));
 }
+
+export function getTableName(id: number, settings?: { restaurantTableCount?: number; familyTableCount?: number }): string {
+  const rCount = settings?.restaurantTableCount ?? 6;
+  const fCount = settings?.familyTableCount ?? 4;
+  if (id >= 1 && id <= rCount) return `R${id}`;
+  if (id >= rCount + 1 && id <= rCount + fCount) return `F${id - rCount}`;
+  return `T${id - rCount - fCount}`;
+}

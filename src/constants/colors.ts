@@ -54,11 +54,11 @@ export const TABLE_STATUS_COLORS: Record<
     dot: COLORS.blue,
   },
   paid: {
-    bg: "#F1F5F9",
-    fg: COLORS.slate,
-    bd: COLORS.gray,
+    bg: COLORS.greenLight,
+    fg: COLORS.green,
+    bd: COLORS.green,
     label: "Paid",
-    dot: COLORS.gray,
+    dot: COLORS.green,
   },
 };
 
@@ -79,8 +79,8 @@ export const TABLE_STATUS_ACCENTS: Record<TableStatus, { fill: string; text: str
     tint: COLORS.blueLight,
   },
   paid: {
-    fill: COLORS.slate,
+    fill: COLORS.green,
     text: COLORS.white,
-    tint: "#F1F5F9",
+    tint: COLORS.greenLight,
   },
 };

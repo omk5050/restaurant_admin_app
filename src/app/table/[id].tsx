@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
-import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Modal, StyleSheet, Text, TextInput, TouchableOpacity, View, Platform } from "react-native";
 
 import { CategorySidebar } from "@/components/menu/CategorySidebar";
 import { MenuList } from "@/components/menu/MenuList";
@@ -13,6 +13,7 @@ import { useMenu } from "@/hooks/useMenu";
 import { useOrder } from "@/hooks/useOrder";
 import { useTables } from "@/hooks/useTables";
 import { useOrderStore } from "@/store/orderStore";
+import { useTableStore } from "@/store/tableStore";
 import { MenuItem, MenuSection } from "@/types";
 import { formatCurrency, formatTime } from "@/utils/formatters";
 
@@ -32,6 +33,11 @@ export default function TableOrderScreen() {
     if (firstCategory) setSelectedCategory(firstCategory.id);
   }
   const { getOrderForTable, updateOrderItem, generateBill } = useOrder();
+  const createOrder = useOrderStore((state) => state.createOrder);
+
+  const table = findTable(tableId);
+  const order = getOrderForTable(tableId);
+  const initialized = useRef(false);
 
   // KOT success modal state
   const [kotModalVisible, setKotModalVisible] = useState(false);
@@ -40,18 +46,44 @@ export default function TableOrderScreen() {
   // Error modal state
   const [errorModal, setErrorModal] = useState("");
 
+  // Takeaway state
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [takeawayModalVisible, setTakeawayModalVisible] = useState(false);
+
   useEffect(() => {
-    if (Number.isFinite(tableId)) {
+    if (table && table.name.startsWith("T") && !order) {
+      setTakeawayModalVisible(true);
+    } else {
+      setTakeawayModalVisible(false);
+    }
+  }, [table, order]);
+
+  useEffect(() => {
+    if (Number.isFinite(tableId) && table && !table.name.startsWith("T") && !initialized.current) {
+      initialized.current = true;
       ensureOrderForTable(tableId).catch((err) => {
         console.error("ensureOrderForTable failed:", err);
         setErrorModal(err.message || "Failed to initialize table session.");
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tableId]);
+  }, [tableId, table]);
 
-  const table = findTable(tableId);
-  const order = getOrderForTable(tableId);
+  // Resolve table status dynamically for takeaways
+  const tableStatus = useMemo(() => {
+    if (!table) return "empty";
+    if (table.name.startsWith("T")) {
+      if (order) {
+        if (order.status === "open" || order.status === "hold") return "active";
+        if (order.status === "billed") return "bill";
+        if (order.status === "paid") return "paid";
+      }
+      return "empty";
+    }
+    return table.status;
+  }, [table, order]);
+
   const activeCategory = categories.find((category) => category.id === selectedCategory);
   const { items } = useMenu(selectedCategory);
 
@@ -133,11 +165,96 @@ export default function TableOrderScreen() {
     return (
       <View style={styles.emptyScreen}>
         <Text style={styles.emptyText}>Preparing table...</Text>
+
+        {/* Takeaway Details Modal */}
+        <Modal
+          visible={takeawayModalVisible}
+          transparent
+          animationType="slide"
+          onRequestClose={() => {
+            setTakeawayModalVisible(false);
+            router.replace("/(tabs)" as never);
+          }}
+        >
+          <View style={styles.kotOverlay}>
+            <View style={styles.kotCard}>
+              <Text style={styles.kotEmoji}>🛍️</Text>
+              <Text style={styles.kotTitle}>New Takeaway Order</Text>
+              <Text style={styles.kotMessage}>
+                Please enter the customer details for Takeaway {table?.name || `T${tableId - 10}`}
+              </Text>
+              
+              <View style={styles.takeawayForm}>
+                <Text style={styles.takeawayInputLabel}>Customer Name *</Text>
+                <TextInput
+                  style={styles.takeawayInput}
+                  placeholder="Enter customer name"
+                  placeholderTextColor={COLORS.textSec}
+                  value={customerName}
+                  onChangeText={setCustomerName}
+                />
+                
+                <Text style={styles.takeawayInputLabel}>Phone Number *</Text>
+                <TextInput
+                  style={styles.takeawayInput}
+                  placeholder="Enter 10-digit number"
+                  placeholderTextColor={COLORS.textSec}
+                  keyboardType="phone-pad"
+                  value={customerPhone}
+                  onChangeText={setCustomerPhone}
+                />
+              </View>
+
+              <TouchableOpacity
+                style={[
+                  styles.kotDismissBtn,
+                  (!customerName.trim() || !customerPhone.trim()) && { opacity: 0.5 }
+                ]}
+                disabled={!customerName.trim() || !customerPhone.trim()}
+                onPress={async () => {
+                  try {
+                    const newOrder = await createOrder(tableId, 1, true, customerName, customerPhone);
+                    await useTableStore.getState().setTableOrder(tableId, newOrder.id);
+                    setTakeawayModalVisible(false);
+                  } catch (err: any) {
+                    setErrorModal(err.message || "Failed to create takeaway order.");
+                  }
+                }}
+              >
+                <Text style={styles.kotDismissText}>Start Order</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.kotDismissBtn, { backgroundColor: "#f1f5f9", marginTop: 0 }]}
+                onPress={() => {
+                  setTakeawayModalVisible(false);
+                  router.replace("/(tabs)" as never);
+                }}
+              >
+                <Text style={[styles.kotDismissText, { color: "#64748b" }]}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Error Modal */}
+        <Modal visible={!!errorModal} transparent animationType="fade" onRequestClose={() => setErrorModal("")}>
+          <View style={styles.kotOverlay}>
+            <View style={styles.kotCard}>
+              <Text style={styles.kotEmoji}>⚠️</Text>
+              <Text style={[styles.kotTitle, { color: "#f59e0b" }]}>Error</Text>
+              <Text style={styles.kotMessage}>{errorModal}</Text>
+              <TouchableOpacity style={[styles.kotDismissBtn, { backgroundColor: "#f59e0b" }]} onPress={() => setErrorModal("")}>
+                <Text style={styles.kotDismissText}>OK</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
       </View>
     );
   }
 
-  if (table.status === "paid") {
+  if (tableStatus === "paid") {
     return (
       <View style={styles.paidScreen}>
         <View style={styles.paidCard}>
@@ -168,7 +285,13 @@ export default function TableOrderScreen() {
                 await clearTable(tableId);
                 await useOrderStore.getState().fetchOrders();
                 await useOrderStore.getState().fetchAnalytics();
-                await ensureOrderForTable(tableId);
+                if (table.name.startsWith("T")) {
+                  setCustomerName("");
+                  setCustomerPhone("");
+                  setTakeawayModalVisible(true);
+                } else {
+                  await ensureOrderForTable(tableId);
+                }
               }}
             >
               Start New Session
@@ -183,10 +306,14 @@ export default function TableOrderScreen() {
     <View style={styles.screen}>
       <View style={styles.infoBar}>
         <View style={styles.infoItem}>
-          <Text style={styles.infoIcon}>👥</Text>
-          <View>
-            <Text style={styles.infoLabel}>Guests</Text>
-            <Text style={styles.infoValue}>{order.guests}</Text>
+          <Text style={styles.infoIcon}>{order.isTakeaway ? "👤" : "👥"}</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.infoLabel} numberOfLines={1} ellipsizeMode="tail">
+              {order.isTakeaway ? order.customerPhone : "Guests"}
+            </Text>
+            <Text style={styles.infoValue} numberOfLines={1} ellipsizeMode="tail">
+              {order.isTakeaway ? order.customerName : order.guests}
+            </Text>
           </View>
         </View>
         <View style={styles.infoItem}>
@@ -225,7 +352,7 @@ export default function TableOrderScreen() {
       </View>
 
       {/* Clear Table Button for active/billed tables */}
-      {(table.status === "active" || table.status === "bill") && (
+      {(tableStatus === "active" || tableStatus === "bill") && (
         <TouchableOpacity style={styles.clearTableBtn} onPress={handleClearTable} activeOpacity={0.8}>
           <Text style={styles.clearTableBtnText}>🗑️  Clear Table</Text>
         </TouchableOpacity>
@@ -389,7 +516,20 @@ const styles = StyleSheet.create({
     gap: 12,
     width: "100%",
     maxWidth: 400,
-    boxShadow: "0 10px 30px rgba(0,0,0,0.06)",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.06,
+        shadowRadius: 30,
+      },
+      android: {
+        elevation: 4,
+      },
+      web: {
+        boxShadow: "0 10px 30px rgba(0,0,0,0.06)",
+      },
+    }),
   },
   paidEmoji: {
     fontSize: 48,
@@ -467,5 +607,27 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "800",
     fontSize: 15,
+  },
+  takeawayForm: {
+    width: "100%",
+    gap: 8,
+    marginVertical: 10,
+  },
+  takeawayInputLabel: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: COLORS.textSec,
+    alignSelf: "flex-start",
+  },
+  takeawayInput: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 15,
+    color: COLORS.text,
+    backgroundColor: COLORS.bg,
+    width: "100%",
   },
 });

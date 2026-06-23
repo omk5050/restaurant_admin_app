@@ -23,23 +23,25 @@ export function CategorySidebar({
 
   return (
     <View style={styles.wrap}>
-      <View style={styles.sectionRow}>
-        {MENU_SECTIONS.map((section) => {
-          const selected = section.id === selectedSection;
-          return (
-            <Pressable
-              key={section.id}
-              onPress={() => onSelectSection(section.id)}
-              style={[styles.sectionTab, selected && styles.sectionTabSelected]}
-            >
-              <Text style={styles.sectionIcon}>{section.icon}</Text>
-              <Text style={[styles.sectionName, selected && styles.sectionNameSelected]}>
-                {section.name}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      {MENU_SECTIONS.length > 1 && (
+        <View style={styles.sectionRow}>
+          {MENU_SECTIONS.map((section) => {
+            const selected = section.id === selectedSection;
+            return (
+              <Pressable
+                key={section.id}
+                onPress={() => onSelectSection(section.id)}
+                style={[styles.sectionTab, selected && styles.sectionTabSelected]}
+              >
+                <Text style={styles.sectionIcon}>{section.icon}</Text>
+                <Text style={[styles.sectionName, selected && styles.sectionNameSelected]}>
+                  {section.name}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
 
       <FlatList
         data={subCategories}

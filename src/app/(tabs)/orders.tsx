@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/Card";
 import { COLORS } from "@/constants/colors";
 import { useOrder } from "@/hooks/useOrder";
 import { useOrderStore } from "@/store/orderStore";
+import { useTableStore } from "@/store/tableStore";
 import { formatCurrency, formatTime } from "@/utils/formatters";
 import { Order } from "@/types";
 
@@ -67,6 +68,10 @@ function Header({ orders }: { orders: Order[] }) {
 }
 
 function OrderCard({ order }: { order: Order }) {
+  const tables = useTableStore((state) => state.tables);
+  const table = tables.find((t) => t.id === order.tableId);
+  const tableName = table ? table.name : `T${order.tableId}`;
+
   const meta = STATUS_META[order.status];
   const itemPreview = order.items.slice(0, 2).map((item) => `${item.qty}x ${item.name}`).join(" · ");
   const extraItems = Math.max(order.items.length - 2, 0);
@@ -75,15 +80,22 @@ function OrderCard({ order }: { order: Order }) {
     <Card style={styles.orderCard}>
       <View style={[styles.statusRail, { backgroundColor: meta.color }]} />
       <View style={styles.cardTop}>
-        <View style={styles.tablePlate}>
-          <Text style={styles.tablePlateText}>T{order.tableId}</Text>
+        <View style={[styles.tablePlate, order.isTakeaway && { backgroundColor: COLORS.purpleLight }]}>
+          <Text style={[styles.tablePlateText, order.isTakeaway && { color: COLORS.purple, fontSize: 20 }]}>
+            {order.isTakeaway ? "🛍️" : tableName}
+          </Text>
         </View>
         <View style={styles.orderInfo}>
           <View style={styles.orderTitleLine}>
             <Text style={styles.orderNo}>{order.orderNo}</Text>
             <Badge label={meta.label} tone={meta.tone} />
           </View>
-          <Text style={styles.meta}>{formatTime(order.openedAt)} · {order.guests} guests</Text>
+          <Text style={styles.meta} numberOfLines={1} ellipsizeMode="tail">
+            {order.isTakeaway
+              ? `${order.customerName || "Takeaway"} (${order.customerPhone || "N/A"})`
+              : `${order.guests} guests`}{" "}
+            · {formatTime(order.openedAt)}
+          </Text>
         </View>
       </View>
 
@@ -106,17 +118,20 @@ function OrderCard({ order }: { order: Order }) {
 export default function OrdersScreen() {
   const orders = useOrderStore((state) => state.orders);
   const fetchOrders = useOrderStore((state) => state.fetchOrders);
+  const fetchTables = useTableStore((state) => state.fetchTables);
 
   useEffect(() => {
     fetchOrders();
+    fetchTables();
 
-    // Poll orders every 10 seconds to keep live tickets updated
+    // Poll orders and tables every 10 seconds to keep live tickets updated
     const interval = setInterval(() => {
       fetchOrders();
+      fetchTables();
     }, 10000);
 
     return () => clearInterval(interval);
-  }, [fetchOrders]);
+  }, [fetchOrders, fetchTables]);
 
   return (
     <FlatList

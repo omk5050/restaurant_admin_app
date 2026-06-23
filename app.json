@@ -1,22 +1,27 @@
 {
   "expo": {
-    "name": "restaurant-admin-app",
-    "slug": "restaurant-admin-app",
-    "platforms": ["ios", "android", "web"],
+    "name": "billbucks",
+    "slug": "billbucks",
+    "privacy": "public",
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "scheme": "restaurantadminapp",
+    "icon": "./assets/images/logo.png",
+    "scheme": "billbucks",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/images/logo.png"
     },
     "android": {
+      "package": "com.billbucks.adminapp",
+      "usesCleartextTraffic": true,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "foregroundImage": "./assets/images/logo.png"
       },
       "predictiveBackGestureEnabled": false
     },
@@ -31,15 +36,24 @@
         {
           "backgroundColor": "#208AEF",
           "android": {
-            "image": "./assets/images/splash-icon.png",
+            "image": "./assets/images/logo.png",
             "imageWidth": 76
           }
         }
-      ]
+      ],
+      "expo-sharing",
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "8f7826c1-68a2-4156-9070-881be0b09909"
+      }
+    },
+    "owner": "omk0505"
   }
 }

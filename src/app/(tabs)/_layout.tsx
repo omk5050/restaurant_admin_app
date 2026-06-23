@@ -1,5 +1,6 @@
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { Platform } from "react-native";
 
 import { COLORS } from "./../../constants/colors";
 import React from "react";
@@ -36,7 +37,20 @@ export default function TabsLayout() {
           height: 74,
           paddingBottom: 8,
           paddingTop: 6,
-          boxShadow: "0 -8px 28px rgba(35, 27, 19, 0.08)",
+          ...Platform.select({
+            ios: {
+              shadowColor: "#231B13",
+              shadowOffset: { width: 0, height: -8 },
+              shadowOpacity: 0.08,
+              shadowRadius: 28,
+            },
+            android: {
+              elevation: 6,
+            },
+            web: {
+              boxShadow: "0 -8px 28px rgba(35, 27, 19, 0.08)",
+            },
+          }),
         },
       }}
     >

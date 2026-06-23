@@ -15,19 +15,26 @@ export function BillSummaryCard({ table, order }: BillSummaryCardProps) {
   return (
     <Card style={styles.card}>
       <View style={styles.header}>
-        <View style={styles.iconBox}>
-          <Text style={styles.icon}>🪑</Text>
+        <View style={[styles.iconBox, order.isTakeaway && { backgroundColor: COLORS.purple }]}>
+          <Text style={styles.icon}>{order.isTakeaway ? "🛍️" : "🪑"}</Text>
         </View>
         <View style={styles.titleWrap}>
           <View style={styles.titleLine}>
-            <Text style={styles.tableName}>Table {table.id}</Text>
-            <Badge label="Bill Amount" />
+            <Text style={styles.tableName}>{table.name}</Text>
+            <Badge label={order.isTakeaway ? "Takeaway" : "Bill Amount"} />
           </View>
           <Text style={styles.amount}>{formatCurrency(order.total)}</Text>
         </View>
       </View>
       <View style={styles.meta}>
-        <Text style={styles.metaText}>Guests: {order.guests}</Text>
+        {order.isTakeaway ? (
+          <>
+            <Text style={styles.metaText}>Name: {order.customerName}</Text>
+            <Text style={styles.metaText}>Phone: {order.customerPhone}</Text>
+          </>
+        ) : (
+          <Text style={styles.metaText}>Guests: {order.guests}</Text>
+        )}
         <Text style={styles.metaText}>Order: {order.orderNo}</Text>
         <Text style={styles.metaText}>{formatTime(order.openedAt)}</Text>
       </View>

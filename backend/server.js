@@ -71,7 +71,10 @@ const SettingsSchema = new mongoose.Schema({
   gstNumber: { type: String, default: "07AABC1234D1Z5" },
   gstPercent: { type: Number, default: 5 },
   currency: { type: String, default: "₹" },
-  tableCount: { type: Number, default: 12 },
+  tableCount: { type: Number, default: 14 },
+  restaurantTableCount: { type: Number, default: 6 },
+  familyTableCount: { type: Number, default: 4 },
+  takeawayTableCount: { type: Number, default: 4 },
 });
 const Settings = mongoose.model("Settings", SettingsSchema);
 
@@ -133,6 +136,9 @@ const OrderSchema = new mongoose.Schema({
   openedAt: { type: String, required: true },
   closedAt: { type: String, default: null },
   paymentMethod: { type: String, default: null },
+  isTakeaway: { type: Boolean, default: false },
+  customerName: { type: String, default: "" },
+  customerPhone: { type: String, default: "" },
 });
 OrderSchema.index({ adminId: 1, id: 1 }, { unique: true });
 const Order = mongoose.model("Order", OrderSchema);
@@ -149,6 +155,9 @@ const InvoiceSchema = new mongoose.Schema({
   total: { type: Number, required: true },
   paymentMethod: { type: String, required: true },
   createdAt: { type: String, required: true },
+  isTakeaway: { type: Boolean, default: false },
+  customerName: { type: String, default: "" },
+  customerPhone: { type: String, default: "" },
 });
 InvoiceSchema.index({ adminId: 1, id: 1 }, { unique: true });
 const Invoice = mongoose.model("Invoice", InvoiceSchema);
@@ -184,14 +193,37 @@ const REQUIRED_CATEGORIES = [
 ];
 
 const REQUIRED_MENU_ITEMS = [
+  // Desserts
   { id: "m38", categoryId: "desserts", name: "Tripple Choco Bowl", price: 150, emoji: "🍫", isAvailable: true, isVeg: true },
   { id: "m39", categoryId: "desserts", name: "Oreo Choco Bowl", price: 160, emoji: "🍪", isAvailable: true, isVeg: true },
+  // Snacks
   { id: "m40", categoryId: "snacks", name: "French Fries Classic", price: 80, emoji: "🍟", isAvailable: true, isVeg: true },
   { id: "m41", categoryId: "snacks", name: "Peri Peri French Fries", price: 100, emoji: "🌶️", isAvailable: true, isVeg: true },
+  { id: "m46", categoryId: "snacks", name: "Tandoori Lollipop", price: 220, emoji: "🍗", isAvailable: true, isVeg: false },
+  { id: "m47", categoryId: "snacks", name: "Reshmi Kebab", price: 240, emoji: "🍢", isAvailable: true, isVeg: false },
+  // Rice
   { id: "m42", categoryId: "rice", name: "Veg Dum Biryani", price: 180, emoji: "🍛", isAvailable: true, isVeg: true },
   { id: "m43", categoryId: "rice", name: "Egg Dum Biryani", price: 200, emoji: "🍳", isAvailable: true, isVeg: false },
   { id: "m44", categoryId: "rice", name: "Paneer Tikka Biryani", price: 220, emoji: "🍢", isAvailable: true, isVeg: true },
+  { id: "m48", categoryId: "rice", name: "Chicken Dum Biryani", price: 240, emoji: "🍗", isAvailable: true, isVeg: false },
+  { id: "m49", categoryId: "rice", name: "Mutton Dum Biryani", price: 280, emoji: "🐑", isAvailable: true, isVeg: false },
+  { id: "m50", categoryId: "rice", name: "Chicken Tikka Biryani", price: 260, emoji: "🍗", isAvailable: true, isVeg: false },
+  { id: "m51", categoryId: "rice", name: "Tandoori Biryani", price: 260, emoji: "🔥", isAvailable: true, isVeg: false },
+  // Main Course
   { id: "m45", categoryId: "main", name: "Paneer Kalimiri Kabab", price: 180, emoji: "🫕", isAvailable: true, isVeg: true },
+  { id: "m52", categoryId: "main", name: "Afghani Tandoor", price: 320, emoji: "🔥", isAvailable: true, isVeg: false },
+  { id: "m53", categoryId: "main", name: "Chicken Sheekh Kabab", price: 260, emoji: "🍗", isAvailable: true, isVeg: false },
+  { id: "m54", categoryId: "main", name: "Mutton Sheekh Kebab", price: 300, emoji: "🐑", isAvailable: true, isVeg: false },
+  { id: "m55", categoryId: "main", name: "Chicken Tikka Kebab", price: 260, emoji: "🍗", isAvailable: true, isVeg: false },
+  { id: "m56", categoryId: "main", name: "Chicken Tangadi Kebab", price: 280, emoji: "🍗", isAvailable: true, isVeg: false },
+  { id: "m57", categoryId: "main", name: "Lahsuni Kebab", price: 240, emoji: "🧄", isAvailable: true, isVeg: false },
+  { id: "m58", categoryId: "main", name: "Paneer Tikka Kebab", price: 220, emoji: "🧀", isAvailable: true, isVeg: true },
+  { id: "m59", categoryId: "main", name: "Speacial Paradise Kebab", price: 350, emoji: "⭐", isAvailable: true, isVeg: false },
+  { id: "m60", categoryId: "main", name: "Chicken Hariyali Kebab", price: 260, emoji: "🌿", isAvailable: true, isVeg: false },
+  { id: "m61", categoryId: "main", name: "Paneer Kalimiri kebab", price: 200, emoji: "🧀", isAvailable: true, isVeg: true },
+  { id: "m62", categoryId: "main", name: "Chicken Kalimiri kebab", price: 260, emoji: "🍗", isAvailable: true, isVeg: false },
+  { id: "m63", categoryId: "main", name: "Tandoor Chicken Red", price: 280, emoji: "🔴", isAvailable: true, isVeg: false },
+  { id: "m64", categoryId: "main", name: "Tandoor Chicken White", price: 280, emoji: "⚪", isAvailable: true, isVeg: false },
 ];
 
 function getScopedId(baseId, adminId, usesSuffixedIds) {
@@ -203,28 +235,39 @@ async function ensureDefaultMenuData(adminId) {
 
   const categories = await Category.find({ adminId });
   const usesSuffixedIds = categories.some((category) => category.id.endsWith(`_${adminId}`));
-  const requiredMenuIds = REQUIRED_MENU_ITEMS.map((item) => getScopedId(item.id, adminId, usesSuffixedIds));
 
-  await Promise.all(REQUIRED_CATEGORIES.map((category) => {
-    const id = getScopedId(category.id, adminId, usesSuffixedIds);
-    return Category.findOneAndUpdate(
-      { adminId, id },
-      { ...category, id, adminId },
-      { upsert: true, setDefaultsOnInsert: true }
-    );
-  }));
+  // 1. Create categories if none exist for this admin
+  if (categories.length === 0) {
+    await Promise.all(REQUIRED_CATEGORIES.map((category) => {
+      const id = getScopedId(category.id, adminId, usesSuffixedIds);
+      return Category.findOneAndUpdate(
+        { adminId, id },
+        { ...category, id, adminId },
+        { upsert: true, setDefaultsOnInsert: true }
+      );
+    }));
+  }
 
-  await MenuItem.deleteMany({ adminId, id: { $nin: requiredMenuIds } });
+  // 2. Create default menu items if none exist for this admin
+  const menuCount = await MenuItem.countDocuments({ adminId });
+  if (menuCount === 0) {
+    await Promise.all(REQUIRED_MENU_ITEMS.map((item) => {
+      const id = getScopedId(item.id, adminId, usesSuffixedIds);
+      const categoryId = getScopedId(item.categoryId, adminId, usesSuffixedIds);
+      return MenuItem.findOneAndUpdate(
+        { adminId, id },
+        { ...item, id, categoryId, adminId },
+        { upsert: true, setDefaultsOnInsert: true }
+      );
+    }));
+  }
+}
 
-  await Promise.all(REQUIRED_MENU_ITEMS.map((item) => {
-    const id = getScopedId(item.id, adminId, usesSuffixedIds);
-    const categoryId = getScopedId(item.categoryId, adminId, usesSuffixedIds);
-    return MenuItem.findOneAndUpdate(
-      { adminId, id },
-      { ...item, id, categoryId, adminId },
-      { upsert: true, setDefaultsOnInsert: true }
-    );
-  }));
+function getTableName(id) {
+  if (id >= 1 && id <= 6) return `R${id}`;
+  if (id >= 7 && id <= 10) return `F${id - 6}`;
+  if (id >= 11 && id <= 14) return `T${id - 10}`;
+  return `Table ${id}`;
 }
 
 // ==========================================
@@ -269,12 +312,15 @@ async function seedDatabase() {
     if (settingsCount === 0) {
       await Settings.create({
         adminId,
-        restaurantName: "Hotel Grand",
+        restaurantName: "Hotel Paradise",
         address: "123 MG Road, Your City",
         gstNumber: "07AABC1234D1Z5",
         gstPercent: 5,
         currency: "₹",
-        tableCount: 12,
+        tableCount: 14,
+        restaurantTableCount: 6,
+        familyTableCount: 4,
+        takeawayTableCount: 4,
       });
       console.log("Seeded default settings.");
     }
@@ -465,14 +511,14 @@ async function seedDatabase() {
     const tableCountDb = await Table.countDocuments();
     if (tableCountDb === 0) {
       const activeOrders = await Order.find({ status: { $ne: "paid" } });
-      const defaultTables = Array.from({ length: 12 }, (_, index) => {
+      const defaultTables = Array.from({ length: 14 }, (_, index) => {
         const id = index + 1;
         const order = activeOrders.find((item) => item.tableId === id);
         return {
           id,
-          name: `T${id}`,
+          name: getTableName(id),
           seats: 4,
-          status: id === 12 ? "paid" : order?.status === "billed" ? "bill" : order ? "active" : "empty",
+          status: id === 14 ? "paid" : order?.status === "billed" ? "bill" : order ? "active" : "empty",
           currentOrderId: order ? order.id : null,
         };
       });
@@ -532,57 +578,117 @@ app.get("/api/settings", authenticateToken, async (req, res) => {
 app.put("/api/settings", authenticateToken, async (req, res) => {
   try {
     const adminId = resolveAdminId(req);
-    const { restaurantName, address, gstNumber, gstPercent, currency, tableCount } = req.body;
+    const {
+      restaurantName,
+      address,
+      gstNumber,
+      gstPercent,
+      currency,
+      restaurantTableCount,
+      familyTableCount,
+      takeawayTableCount,
+    } = req.body;
     let settings = await Settings.findOne({ adminId });
     if (!settings) {
       settings = new Settings({ adminId });
     }
 
-    const oldTableCount = settings.tableCount;
-    const newTableCount = Number(tableCount);
+    const rCount = Number(restaurantTableCount ?? 6);
+    const fCount = Number(familyTableCount ?? 4);
+    const tCount = Number(takeawayTableCount ?? 4);
+    const newTableCount = rCount + fCount + tCount;
 
-    if (newTableCount !== oldTableCount) {
-      if (newTableCount > oldTableCount) {
-        // Create tables from oldTableCount + 1 to newTableCount
-        const newTables = [];
-        for (let i = oldTableCount + 1; i <= newTableCount; i++) {
-          newTables.push({
-            adminId,
-            id: i,
-            name: `T${i}`,
-            seats: 4,
-            status: "empty",
-            currentOrderId: null,
-          });
-        }
-        await Table.insertMany(newTables);
-      } else {
-        // Check if any tables that will be deleted are active
-        const activeTablesCount = await Table.countDocuments({
-          adminId,
-          id: { $gt: newTableCount },
-          status: { $in: ["active", "bill"] },
+    const countsChanged =
+      (settings.restaurantTableCount ?? 6) !== rCount ||
+      (settings.familyTableCount ?? 4) !== fCount ||
+      (settings.takeawayTableCount ?? 4) !== tCount;
+
+    if (countsChanged) {
+      // Check if there are ANY active or billed orders in the entire system
+      const activeTablesCount = await Table.countDocuments({
+        adminId,
+        status: { $in: ["active", "bill"] },
+      });
+
+      if (activeTablesCount > 0) {
+        return res.status(400).json({
+          error: "Cannot change table counts while there are active or billed orders. Please clear all tables first.",
         });
-
-        if (activeTablesCount > 0) {
-          return res.status(400).json({
-            error: "Cannot decrease table count. Some of the tables being removed have active orders.",
-          });
-        }
-
-        // Delete tables with id > newTableCount
-        await Table.deleteMany({ adminId, id: { $gt: newTableCount } });
       }
+
+      // Delete all tables for this admin and recreate
+      await Table.deleteMany({ adminId });
+
+      const newTables = [];
+      let currentId = 1;
+
+      // 1. Restaurant
+      for (let i = 1; i <= rCount; i++) {
+        newTables.push({
+          adminId,
+          id: currentId,
+          name: `R${i}`,
+          seats: 4,
+          status: "empty",
+          currentOrderId: null,
+        });
+        currentId++;
+      }
+
+      // 2. Family Section
+      for (let i = 1; i <= fCount; i++) {
+        newTables.push({
+          adminId,
+          id: currentId,
+          name: `F${i}`,
+          seats: 4,
+          status: "empty",
+          currentOrderId: null,
+        });
+        currentId++;
+      }
+
+      // 3. Takeaway
+      for (let i = 1; i <= tCount; i++) {
+        newTables.push({
+          adminId,
+          id: currentId,
+          name: `T${i}`,
+          seats: 4,
+          status: "empty",
+          currentOrderId: null,
+        });
+        currentId++;
+      }
+
+      await Table.insertMany(newTables);
     }
+
+    const oldGstPercent = settings.gstPercent ?? 5;
+    const newGstPercent = Number(gstPercent ?? 5);
 
     settings.restaurantName = restaurantName;
     settings.address = address;
     settings.gstNumber = gstNumber;
-    settings.gstPercent = Number(gstPercent);
+    settings.gstPercent = newGstPercent;
     settings.currency = currency;
+    settings.restaurantTableCount = rCount;
+    settings.familyTableCount = fCount;
+    settings.takeawayTableCount = tCount;
     settings.tableCount = newTableCount;
 
     await settings.save();
+
+    if (oldGstPercent !== newGstPercent) {
+      const activeOrders = await Order.find({ adminId, status: { $ne: "paid" } });
+      for (const order of activeOrders) {
+        const { subtotal, gstAmount, total } = calculateTotal(order.items || [], newGstPercent);
+        await Order.findOneAndUpdate(
+          { adminId, id: order.id },
+          { subtotal, gstAmount, total }
+        );
+      }
+    }
     res.json(settings);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -757,7 +863,7 @@ app.get("/api/orders", authenticateToken, async (req, res) => {
 app.post("/api/orders", authenticateToken, async (req, res) => {
   try {
     const adminId = resolveAdminId(req);
-    const { tableId, guests } = req.body;
+    const { tableId, guests, isTakeaway, customerName, customerPhone } = req.body;
     const totalOrders = await Order.countDocuments({ adminId });
     const orderNo = `#${1026 + totalOrders}`;
     const id = "ord_" + Date.now();
@@ -774,6 +880,9 @@ app.post("/api/orders", authenticateToken, async (req, res) => {
       gstAmount: 0,
       total: 0,
       openedAt: new Date().toISOString(),
+      isTakeaway: !!isTakeaway,
+      customerName: customerName || "",
+      customerPhone: customerPhone || "",
     });
 
     await Table.findOneAndUpdate(
@@ -848,6 +957,9 @@ app.post("/api/orders/:id/pay", authenticateToken, async (req, res) => {
       total: order.total,
       paymentMethod,
       createdAt: closedAt,
+      isTakeaway: order.isTakeaway,
+      customerName: order.customerName,
+      customerPhone: order.customerPhone,
     });
 
     await Table.findOneAndUpdate(

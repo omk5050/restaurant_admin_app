@@ -42,7 +42,13 @@ interface OrderStore {
   analytics: typeof DEFAULT_ANALYTICS;
   fetchOrders: () => Promise<void>;
   fetchAnalytics: () => Promise<void>;
-  createOrder: (tableId: number, guests: number) => Promise<Order>;
+  createOrder: (
+    tableId: number,
+    guests: number,
+    isTakeaway?: boolean,
+    customerName?: string,
+    customerPhone?: string
+  ) => Promise<Order>;
   updateOrderItem: (orderId: string, menuItem: MenuItem, qty: number) => Promise<void>;
   generateBill: (orderId: string) => Promise<void>;
   closeOrder: (orderId: string, method: PaymentMethod) => Promise<Invoice>;
@@ -78,12 +84,12 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
       console.error("Failed to fetch analytics:", err);
     }
   },
-  createOrder: async (tableId, guests) => {
+  createOrder: async (tableId, guests, isTakeaway = false, customerName = "", customerPhone = "") => {
     try {
       const res = await apiFetch(`${API_URL}/api/orders`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tableId, guests }),
+        body: JSON.stringify({ tableId, guests, isTakeaway, customerName, customerPhone }),
       });
       if (res.ok) {
         const order = await res.json();

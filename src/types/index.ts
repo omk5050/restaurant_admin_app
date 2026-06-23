@@ -52,6 +52,9 @@ export interface Order {
   openedAt: string;
   closedAt?: string;
   paymentMethod?: PaymentMethod;
+  isTakeaway?: boolean;
+  customerName?: string;
+  customerPhone?: string;
 }
 
 export interface Invoice {
@@ -65,6 +68,9 @@ export interface Invoice {
   total: number;
   paymentMethod: PaymentMethod;
   createdAt: string;
+  isTakeaway?: boolean;
+  customerName?: string;
+  customerPhone?: string;
 }
 
 export interface AppSettings {
@@ -74,4 +80,7 @@ export interface AppSettings {
   gstPercent: number;
   currency: string;
   tableCount: number;
+  restaurantTableCount: number;
+  familyTableCount: number;
+  takeawayTableCount: number;
 }

@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from "react-native";
 
 import { COLORS } from "@/constants/colors";
-import { formatCurrency, formatDate, formatTime } from "@/utils/formatters";
+import { formatCurrency, formatDate, formatTime, getTableName } from "@/utils/formatters";
 import { AppSettings, Invoice } from "@/types";
 
 interface ThermalReceiptProps {
@@ -18,7 +18,15 @@ export function ThermalReceipt({ invoice, settings }: ThermalReceiptProps) {
         <Text style={styles.sub}>GST: {settings.gstNumber}</Text>
       </View>
       <View style={styles.meta}>
-        <Text style={styles.mono}>Table   : {invoice.tableId}</Text>
+        {invoice.isTakeaway ? (
+          <>
+            <Text style={styles.mono}>Type    : Takeaway ({getTableName(invoice.tableId, settings)})</Text>
+            <Text style={styles.mono}>Customer: {invoice.customerName}</Text>
+            <Text style={styles.mono}>Phone   : {invoice.customerPhone}</Text>
+          </>
+        ) : (
+          <Text style={styles.mono}>Table   : {getTableName(invoice.tableId, settings)}</Text>
+        )}
         <Text style={styles.mono}>
           Date    : {formatDate(invoice.createdAt)} {formatTime(invoice.createdAt)}
         </Text>
@@ -63,7 +71,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
     borderCurve: "continuous",
     borderRadius: 4,
-    maxWidth: 330,
+    maxWidth: 350,
     paddingHorizontal: 20,
     paddingVertical: 22,
     width: "100%",
@@ -77,14 +85,14 @@ const styles = StyleSheet.create({
   restaurant: {
     color: COLORS.text,
     fontFamily: "monospace",
-    fontSize: 15,
+    fontSize: 18,
     fontWeight: "900",
     letterSpacing: 3,
   },
   sub: {
     color: COLORS.textSec,
     fontFamily: "monospace",
-    fontSize: 10,
+    fontSize: 12,
     marginTop: 2,
   },
   meta: {
@@ -94,7 +102,7 @@ const styles = StyleSheet.create({
   mono: {
     color: COLORS.text,
     fontFamily: "monospace",
-    fontSize: 12,
+    fontSize: 14,
   },
   items: {
     borderBottomColor: COLORS.border,
@@ -113,11 +121,11 @@ const styles = StyleSheet.create({
   },
   qty: {
     textAlign: "center",
-    width: 34,
+    width: 36,
   },
   itemAmount: {
     textAlign: "right",
-    width: 62,
+    width: 72,
   },
   totals: {
     gap: 5,
@@ -138,7 +146,7 @@ const styles = StyleSheet.create({
   grandText: {
     color: COLORS.text,
     fontFamily: "monospace",
-    fontSize: 16,
+    fontSize: 19,
     fontWeight: "900",
   },
   footer: {
@@ -150,7 +158,7 @@ const styles = StyleSheet.create({
   },
   thanks: {
     color: COLORS.text,
-    fontSize: 13,
+    fontSize: 16,
     fontWeight: "800",
   },
 });

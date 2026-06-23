@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { FlatList, Pressable, StyleSheet, Text, View, Modal, TextInput, ScrollView, TouchableOpacity, useWindowDimensions, Platform, ActivityIndicator } from "react-native";
 
 import { Card } from "@/components/ui/Card";
@@ -15,21 +15,36 @@ import { API_URL } from "@/constants/config";
 import { apiFetch } from "@/utils/api";
 
 const menuImages: Record<string, any> = {
-  "Veg Dum Biryani": require("../../../assets/images/veg-dum-biryani.jpg"),
+  // ── Existing items (corrected filenames) ────────────────────────────────────
+  "Veg Dum Biryani":         require("../../../assets/images/Veg-Dum-Biryani.jpg"),
+  "Egg Dum Biryani":         require("../../../assets/images/egg-dum-biryani.jpg"),
+  "French Fries Classic":    require("../../../assets/images/french-fries-classic.jpg"),
+  "Peri Peri French Fries":  require("../../../assets/images/peri-peri-fries.jpg"),
+  "Tripple Choco Bowl":      require("../../../assets/images/triple-choco-bowl.jpg"),
+  "Oreo Choco Bowl":         require("../../../assets/images/oreo-choco-bowl.jpg"),
+  "Paneer Tikka Biryani":    require("../../../assets/images/Paneer-Tikka-Biryani.jpg"),
+  "Paneer Kalimiri Kabab":   require("../../../assets/images/paneer-kalimiri-kabab.jpg"),
 
-  "Egg Dum Biryani": require("../../../assets/images/egg-dum-biryani.jpg"),
-
-  "French Fries Classic": require("../../../assets/images/french-fries-classic.jpg"),
-
-  "Peri Peri French Fries": require("../../../assets/images/peri-peri-fries.jpg"),
-
-  "Tripple Choco Bowl": require("../../../assets/images/triple-choco-bowl.jpg"),
-
-  "Oreo Choco Bowl": require("../../../assets/images/oreo-choco-bowl.jpg"),
-
-  "Paneer Tikka Biryani": require("../../../assets/images/paneer-tikka-biryani.jpg"),
-
-  "Paneer Kalimiri Kabab": require("../../../assets/images/paneer-kalimiri-kabab.jpg"),
+  // ── New items ────────────────────────────────────────────────────────────────
+  "Chicken Dum Biryani":     require("../../../assets/images/Chicken-Dum-Biryani.jpg"),
+  "Mutton Dum Biryani":      require("../../../assets/images/Mutton-Dum-Biryani.jpg"),
+  "Chicken Tikka Biryani":   require("../../../assets/images/chicken-Tikka-Biryani.jpg"),
+  "Tandoori Biryani":        require("../../../assets/images/Tandoori-Biryani.jpg"),
+  "Afghani Tandoor":         require("../../../assets/images/Afghani-Tandoor.jpg"),
+  "Chicken Sheekh Kabab":    require("../../../assets/images/Chicken-Sheekh-Kabab.jpg"),
+  "Mutton Sheekh Kebab":     require("../../../assets/images/Mutton-Sheekh-Kebab.jpg"),
+  "Chicken Tikka Kebab":     require("../../../assets/images/Chicken-Tikka-Kebab.jpg"),
+  "Chicken Tangadi Kebab":   require("../../../assets/images/Chicken-Tangadi-Kebab.jpg"),
+  "Lahsuni Kebab":           require("../../../assets/images/Lahsuni-Kebab.jpg"),
+  "Paneer Tikka Kebab":      require("../../../assets/images/Paneer-Tikka-Kebab.jpg"),
+  "Speacial Paradise Kebab": require("../../../assets/images/Speacial-Paradise-Kebab.jpg"),
+  "Chicken Hariyali Kebab":  require("../../../assets/images/Chicken-Hariyali-Kebab.jpg"),
+  "Paneer Kalimiri kebab":   require("../../../assets/images/Paneer-Kalimiri-kebab.jpg"),
+  "Chicken Kalimiri kebab":  require("../../../assets/images/Chicken-Kalimiri-kebab.jpg"),
+  "Tandoor Chicken Red":     require("../../../assets/images/Tandoor-Chicken-Red.jpg"),
+  "Tandoor Chicken White":   require("../../../assets/images/Tandoor-chicken-White.jpg"),
+  "Tandoori Lollipop":       require("../../../assets/images/Tandoori-Lollipop.jpg"),
+  "Reshmi Kebab":            require("../../../assets/images/Reshmi-Kebab.jpg"),
 };
 
 function Header({
@@ -91,26 +106,28 @@ function Header({
         </Card>
       </View>
 
-      <View style={styles.sectionRail}>
-        {MENU_SECTIONS.map((section) => {
-          const isActive = selectedSection === section.id;
-          return (
-            <Pressable
-              key={section.id}
-              onPress={() => onSelectSection(section.id)}
-              style={[
-                styles.sectionTab,
-                isActive && styles.sectionTabActive,
-              ]}
-            >
-              <Text style={styles.categoryIcon}>{section.icon}</Text>
-              <Text style={[styles.sectionTabText, isActive && { color: COLORS.white }]}>
-                {section.name}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      {MENU_SECTIONS.length > 1 && (
+        <View style={styles.sectionRail}>
+          {MENU_SECTIONS.map((section) => {
+            const isActive = selectedSection === section.id;
+            return (
+              <Pressable
+                key={section.id}
+                onPress={() => onSelectSection(section.id)}
+                style={[
+                  styles.sectionTab,
+                  isActive && styles.sectionTabActive,
+                ]}
+              >
+                <Text style={styles.categoryIcon}>{section.icon}</Text>
+                <Text style={[styles.sectionTabText, isActive && { color: COLORS.white }]}>
+                  {section.name}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
 
       <View style={styles.categoryRail}>
         {subCategories.map((category) => {
@@ -162,17 +179,16 @@ function MenuCard({
 }) {
   return (
     <Card style={styles.menuCard}>
-      <View style={{ position: "relative" }}>
-
+      <View style={{ position: "relative", width: "100%", height: 110 }}>
         <Image
           source={
             item.imageUrl
               ? { uri: item.imageUrl }
-              : (menuImages[item.name] || require("../../../assets/images/veg-dum-biryani.jpg"))
+              : (menuImages[item.name] || require("../../../assets/images/Veg-Dum-Biryani.jpg"))
           }
           style={{
             width: "100%",
-            height: 180,
+            height: 110,
             borderRadius: 16,
           }}
           resizeMode="cover"
@@ -182,21 +198,32 @@ function MenuCard({
           onPress={() => onDeletePress(item.id, item.name)}
           style={{
             position: "absolute",
-            top: 12,
-            right: 12,
-            backgroundColor: "rgba(255,255,255,0.9)",
-            borderRadius: 20,
-            padding: 8,
+            top: 8,
+            right: 8,
+            backgroundColor: "rgba(255,255,255,0.95)",
+            borderRadius: 16,
+            width: 32,
+            height: 32,
+            alignItems: "center",
+            justifyContent: "center",
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.1,
+            shadowRadius: 1,
+            elevation: 2,
           }}
         >
-          <Text style={{ fontSize: 18 }}>🗑️</Text>
+          <Text style={{ fontSize: 14 }}>🗑️</Text>
         </TouchableOpacity>
 
         <View
           style={{
             position: "absolute",
-            top: 12,
-            left: 12,
+            top: 8,
+            left: 8,
+            backgroundColor: "rgba(255,255,255,0.9)",
+            borderRadius: 10,
+            padding: 4,
           }}
         >
           <View
@@ -221,16 +248,16 @@ function MenuCard({
             />
           </View>
         </View>
-
       </View>
-      <Text numberOfLines={2} style={styles.name}>
-        {item.name}
-      </Text>
-      <Text numberOfLines={1} style={styles.meta}>
-        {categoryName}
-      </Text>
+
+      <View style={styles.details}>
+        <Text numberOfLines={2} style={styles.name}>
+          {item.name}
+        </Text>
+        <Text style={styles.price}>({formatCurrency(item.price)})</Text>
+      </View>
+
       <View style={styles.cardFooter}>
-        <Text style={styles.price}>{formatCurrency(item.price)}</Text>
         <View style={[styles.statusPill, item.isAvailable ? styles.availablePill : styles.unavailablePill]}>
           <Text style={[styles.statusText, item.isAvailable ? styles.availableStatusText : styles.unavailableStatusText]}>
             {item.isAvailable ? "Live" : "Off"}
@@ -248,6 +275,30 @@ export default function MenuManagementScreen() {
 
   const [selectedSection, setSelectedSection] = useState<MenuSection>("restaurant");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+
+  const flatListRef = useRef<FlatList>(null);
+  const scrollOffset = useRef(0);
+  const [showLeftArrow, setShowLeftArrow] = useState(false);
+
+  const handleScroll = (event: any) => {
+    const offset = event.nativeEvent.contentOffset.x;
+    scrollOffset.current = offset;
+    setShowLeftArrow(offset > 10);
+  };
+
+  const handleScrollLeft = () => {
+    flatListRef.current?.scrollToOffset({
+      offset: Math.max(0, scrollOffset.current - 172),
+      animated: true,
+    });
+  };
+
+  const handleScrollRight = () => {
+    flatListRef.current?.scrollToOffset({
+      offset: scrollOffset.current + 172,
+      animated: true,
+    });
+  };
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [formName, setFormName] = useState("");
   const [formPrice, setFormPrice] = useState("");
@@ -407,39 +458,55 @@ export default function MenuManagementScreen() {
 
   return (
     <View style={{ flex: 1 }}>
-      <FlatList
-        style={styles.screen}
-        contentContainerStyle={styles.content}
-        data={filteredItems}
-        keyExtractor={(item) => item.id}
-        numColumns={1}
-        ListHeaderComponent={
-          <Header
-            categories={categories}
-            menuItems={menuItems}
-            averagePrice={averagePrice}
-            selectedSection={selectedSection}
-            selectedCategoryId={selectedCategoryId}
-            onSelectSection={handleSelectSection}
-            onSelectCategory={handleSelectCategory}
-            onAddPress={handleOpenAdd}
+      <ScrollView style={styles.screen} contentContainerStyle={styles.scrollContent}>
+        <Header
+          categories={categories}
+          menuItems={menuItems}
+          averagePrice={averagePrice}
+          selectedSection={selectedSection}
+          selectedCategoryId={selectedCategoryId}
+          onSelectSection={handleSelectSection}
+          onSelectCategory={handleSelectCategory}
+          onAddPress={handleOpenAdd}
+        />
+
+        <View style={styles.listContainer}>
+          <FlatList
+            ref={flatListRef}
+            data={filteredItems}
+            keyExtractor={(item) => item.id}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.list}
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
+            renderItem={({ item }) => (
+              <MenuCard
+                item={item}
+                categoryName={categories.find((category) => category.id === item.categoryId)?.name}
+                onDeletePress={(id, name) => handleDeleteItem(id, name)}
+              />
+            )}
+            ListEmptyComponent={
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyStateText}>No items in this category</Text>
+              </View>
+            }
           />
-        }
-        renderItem={({ item }) => (
-          <View style={styles.menuItemWrap}>
-            <MenuCard
-              item={item}
-              categoryName={categories.find((category) => category.id === item.categoryId)?.name}
-              onDeletePress={(id, name) => handleDeleteItem(id, name)}
-            />
-          </View>
-        )}
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyStateText}>No items in this category</Text>
-          </View>
-        }
-      />
+
+          {showLeftArrow && filteredItems.length > 0 && (
+            <Pressable onPress={handleScrollLeft} style={styles.arrowLeft}>
+              <Text style={styles.arrowText}>‹</Text>
+            </Pressable>
+          )}
+
+          {filteredItems.length > 2 && (
+            <Pressable onPress={handleScrollRight} style={styles.arrowRight}>
+              <Text style={styles.arrowText}>›</Text>
+            </Pressable>
+          )}
+        </View>
+      </ScrollView>
 
       {/* Add Item Modal */}
       <Modal visible={addModalVisible} animationType="slide" transparent>
@@ -464,43 +531,45 @@ export default function MenuManagementScreen() {
               <TextInput value={formEmoji} onChangeText={setFormEmoji} style={styles.input} placeholder="e.g. 🍞" editable={!uploading} />
             </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Menu Section</Text>
-              <View style={{ flexDirection: "row", gap: 10 }}>
-                <Pressable
-                  onPress={() => handleFormSectionChange("restaurant")}
-                  style={[
-                    styles.categoryPill,
-                    {
-                      flex: 1,
-                      justifyContent: "center",
-                      backgroundColor: formSection === "restaurant" ? COLORS.espresso : COLORS.white,
-                      borderColor: formSection === "restaurant" ? COLORS.espresso : COLORS.border,
-                      paddingVertical: 10,
-                    },
-                  ]}
-                  disabled={uploading}
-                >
-                  <Text style={{ color: formSection === "restaurant" ? COLORS.white : COLORS.slate, fontWeight: "800" }}>🍽️ Restaurant</Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => handleFormSectionChange("cafe")}
-                  style={[
-                    styles.categoryPill,
-                    {
-                      flex: 1,
-                      justifyContent: "center",
-                      backgroundColor: formSection === "cafe" ? COLORS.espresso : COLORS.white,
-                      borderColor: formSection === "cafe" ? COLORS.espresso : COLORS.border,
-                      paddingVertical: 10,
-                    },
-                  ]}
-                  disabled={uploading}
-                >
-                  <Text style={{ color: formSection === "cafe" ? COLORS.white : COLORS.slate, fontWeight: "800" }}>☕ Cafe</Text>
-                </Pressable>
+            {MENU_SECTIONS.length > 1 && (
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Menu Section</Text>
+                <View style={{ flexDirection: "row", gap: 10 }}>
+                  <Pressable
+                    onPress={() => handleFormSectionChange("restaurant")}
+                    style={[
+                      styles.categoryPill,
+                      {
+                        flex: 1,
+                        justifyContent: "center",
+                        backgroundColor: formSection === "restaurant" ? COLORS.espresso : COLORS.white,
+                        borderColor: formSection === "restaurant" ? COLORS.espresso : COLORS.border,
+                        paddingVertical: 10,
+                      },
+                    ]}
+                    disabled={uploading}
+                  >
+                    <Text style={{ color: formSection === "restaurant" ? COLORS.white : COLORS.slate, fontWeight: "800" }}>🍽️ Restaurant</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => handleFormSectionChange("cafe")}
+                    style={[
+                      styles.categoryPill,
+                      {
+                        flex: 1,
+                        justifyContent: "center",
+                        backgroundColor: formSection === "cafe" ? COLORS.espresso : COLORS.white,
+                        borderColor: formSection === "cafe" ? COLORS.espresso : COLORS.border,
+                        paddingVertical: 10,
+                      },
+                    ]}
+                    disabled={uploading}
+                  >
+                    <Text style={{ color: formSection === "cafe" ? COLORS.white : COLORS.slate, fontWeight: "800" }}>☕ Cafe</Text>
+                  </Pressable>
+                </View>
               </View>
-            </View>
+            )}
 
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Category</Text>
@@ -823,30 +892,80 @@ const styles = StyleSheet.create({
   menuRow: {
     gap: 12,
   },
-  menuItemWrap: {
-    width: "100%",
+  scrollContent: {
+    gap: 12,
+    padding: 18,
+    paddingBottom: 34,
+  },
+  listContainer: {
+    position: "relative",
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 18,
+  },
+  list: {
+    gap: 12,
+    paddingRight: 32,
+  },
+  arrowLeft: {
+    position: "absolute",
+    left: 10,
+    zIndex: 10,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 3,
+  },
+  arrowRight: {
+    position: "absolute",
+    right: 10,
+    zIndex: 10,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 3,
+  },
+  arrowText: {
+    fontSize: 22,
+    color: COLORS.slate,
+    fontWeight: "600",
+    lineHeight: 22,
+    marginTop: -2,
   },
   menuCard: {
-    padding: 16,
-    borderRadius: 24,
-    marginBottom: 18,
-  },
-  menuTop: {
-    alignItems: "flex-start",
-    flexDirection: "row",
+    backgroundColor: COLORS.white,
+    borderColor: COLORS.border,
+    borderRadius: 20,
+    borderWidth: 1,
+    flexDirection: "column",
+    width: 160,
+    height: 255,
+    padding: 12,
+    alignItems: "stretch",
     justifyContent: "space-between",
-  },
-  emojiPlate: {
-    alignItems: "center",
-    backgroundColor: COLORS.primaryLight,
-    borderCurve: "continuous",
-    borderRadius: 14,
-    height: 42,
-    justifyContent: "center",
-    width: 42,
-  },
-  emoji: {
-    fontSize: 23,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 2,
   },
   vegDot: {
     alignItems: "center",
@@ -864,25 +983,26 @@ const styles = StyleSheet.create({
   name: {
     color: COLORS.text,
     fontSize: 15,
-    fontWeight: "900",
-    lineHeight: 19,
-  },
-  meta: {
-    color: COLORS.textSec,
-    fontSize: 11,
     fontWeight: "800",
+    textAlign: "center",
+    lineHeight: 20,
   },
   cardFooter: {
     alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: "auto",
+    marginTop: 8,
   },
   price: {
-    color: COLORS.primaryDark,
-    fontSize: 16,
-    fontVariant: ["tabular-nums"],
-    fontWeight: "900",
+    color: COLORS.primary,
+    fontSize: 14,
+    fontWeight: "800",
+    marginTop: 4,
+    textAlign: "center",
+  },
+  details: {
+    marginTop: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    flex: 1,
   },
   statusPill: {
     borderCurve: "continuous",

@@ -11,12 +11,12 @@ interface QtyControlProps {
 export function QtyControl({ qty, onIncrement, onDecrement }: QtyControlProps) {
   return (
     <View style={styles.row}>
-      <Pressable onPress={onDecrement} style={[styles.button, qty > 0 && styles.activeButton]}>
-        <Text style={[styles.buttonText, qty > 0 && styles.activeButtonText]}>-</Text>
+      <Pressable onPress={onDecrement} style={styles.minusButton}>
+        <Text style={styles.minusButtonText}>-</Text>
       </Pressable>
       <Text style={styles.qty}>{qty}</Text>
-      <Pressable onPress={onIncrement} style={[styles.button, styles.activeButton]}>
-        <Text style={[styles.buttonText, styles.activeButtonText]}>+</Text>
+      <Pressable onPress={onIncrement} style={styles.plusButton}>
+        <Text style={styles.plusButtonText}>+</Text>
       </Pressable>
     </View>
   );
@@ -26,33 +26,43 @@ const styles = StyleSheet.create({
   row: {
     alignItems: "center",
     flexDirection: "row",
-    gap: 6,
+    gap: 12,
   },
-  button: {
+  minusButton: {
     alignItems: "center",
+    backgroundColor: COLORS.white,
     borderColor: COLORS.primary,
-    borderCurve: "continuous",
-    borderRadius: 7,
+    borderRadius: 10,
     borderWidth: 1.5,
-    height: 28,
+    height: 32,
     justifyContent: "center",
-    width: 28,
+    width: 32,
   },
-  activeButton: {
-    backgroundColor: COLORS.primary,
-  },
-  buttonText: {
+  minusButtonText: {
     color: COLORS.primary,
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "900",
-    lineHeight: 21,
+    lineHeight: 22,
   },
-  activeButtonText: {
+  plusButton: {
+    alignItems: "center",
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    height: 32,
+    justifyContent: "center",
+    width: 32,
+  },
+  plusButtonText: {
     color: COLORS.white,
+    fontSize: 20,
+    fontWeight: "900",
+    lineHeight: 22,
   },
   qty: {
     color: COLORS.text,
-    fontSize: 13,
+    fontSize: 15,
     fontVariant: ["tabular-nums"],
     fontWeight: "900",
     minWidth: 16,

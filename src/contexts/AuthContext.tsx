@@ -72,7 +72,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setRole(null);
     // Small timeout to ensure state update is processed before navigation
     setTimeout(() => {
-      router.replace('/');
+      router.replace('/(auth)/admin/login');
     }, 50);
   };
 
