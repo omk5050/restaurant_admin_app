@@ -4,7 +4,7 @@ export const MENU_SECTIONS: { id: MenuSection; name: string; icon: string }[] = 
   { id: "restaurant", name: "Restaurant", icon: "🍽️" },
 ];
 
-const RESTAURANT_CATEGORY_KEYS = new Set(["popular", "breakfast", "main", "rice"]);
+const RESTAURANT_CATEGORY_KEYS = new Set(["popular", "main", "rice"]);
 const CAFE_CATEGORY_KEYS = new Set(["beverages", "snacks", "desserts"]);
 const LEGACY_TOP_LEVEL_IDS = new Set(["cafe", "restaurant"]);
 
@@ -38,6 +38,9 @@ export function getCategorySection(category: Category): MenuSection | null {
 
 export function getSubCategories(categories: Category[], section: MenuSection): Category[] {
   return categories
-    .filter((category) => getCategorySection(category) === section)
+    .filter((category) => {
+      const key = getCategoryKey(category.id);
+      return key !== "breakfast" && getCategorySection(category) === section;
+    })
     .sort((a, b) => a.sortOrder - b.sortOrder);
 }

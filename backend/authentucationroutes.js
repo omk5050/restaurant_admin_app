@@ -129,9 +129,8 @@ router.post("/register-admin", authenticateToken, async (req, res) => {
     // Seed Categories
     const defaultCategories = [
       { id: "popular_" + newAdmin._id, name: "Popular", icon: "★", sortOrder: 0, section: "restaurant", adminId: newAdmin._id },
-      { id: "breakfast_" + newAdmin._id, name: "Breakfast", icon: "☀", sortOrder: 1, section: "restaurant", adminId: newAdmin._id },
-      { id: "main_" + newAdmin._id, name: "Main Course", icon: "🍛", sortOrder: 2, section: "restaurant", adminId: newAdmin._id },
-      { id: "rice_" + newAdmin._id, name: "Rice", icon: "🍚", sortOrder: 3, section: "restaurant", adminId: newAdmin._id },
+      { id: "main_" + newAdmin._id, name: "Main Course", icon: "🍛", sortOrder: 1, section: "restaurant", adminId: newAdmin._id },
+      { id: "rice_" + newAdmin._id, name: "Rice", icon: "🍚", sortOrder: 2, section: "restaurant", adminId: newAdmin._id },
       { id: "beverages_" + newAdmin._id, name: "Beverages", icon: "🥤", sortOrder: 0, section: "cafe", adminId: newAdmin._id },
       { id: "snacks_" + newAdmin._id, name: "Snacks", icon: "🍟", sortOrder: 1, section: "cafe", adminId: newAdmin._id },
       { id: "desserts_" + newAdmin._id, name: "Desserts", icon: "🍰", sortOrder: 2, section: "cafe", adminId: newAdmin._id },
@@ -302,9 +301,8 @@ router.post("/registration-requests/:id/action", authenticateToken, async (req, 
     // Seed Categories
     const defaultCategories = [
       { id: "popular_" + newAdmin._id, name: "Popular", icon: "★", sortOrder: 0, section: "restaurant", adminId: newAdmin._id },
-      { id: "breakfast_" + newAdmin._id, name: "Breakfast", icon: "☀", sortOrder: 1, section: "restaurant", adminId: newAdmin._id },
-      { id: "main_" + newAdmin._id, name: "Main Course", icon: "🍛", sortOrder: 2, section: "restaurant", adminId: newAdmin._id },
-      { id: "rice_" + newAdmin._id, name: "Rice", icon: "🍚", sortOrder: 3, section: "restaurant", adminId: newAdmin._id },
+      { id: "main_" + newAdmin._id, name: "Main Course", icon: "🍛", sortOrder: 1, section: "restaurant", adminId: newAdmin._id },
+      { id: "rice_" + newAdmin._id, name: "Rice", icon: "🍚", sortOrder: 2, section: "restaurant", adminId: newAdmin._id },
       { id: "beverages_" + newAdmin._id, name: "Beverages", icon: "🥤", sortOrder: 0, section: "cafe", adminId: newAdmin._id },
       { id: "snacks_" + newAdmin._id, name: "Snacks", icon: "🍟", sortOrder: 1, section: "cafe", adminId: newAdmin._id },
       { id: "desserts_" + newAdmin._id, name: "Desserts", icon: "🍰", sortOrder: 2, section: "cafe", adminId: newAdmin._id },
