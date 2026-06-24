@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { FlatList, Pressable, StyleSheet, Text, View, Modal, TextInput, ScrollView, TouchableOpacity, useWindowDimensions, ActivityIndicator } from "react-native";
+import { FlatList, Pressable, StyleSheet, Text, View, Modal, TextInput, ScrollView, TouchableOpacity, useWindowDimensions, ActivityIndicator, Platform, Image } from "react-native";
 
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -9,8 +9,9 @@ import { useMenu } from "@/hooks/useMenu";
 import { useMenuStore } from "@/store/menuStore";
 import { formatCurrency } from "@/utils/formatters";
 import { Category, MenuItem, MenuSection } from "@/types";
-import { Image } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import * as FileSystem from "expo-file-system";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_URL } from "@/constants/config";
 import { apiFetch } from "@/utils/api";
 
@@ -376,26 +377,62 @@ export default function MenuManagementScreen() {
   };
 
   const uploadImage = async (uri: string): Promise<string> => {
-    const formData = new FormData();
-    const filename = uri.split("/").pop() || "upload.jpg";
+    if (Platform.OS === "web") {
+      const formData = new FormData();
+      const filename = uri.split("/").pop() || "upload.jpg";
 
-    const response = await fetch(uri);
-    const blob = await response.blob();
+      const response = await fetch(uri);
+      const blob = await response.blob();
 
-    formData.append("image", blob, filename);
+      formData.append("image", blob, filename);
 
-    const res = await apiFetch(`${API_URL}/api/upload`, {
-      method: "POST",
-      body: formData,
-    });
+      const res = await apiFetch(`${API_URL}/api/upload`, {
+        method: "POST",
+        body: formData,
+      });
 
-    if (!res.ok) {
-      const errData = await res.json().catch(() => ({}));
-      throw new Error(errData.error || "Image upload failed");
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || "Image upload failed");
+      }
+
+      const data = await res.json();
+      return data.imageUrl;
+    } else {
+      const token = await AsyncStorage.getItem("authToken");
+      const selectedAdminId = await AsyncStorage.getItem("selectedAdminId");
+
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      if (selectedAdminId) {
+        headers["X-Selected-Admin-Id"] = selectedAdminId;
+      }
+
+      const uploadResult = await FileSystem.uploadAsync(
+        `${API_URL}/api/upload`,
+        uri,
+        {
+          httpMethod: "POST",
+          uploadType: FileSystem.UploadType.MULTIPART,
+          fieldName: "image",
+          headers,
+        }
+      );
+
+      if (uploadResult.status !== 200) {
+        let errMsg = "Image upload failed";
+        try {
+          const errData = JSON.parse(uploadResult.body);
+          errMsg = errData.error || errMsg;
+        } catch {}
+        throw new Error(errMsg);
+      }
+
+      const data = JSON.parse(uploadResult.body);
+      return data.imageUrl;
     }
-
-    const data = await res.json();
-    return data.imageUrl;
   };
 
   const handleOpenAdd = () => {
