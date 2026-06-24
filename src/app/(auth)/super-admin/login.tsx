@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, Keyb
 import { useAuth } from '../../../contexts/AuthContext';
 import { useRouter } from "expo-router";
 import { API_URL } from '@/constants/config';
+import { Ionicons } from '@expo/vector-icons';
 import { CustomAlert } from '@/components/ui/CustomAlert';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -14,6 +15,8 @@ export default function SuperAdminLoginScreen() {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const router = useRouter();
 
   // Custom Alert state
@@ -169,23 +172,49 @@ export default function SuperAdminLoginScreen() {
                 keyboardType="phone-pad"
               />
 
-              <TextInput
-                placeholder="Password"
-                placeholderTextColor="#94a3b8"
-                secureTextEntry
-                style={styles.input}
-                value={password}
-                onChangeText={setPassword}
-              />
+              <View style={styles.passwordContainer}>
+                <TextInput
+                  placeholder="Password"
+                  placeholderTextColor="#94a3b8"
+                  secureTextEntry={!showPassword}
+                  style={styles.passwordInput}
+                  value={password}
+                  onChangeText={setPassword}
+                />
+                <TouchableOpacity
+                  onPress={() => setShowPassword(!showPassword)}
+                  style={styles.eyeIcon}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                    size={22}
+                    color="#64748b"
+                  />
+                </TouchableOpacity>
+              </View>
 
-              <TextInput
-                placeholder="Confirm Password"
-                placeholderTextColor="#94a3b8"
-                secureTextEntry
-                style={styles.input}
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-              />
+              <View style={styles.passwordContainer}>
+                <TextInput
+                  placeholder="Confirm Password"
+                  placeholderTextColor="#94a3b8"
+                  secureTextEntry={!showConfirmPassword}
+                  style={styles.passwordInput}
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                />
+                <TouchableOpacity
+                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                  style={styles.eyeIcon}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+                    size={22}
+                    color="#64748b"
+                  />
+                </TouchableOpacity>
+              </View>
 
               <TouchableOpacity style={styles.button} onPress={handleSubmit} activeOpacity={0.85}>
                 <Text style={styles.buttonText} numberOfLines={2}>
@@ -263,6 +292,28 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     color: '#0f172a',
     fontSize: 15,
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 50,
+    borderColor: '#e2e8f0',
+    borderWidth: 1,
+    borderRadius: 14,
+    marginBottom: 14,
+    paddingHorizontal: 16,
+    backgroundColor: '#fff',
+  },
+  passwordInput: {
+    flex: 1,
+    height: '100%',
+    color: '#0f172a',
+    fontSize: 15,
+  },
+  eyeIcon: {
+    padding: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   button: {
     backgroundColor: '#ff7043',

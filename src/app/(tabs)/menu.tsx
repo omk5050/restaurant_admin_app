@@ -92,15 +92,15 @@ function Header({
       </View>
 
       <View style={[styles.metricRow, isSmallScreen ? { flexWrap: "wrap", gap: 10 } : undefined]}>
-        <Card style={[styles.metric, isSmallScreen ? { minWidth: "47%", flex: 0 } : undefined]}>
+        <Card style={[styles.metric, isSmallScreen ? { minWidth: "47%", flex: 1 } : undefined]}>
           <Text style={styles.metricValue}>{categories.length}</Text>
           <Text style={styles.metricLabel}>Categories</Text>
         </Card>
-        <Card style={[styles.metric, isSmallScreen ? { minWidth: "47%", flex: 0 } : undefined]}>
+        <Card style={[styles.metric, isSmallScreen ? { minWidth: "47%", flex: 1 } : undefined]}>
           <Text style={styles.metricValue}>{formatCurrency(averagePrice)}</Text>
           <Text style={styles.metricLabel}>Avg price</Text>
         </Card>
-        <Card style={[styles.metric, isSmallScreen ? { minWidth: "100%", flex: 0, alignItems: "center" } : undefined]}>
+        <Card style={[styles.metric, isSmallScreen ? { minWidth: "100%", flex: 1, alignItems: "center" } : undefined]}>
           <Text style={styles.metricValue}>{menuItems.filter((item) => item.isVeg).length}</Text>
           <Text style={styles.metricLabel}>Veg items</Text>
         </Card>
@@ -717,7 +717,7 @@ export default function MenuManagementScreen() {
             <Text style={styles.kotEmoji}>🗑️</Text>
             <Text style={[styles.kotTitle, { color: "#ef4444" }]}>Delete Item?</Text>
             <Text style={styles.kotMessage}>
-              Are you sure you want to delete "{itemToDelete?.name}"? This cannot be undone.
+              Are you sure you want to delete &quot;{itemToDelete?.name}&quot;? This cannot be undone.
             </Text>
             <TouchableOpacity style={[styles.kotDismissBtn, { backgroundColor: "#ef4444" }]} onPress={executeDeleteItem}>
               <Text style={styles.kotDismissText}>Yes, Delete</Text>

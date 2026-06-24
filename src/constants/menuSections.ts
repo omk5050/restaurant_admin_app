@@ -4,7 +4,7 @@ export const MENU_SECTIONS: { id: MenuSection; name: string; icon: string }[] = 
   { id: "restaurant", name: "Restaurant", icon: "🍽️" },
 ];
 
-const RESTAURANT_CATEGORY_KEYS = new Set(["popular", "main", "rice"]);
+const RESTAURANT_CATEGORY_KEYS = new Set(["popular", "starters", "main", "rice"]);
 const CAFE_CATEGORY_KEYS = new Set(["beverages", "snacks", "desserts"]);
 const LEGACY_TOP_LEVEL_IDS = new Set(["cafe", "restaurant"]);
 

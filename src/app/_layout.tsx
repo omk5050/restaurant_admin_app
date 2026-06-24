@@ -2,6 +2,7 @@ import 'react-native-gesture-handler';
 import React, { useEffect, useState } from 'react';
 import { Stack, router, useSegments } from 'expo-router';
 import { StatusBar, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS } from '@/constants/colors';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
@@ -69,14 +70,16 @@ const RootContent = () => {
     <View style={styles.stackContainer}>
       <StatusBar style="dark" />
       {role === 'super-admin' && selectedAdminId && (
-        <View style={styles.impersonationBanner}>
-          <Text style={styles.impersonationText}>
-            Viewing Admin's Restaurant Portal
-          </Text>
-          <TouchableOpacity onPress={handleExitImpersonation} style={styles.impersonationBtn}>
-            <Text style={styles.impersonationBtnText}>Return to Super Admin Panel</Text>
-          </TouchableOpacity>
-        </View>
+        <SafeAreaView edges={['top']} style={{ backgroundColor: '#1e293b' }}>
+          <View style={styles.impersonationBanner}>
+            <Text style={styles.impersonationText}>
+              Viewing Admin&apos;s Restaurant Portal
+            </Text>
+            <TouchableOpacity onPress={handleExitImpersonation} style={styles.impersonationBtn}>
+              <Text style={styles.impersonationBtnText}>Return to Super Admin Panel</Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
       )}
       <Stack
         screenOptions={{

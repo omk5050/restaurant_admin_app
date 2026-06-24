@@ -184,8 +184,9 @@ const RegistrationRequest = mongoose.model("RegistrationRequest", RegistrationRe
 
 const REQUIRED_CATEGORIES = [
   { id: "popular", name: "Popular", icon: "★", sortOrder: 0, section: "restaurant" },
-  { id: "main", name: "Main Course", icon: "🍛", sortOrder: 1, section: "restaurant" },
-  { id: "rice", name: "Rice", icon: "🍚", sortOrder: 2, section: "restaurant" },
+  { id: "starters", name: "Starters", icon: "🥗", sortOrder: 1, section: "restaurant" },
+  { id: "main", name: "Main Course", icon: "🍛", sortOrder: 2, section: "restaurant" },
+  { id: "rice", name: "Rice", icon: "🍚", sortOrder: 3, section: "restaurant" },
   { id: "beverages", name: "Beverages", icon: "🥤", sortOrder: 0, section: "cafe" },
   { id: "snacks", name: "Snacks", icon: "🍟", sortOrder: 1, section: "cafe" },
   { id: "desserts", name: "Desserts", icon: "🍰", sortOrder: 2, section: "cafe" },
@@ -235,17 +236,15 @@ async function ensureDefaultMenuData(adminId) {
   const categories = await Category.find({ adminId });
   const usesSuffixedIds = categories.some((category) => category.id.endsWith(`_${adminId}`));
 
-  // 1. Create categories if none exist for this admin
-  if (categories.length === 0) {
-    await Promise.all(REQUIRED_CATEGORIES.map((category) => {
-      const id = getScopedId(category.id, adminId, usesSuffixedIds);
-      return Category.findOneAndUpdate(
-        { adminId, id },
-        { ...category, id, adminId },
-        { upsert: true, setDefaultsOnInsert: true }
-      );
-    }));
-  }
+  // 1. Create categories if they don't exist for this admin
+  await Promise.all(REQUIRED_CATEGORIES.map((category) => {
+    const id = getScopedId(category.id, adminId, usesSuffixedIds);
+    return Category.findOneAndUpdate(
+      { adminId, id },
+      { ...category, id, adminId },
+      { upsert: true, setDefaultsOnInsert: true }
+    );
+  }));
 
   // 2. Create default menu items if none exist for this admin
   const menuCount = await MenuItem.countDocuments({ adminId });
@@ -329,8 +328,9 @@ async function seedDatabase() {
     if (categoryCount === 0) {
       const defaultCategories = [
         { id: "popular", name: "Popular", icon: "★", sortOrder: 0, section: "restaurant" },
-        { id: "main", name: "Main Course", icon: "🍛", sortOrder: 1, section: "restaurant" },
-        { id: "rice", name: "Rice", icon: "🍚", sortOrder: 2, section: "restaurant" },
+        { id: "starters", name: "Starters", icon: "🥗", sortOrder: 1, section: "restaurant" },
+        { id: "main", name: "Main Course", icon: "🍛", sortOrder: 2, section: "restaurant" },
+        { id: "rice", name: "Rice", icon: "🍚", sortOrder: 3, section: "restaurant" },
         { id: "beverages", name: "Beverages", icon: "🥤", sortOrder: 0, section: "cafe" },
         { id: "snacks", name: "Snacks", icon: "🍟", sortOrder: 1, section: "cafe" },
         { id: "desserts", name: "Desserts", icon: "🍰", sortOrder: 2, section: "cafe" },

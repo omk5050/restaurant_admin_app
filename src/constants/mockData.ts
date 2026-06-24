@@ -3,8 +3,9 @@ import { Category, MenuItem, Order, Table } from "@/types";
 
 export const DEFAULT_CATEGORIES: Category[] = [
   { id: "popular", name: "Popular", icon: "★", sortOrder: 0, section: "restaurant" },
-  { id: "main", name: "Main Course", icon: "🍛", sortOrder: 1, section: "restaurant" },
-  { id: "rice", name: "Rice", icon: "🍚", sortOrder: 2, section: "restaurant" },
+  { id: "starters", name: "Starters", icon: "🥗", sortOrder: 1, section: "restaurant" },
+  { id: "main", name: "Main Course", icon: "🍛", sortOrder: 2, section: "restaurant" },
+  { id: "rice", name: "Rice", icon: "🍚", sortOrder: 3, section: "restaurant" },
   { id: "beverages", name: "Beverages", icon: "🥤", sortOrder: 0, section: "cafe" },
   { id: "snacks", name: "Snacks", icon: "🍟", sortOrder: 1, section: "cafe" },
   { id: "desserts", name: "Desserts", icon: "🍰", sortOrder: 2, section: "cafe" },
