@@ -10,7 +10,7 @@ import { useMenuStore } from "@/store/menuStore";
 import { formatCurrency } from "@/utils/formatters";
 import { Category, MenuItem, MenuSection } from "@/types";
 import * as ImagePicker from "expo-image-picker";
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_URL } from "@/constants/config";
 import { apiFetch } from "@/utils/api";
@@ -415,7 +415,7 @@ export default function MenuManagementScreen() {
         uri,
         {
           httpMethod: "POST",
-          uploadType: FileSystem.UploadType.MULTIPART,
+          uploadType: FileSystem.FileSystemUploadType.MULTIPART,
           fieldName: "image",
           headers,
         }
