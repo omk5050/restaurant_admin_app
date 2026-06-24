@@ -10,6 +10,8 @@ interface MenuStore {
   fetchMenu: () => Promise<void>;
   addMenuItem: (item: Omit<MenuItem, "id">) => Promise<void>;
   deleteMenuItem: (id: string) => Promise<void>;
+  addCategory: (category: Omit<Category, "id" | "adminId">) => Promise<void>;
+  deleteCategory: (id: string) => Promise<void>;
 }
 
 export const useMenuStore = create<MenuStore>((set) => ({
@@ -63,6 +65,40 @@ export const useMenuStore = create<MenuStore>((set) => ({
       }
     } catch (err) {
       console.error("Failed to delete menu item:", err);
+    }
+  },
+  addCategory: async (category) => {
+    try {
+      const res = await apiFetch(`${API_URL}/api/categories`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(category),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        set((state) => ({ categories: [...state.categories, data] }));
+      } else {
+        throw new Error(data.error || "Failed to add category");
+      }
+    } catch (err) {
+      console.error("Failed to add category:", err);
+      throw err;
+    }
+  },
+  deleteCategory: async (id) => {
+    try {
+      const res = await apiFetch(`${API_URL}/api/categories/${id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (res.ok) {
+        set((state) => ({ categories: state.categories.filter((cat) => cat.id !== id) }));
+      } else {
+        throw new Error(data.error || "Failed to delete category");
+      }
+    } catch (err) {
+      console.error("Failed to delete category:", err);
+      throw err;
     }
   },
 }));

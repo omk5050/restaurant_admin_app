@@ -105,9 +105,9 @@ export function TableGrid({ tables, getOrderForTable }: TableGridProps) {
   };
 
   return (
-    <View style={isMobile ? [styles.container, styles.containerMobile] : styles.containerTablet}>
+    <View style={isMobile ? styles.containerMobile : styles.containerTablet}>
       {/* 1. Restaurant Column */}
-      <View style={[isMobile ? styles.column : styles.sectionCard, isMobile && styles.columnMobile]}>
+      <View style={isMobile ? styles.columnMobile : styles.sectionCard}>
         <View style={[styles.columnHeader, isMobile && styles.columnHeaderMobile]}>
           <View style={[styles.iconPlate, { backgroundColor: "#FFF1E7" }]}>
             <MaterialIcons name="restaurant" size={isMobile ? 18 : 20} color={COLORS.primary} />
@@ -122,10 +122,8 @@ export function TableGrid({ tables, getOrderForTable }: TableGridProps) {
         </View>
       </View>
 
-      {isMobile && <View style={[styles.verticalDivider, styles.verticalDividerMobile]} />}
-
       {/* 2. Family Section Column */}
-      <View style={[isMobile ? styles.column : styles.sectionCard, isMobile && styles.columnMobile]}>
+      <View style={isMobile ? styles.columnMobile : styles.sectionCard}>
         <View style={[styles.columnHeader, isMobile && styles.columnHeaderMobile]}>
           <View style={[styles.iconPlate, { backgroundColor: "#ECFDF3" }]}>
             <MaterialCommunityIcons name="account-group" size={isMobile ? 18 : 20} color={COLORS.green} />
@@ -140,10 +138,8 @@ export function TableGrid({ tables, getOrderForTable }: TableGridProps) {
         </View>
       </View>
 
-      {isMobile && <View style={[styles.verticalDivider, styles.verticalDividerMobile]} />}
-
       {/* 3. Takeaway Column */}
-      <View style={[isMobile ? styles.column : styles.sectionCard, isMobile && styles.columnMobile]}>
+      <View style={isMobile ? styles.columnMobile : styles.sectionCard}>
         <View style={[styles.columnHeader, isMobile && styles.columnHeaderMobile]}>
           <View style={[styles.iconPlate, { backgroundColor: "#F5F3FF" }]}>
             <MaterialCommunityIcons name="shopping" size={isMobile ? 18 : 20} color={COLORS.purple} />
@@ -183,8 +179,8 @@ const styles = StyleSheet.create({
     }),
   },
   containerMobile: {
-    padding: 10,
-    borderRadius: 16,
+    flexDirection: "row",
+    gap: 8,
   },
   containerTablet: {
     flexDirection: "row",
@@ -215,7 +211,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   columnMobile: {
-    paddingHorizontal: 1,
+    flex: 1,
+    backgroundColor: COLORS.white,
+    borderRadius: 24,
+    borderCurve: "continuous",
+    paddingHorizontal: 8,
+    paddingVertical: 12,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#231B13",
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.04,
+        shadowRadius: 16,
+      },
+      android: {
+        elevation: 1.5,
+      },
+      web: {
+        boxShadow: "0 6px 16px rgba(35, 27, 19, 0.04)",
+      },
+    }),
   },
   columnCentered: {
     alignItems: "center",

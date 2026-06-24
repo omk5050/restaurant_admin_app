@@ -56,6 +56,7 @@ function Header({
   onSelectSection,
   onSelectCategory,
   onAddPress,
+  onManageCategoriesPress,
 }: {
   categories: Category[];
   menuItems: MenuItem[];
@@ -65,6 +66,7 @@ function Header({
   onSelectSection: (section: MenuSection) => void;
   onSelectCategory: (id: string) => void;
   onAddPress: () => void;
+  onManageCategoriesPress: () => void;
 }) {
   const { width } = useWindowDimensions();
   const isSmallScreen = width < 500;
@@ -159,9 +161,14 @@ function Header({
         </View>
         <View style={{ alignItems: "flex-end", gap: 6 }}>
           <Text style={styles.availableText}>{visibleCount} available</Text>
-          <Pressable onPress={onAddPress} style={[styles.categoryPill, { backgroundColor: COLORS.primary, borderColor: COLORS.primary }]}>
-            <Text style={[styles.categoryText, { color: COLORS.white }]}>+ Add Item</Text>
-          </Pressable>
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            <Pressable onPress={onManageCategoriesPress} style={[styles.categoryPill, { borderColor: COLORS.primary }]}>
+              <Text style={[styles.categoryText, { color: COLORS.primary }]}>🏷️ Tags</Text>
+            </Pressable>
+            <Pressable onPress={onAddPress} style={[styles.categoryPill, { backgroundColor: COLORS.primary, borderColor: COLORS.primary }]}>
+              <Text style={[styles.categoryText, { color: COLORS.white }]}>+ Add Item</Text>
+            </Pressable>
+          </View>
         </View>
       </View>
     </View>
@@ -272,6 +279,8 @@ export default function MenuManagementScreen() {
   const { menuItems, categories } = useMenu();
   const addMenuItem = useMenuStore((state) => state.addMenuItem);
   const deleteMenuItem = useMenuStore((state) => state.deleteMenuItem);
+  const addCategory = useMenuStore((state) => state.addCategory);
+  const deleteCategory = useMenuStore((state) => state.deleteCategory);
 
   const [selectedSection, setSelectedSection] = useState<MenuSection>("restaurant");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
@@ -312,6 +321,13 @@ export default function MenuManagementScreen() {
   const [error, setError] = useState("");
   const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<{ id: string; name: string } | null>(null);
+  
+  // Category management state
+  const [manageModalVisible, setManageModalVisible] = useState(false);
+  const [newCatName, setNewCatName] = useState("");
+  const [newCatEmoji, setNewCatEmoji] = useState("");
+  const [categoryError, setCategoryError] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
 
   function handleSelectSection(section: MenuSection) {
     setSelectedSection(section);
@@ -456,6 +472,41 @@ export default function MenuManagementScreen() {
     setItemToDelete(null);
   };
 
+  const handleAddCategory = async () => {
+    if (!newCatName.trim() || !newCatEmoji.trim()) {
+      setCategoryError("Name and Emoji icon are required.");
+      return;
+    }
+    setActionLoading(true);
+    setCategoryError("");
+    try {
+      await addCategory({
+        name: newCatName.trim(),
+        icon: newCatEmoji.trim(),
+        section: selectedSection,
+        sortOrder: 0,
+      });
+      setNewCatName("");
+      setNewCatEmoji("");
+    } catch (err: any) {
+      setCategoryError(err.message || "Failed to create category.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDeleteCategory = async (id: string) => {
+    setActionLoading(true);
+    setCategoryError("");
+    try {
+      await deleteCategory(id);
+    } catch (err: any) {
+      setCategoryError(err.message || "Failed to delete category.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   return (
     <View style={{ flex: 1 }}>
       <ScrollView style={styles.screen} contentContainerStyle={styles.scrollContent}>
@@ -468,6 +519,7 @@ export default function MenuManagementScreen() {
           onSelectSection={handleSelectSection}
           onSelectCategory={handleSelectCategory}
           onAddPress={handleOpenAdd}
+          onManageCategoriesPress={() => setManageModalVisible(true)}
         />
 
         <View style={styles.listContainer}>
@@ -725,6 +777,75 @@ export default function MenuManagementScreen() {
             <TouchableOpacity style={[styles.kotDismissBtn, { backgroundColor: "#f1f5f9", marginTop: 0 }]} onPress={() => setDeleteConfirmVisible(false)}>
               <Text style={[styles.kotDismissText, { color: "#64748b" }]}>Cancel</Text>
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Manage Categories Modal */}
+      <Modal visible={manageModalVisible} animationType="slide" transparent>
+        <View style={styles.modalContainer}>
+          <View style={[styles.modalContent, { maxHeight: "85%" }]}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderBottomWidth: 1, borderBottomColor: COLORS.border, paddingBottom: 12 }}>
+              <Text style={styles.modalTitle}>Manage Tags</Text>
+              <Pressable onPress={() => setManageModalVisible(false)} style={{ padding: 4 }}>
+                <Text style={{ fontSize: 22, color: COLORS.slate }}>×</Text>
+              </Pressable>
+            </View>
+
+            {categoryError ? <Text style={styles.errorText}>{categoryError}</Text> : null}
+
+            <Text style={{ fontSize: 13, fontWeight: "700", color: COLORS.text, marginTop: 10, marginBottom: 6 }}>
+              Active {selectedSection === "restaurant" ? "Restaurant" : "Cafe"} Tags
+            </Text>
+
+            <ScrollView style={{ flexGrow: 0, maxHeight: 220 }} showsVerticalScrollIndicator={false}>
+              <View style={{ gap: 8, paddingVertical: 4 }}>
+                {getSubCategories(categories, selectedSection).map((cat) => (
+                  <View key={cat.id} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: COLORS.bg, padding: 10, borderRadius: 12, borderWidth: 1, borderColor: COLORS.border }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                      <Text style={{ fontSize: 18 }}>{cat.icon}</Text>
+                      <Text style={{ fontSize: 14, fontWeight: "700", color: COLORS.text }}>{cat.name}</Text>
+                    </View>
+                    <TouchableOpacity
+                      onPress={() => handleDeleteCategory(cat.id)}
+                      disabled={actionLoading}
+                      style={{ padding: 6 }}
+                    >
+                      <Text style={{ fontSize: 14 }}>🗑️</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            </ScrollView>
+
+            <View style={{ borderTopWidth: 1, borderTopColor: COLORS.border, paddingTop: 12, gap: 10, marginTop: 10 }}>
+              <Text style={{ fontSize: 13, fontWeight: "700", color: COLORS.text }}>Add New Tag</Text>
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                <View style={{ flex: 1, gap: 4 }}>
+                  <Text style={styles.inputLabel}>Emoji Icon</Text>
+                  <TextInput
+                    value={newCatEmoji}
+                    onChangeText={setNewCatEmoji}
+                    placeholder="e.g. 🍹"
+                    style={styles.input}
+                    editable={!actionLoading}
+                  />
+                </View>
+                <View style={{ flex: 2, gap: 4 }}>
+                  <Text style={styles.inputLabel}>Tag Name</Text>
+                  <TextInput
+                    value={newCatName}
+                    onChangeText={setNewCatName}
+                    placeholder="e.g. Drinks"
+                    style={styles.input}
+                    editable={!actionLoading}
+                  />
+                </View>
+              </View>
+              <Button onPress={handleAddCategory} disabled={actionLoading}>
+                {actionLoading ? <ActivityIndicator size="small" color={COLORS.white} /> : "+ Add Tag"}
+              </Button>
+            </View>
           </View>
         </View>
       </Modal>

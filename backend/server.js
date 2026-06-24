@@ -756,6 +756,50 @@ app.get("/api/categories", authenticateToken, async (req, res) => {
   }
 });
 
+app.post("/api/categories", authenticateToken, async (req, res) => {
+  try {
+    const adminId = resolveAdminId(req);
+    const { name, icon, section } = req.body;
+    if (!name || !icon) {
+      return res.status(400).json({ error: "Name and icon are required." });
+    }
+    const lastCategory = await Category.findOne({ adminId, section }).sort({ sortOrder: -1 });
+    const nextSortOrder = lastCategory ? lastCategory.sortOrder + 1 : 0;
+    const uniqueId = `cat_${Date.now()}`;
+    const newCategory = await Category.create({
+      adminId,
+      id: uniqueId,
+      name,
+      icon,
+      section: section || "restaurant",
+      sortOrder: nextSortOrder,
+    });
+    res.json(newCategory);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete("/api/categories/:id", authenticateToken, async (req, res) => {
+  try {
+    const adminId = resolveAdminId(req);
+    const categoryId = req.params.id;
+    const itemsCount = await MenuItem.countDocuments({ adminId, categoryId });
+    if (itemsCount > 0) {
+      return res.status(400).json({
+        error: "Cannot delete category while it contains menu items. Please delete or reassign all items in this category first.",
+      });
+    }
+    const deleted = await Category.findOneAndDelete({ adminId, id: categoryId });
+    if (!deleted) {
+      return res.status(404).json({ error: "Category not found." });
+    }
+    res.json({ message: "Category deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // --- UPLOAD ENDPOINT ---
 app.post("/api/upload", authenticateToken, upload.single("image"), async (req, res) => {
   try {
