@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { FlatList, Pressable, StyleSheet, Text, View, Modal, TextInput, ScrollView, TouchableOpacity, useWindowDimensions, Platform, ActivityIndicator } from "react-native";
+import { FlatList, Pressable, StyleSheet, Text, View, Modal, TextInput, ScrollView, TouchableOpacity, useWindowDimensions, ActivityIndicator } from "react-native";
 
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -378,23 +378,11 @@ export default function MenuManagementScreen() {
   const uploadImage = async (uri: string): Promise<string> => {
     const formData = new FormData();
     const filename = uri.split("/").pop() || "upload.jpg";
-    const match = /\.(\w+)$/.exec(filename);
-    const type = match ? `image/${match[1]}` : `image`;
 
-    let fileData: any;
-    if (Platform.OS === "web") {
-      const response = await fetch(uri);
-      const blob = await response.blob();
-      fileData = blob;
-    } else {
-      fileData = {
-        uri,
-        name: filename,
-        type: type === "image/jpg" ? "image/jpeg" : type,
-      };
-    }
+    const response = await fetch(uri);
+    const blob = await response.blob();
 
-    formData.append("image", fileData);
+    formData.append("image", blob, filename);
 
     const res = await apiFetch(`${API_URL}/api/upload`, {
       method: "POST",
