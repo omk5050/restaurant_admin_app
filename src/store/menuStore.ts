@@ -74,11 +74,19 @@ export const useMenuStore = create<MenuStore>((set) => ({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(category),
       });
-      const data = await res.json();
       if (res.ok) {
+        const data = await res.json();
         set((state) => ({ categories: [...state.categories, data] }));
       } else {
-        throw new Error(data.error || "Failed to add category");
+        const contentType = res.headers.get("content-type");
+        let errorMessage = "Failed to add category";
+        if (contentType && contentType.includes("application/json")) {
+          const data = await res.json();
+          errorMessage = data.error || errorMessage;
+        } else {
+          errorMessage = `HTTP error ${res.status}: ${res.statusText}`;
+        }
+        throw new Error(errorMessage);
       }
     } catch (err) {
       console.error("Failed to add category:", err);
@@ -90,11 +98,18 @@ export const useMenuStore = create<MenuStore>((set) => ({
       const res = await apiFetch(`${API_URL}/api/categories/${id}`, {
         method: "DELETE",
       });
-      const data = await res.json();
       if (res.ok) {
         set((state) => ({ categories: state.categories.filter((cat) => cat.id !== id) }));
       } else {
-        throw new Error(data.error || "Failed to delete category");
+        const contentType = res.headers.get("content-type");
+        let errorMessage = "Failed to delete category";
+        if (contentType && contentType.includes("application/json")) {
+          const data = await res.json();
+          errorMessage = data.error || errorMessage;
+        } else {
+          errorMessage = `HTTP error ${res.status}: ${res.statusText}`;
+        }
+        throw new Error(errorMessage);
       }
     } catch (err) {
       console.error("Failed to delete category:", err);
