@@ -54,8 +54,10 @@ function Header({
   averagePrice,
   selectedSection,
   selectedCategoryId,
+  selectedFoodType,
   onSelectSection,
   onSelectCategory,
+  onSelectFoodType,
   onAddPress,
   onManageCategoriesPress,
 }: {
@@ -64,8 +66,10 @@ function Header({
   averagePrice: number;
   selectedSection: MenuSection;
   selectedCategoryId: string | null;
+  selectedFoodType: "all" | "veg" | "non-veg";
   onSelectSection: (section: MenuSection) => void;
   onSelectCategory: (id: string) => void;
+  onSelectFoodType: (foodType: "all" | "veg" | "non-veg") => void;
   onAddPress: () => void;
   onManageCategoriesPress: () => void;
 }) {
@@ -151,16 +155,54 @@ function Header({
             </Pressable>
           );
         })}
+
+        {/* Divider */}
+        <View style={{ width: 1.5, height: 22, backgroundColor: COLORS.border, marginHorizontal: 4, alignSelf: "center" }} />
+
+        {/* Veg/Non-Veg filter tags */}
+        <Pressable
+          onPress={() => onSelectFoodType("all")}
+          style={[
+            styles.categoryPill,
+            selectedFoodType === "all" && { backgroundColor: COLORS.espresso, borderColor: COLORS.espresso },
+          ]}
+        >
+          <Text style={[styles.categoryText, selectedFoodType === "all" && { color: COLORS.white }]}>
+            All Type
+          </Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() => onSelectFoodType("veg")}
+          style={[
+            styles.categoryPill,
+            selectedFoodType === "veg" && { backgroundColor: COLORS.greenLight, borderColor: COLORS.green },
+          ]}
+        >
+          <Text style={styles.categoryIcon}>🟢</Text>
+          <Text style={[styles.categoryText, { color: COLORS.green, fontWeight: "800" }]}>Veg</Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() => onSelectFoodType("non-veg")}
+          style={[
+            styles.categoryPill,
+            selectedFoodType === "non-veg" && { backgroundColor: "#FEF2F2", borderColor: COLORS.danger },
+          ]}
+        >
+          <Text style={styles.categoryIcon}>🔴</Text>
+          <Text style={[styles.categoryText, { color: COLORS.danger, fontWeight: "800" }]}>Non-Veg</Text>
+        </Pressable>
       </View>
 
       <View style={styles.sectionHeader}>
-        <View>
-          <Text style={styles.title}>{sectionTitle}</Text>
+        <View style={{ flex: 1, minWidth: 140 }}>
+          <Text style={styles.title} numberOfLines={2} adjustsFontSizeToFit>{sectionTitle}</Text>
           <Text style={styles.subtitle}>
             {selectedCategoryId ? "Filtered by category" : "Tap-friendly cards for quick item review"}
           </Text>
         </View>
-        <View style={{ alignItems: "flex-end", gap: 6 }}>
+        <View style={{ alignItems: "flex-end", gap: 6, paddingVertical: 4 }}>
           <Text style={styles.availableText}>{visibleCount} available</Text>
           <View style={{ flexDirection: "row", gap: 8 }}>
             <Pressable onPress={onManageCategoriesPress} style={[styles.categoryPill, { borderColor: COLORS.primary }]}>
@@ -285,6 +327,7 @@ export default function MenuManagementScreen() {
 
   const [selectedSection, setSelectedSection] = useState<MenuSection>("restaurant");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [selectedFoodType, setSelectedFoodType] = useState<"all" | "veg" | "non-veg">("all");
 
   const flatListRef = useRef<FlatList>(null);
   const scrollOffset = useRef(0);
@@ -333,6 +376,7 @@ export default function MenuManagementScreen() {
   function handleSelectSection(section: MenuSection) {
     setSelectedSection(section);
     setSelectedCategoryId(null);
+    setSelectedFoodType("all");
   }
 
   // Toggle category filter — click same pill again to show all in section
@@ -346,7 +390,10 @@ export default function MenuManagementScreen() {
 
   const filteredItems = menuItems.filter((item) => {
     if (!sectionCategoryIds.includes(item.categoryId)) return false;
-    return !selectedCategoryId || item.categoryId === selectedCategoryId;
+    if (selectedCategoryId && item.categoryId !== selectedCategoryId) return false;
+    if (selectedFoodType === "veg" && !item.isVeg) return false;
+    if (selectedFoodType === "non-veg" && item.isVeg) return false;
+    return true;
   });
 
   const handleFormSectionChange = (section: MenuSection) => {
@@ -541,8 +588,10 @@ export default function MenuManagementScreen() {
           averagePrice={averagePrice}
           selectedSection={selectedSection}
           selectedCategoryId={selectedCategoryId}
+          selectedFoodType={selectedFoodType}
           onSelectSection={handleSelectSection}
           onSelectCategory={handleSelectCategory}
+          onSelectFoodType={setSelectedFoodType}
           onAddPress={handleOpenAdd}
           onManageCategoriesPress={() => setManageModalVisible(true)}
         />
@@ -1015,9 +1064,11 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   sectionHeader: {
-    alignItems: "flex-end",
+    alignItems: "center",
     flexDirection: "row",
     justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: 12,
   },
   title: {
     color: COLORS.text,

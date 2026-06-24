@@ -10,6 +10,8 @@ interface CategorySidebarProps {
   selectedId: string;
   onSelectSection: (section: MenuSection) => void;
   onSelect: (id: string) => void;
+  selectedFoodType: "all" | "veg" | "non-veg";
+  onSelectFoodType: (foodType: "all" | "veg" | "non-veg") => void;
 }
 
 export function CategorySidebar({
@@ -18,6 +20,8 @@ export function CategorySidebar({
   selectedId,
   onSelectSection,
   onSelect,
+  selectedFoodType,
+  onSelectFoodType,
 }: CategorySidebarProps) {
   const subCategories = getSubCategories(categories, selectedSection);
 
@@ -63,6 +67,50 @@ export function CategorySidebar({
             </Pressable>
           );
         }}
+        ListFooterComponent={
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingLeft: 8 }}>
+            {/* Vertical separator */}
+            <View style={{ width: 1.5, height: 20, backgroundColor: COLORS.border }} />
+
+            <Pressable
+              onPress={() => onSelectFoodType("all")}
+              style={[
+                styles.pill,
+                selectedFoodType === "all" && { backgroundColor: COLORS.espresso, borderColor: COLORS.espresso },
+              ]}
+            >
+              <Text style={[styles.name, selectedFoodType === "all" && { color: COLORS.white, fontWeight: "800" }]}>
+                All Type
+              </Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => onSelectFoodType("veg")}
+              style={[
+                styles.pill,
+                selectedFoodType === "veg" && { backgroundColor: COLORS.greenLight, borderColor: COLORS.green },
+              ]}
+            >
+              <Text style={styles.icon}>🟢</Text>
+              <Text style={[styles.name, { color: COLORS.green, fontWeight: "800" }]}>
+                Veg
+              </Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => onSelectFoodType("non-veg")}
+              style={[
+                styles.pill,
+                selectedFoodType === "non-veg" && { backgroundColor: "#FEF2F2", borderColor: COLORS.danger },
+              ]}
+            >
+              <Text style={styles.icon}>🔴</Text>
+              <Text style={[styles.name, { color: COLORS.danger, fontWeight: "800" }]}>
+                Non-Veg
+              </Text>
+            </Pressable>
+          </View>
+        }
       />
     </View>
   );

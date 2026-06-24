@@ -290,14 +290,15 @@ export default function DashboardScreen() {
             </View>
 
             <TouchableOpacity
-              style={styles.logoutBtn}
+              style={[styles.logoutBtn, { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 6 }]}
               onPress={async () => {
                 setSettingsModalVisible(false);
                 await signOut();
               }}
               activeOpacity={0.8}
             >
-              <Text style={styles.logoutBtnText}>⏻  Logout</Text>
+              <MaterialIcons name="logout" size={18} color="#ef4444" />
+              <Text style={styles.logoutBtnText}>Logout</Text>
             </TouchableOpacity>
           </ScrollView>
         </View>

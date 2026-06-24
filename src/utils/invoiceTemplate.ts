@@ -6,30 +6,32 @@ export function generateInvoiceHTML(invoice: Invoice, settings: AppSettings) {
     .map(
       (item) => `
     <tr>
-      <td style="padding:3px 0">${item.name}</td>
-      <td style="text-align:center">x${item.qty}</td>
-      <td style="text-align:right">${settings.currency}${item.price * item.qty}</td>
+      <td style="padding:4px 0; font-weight:bold;">${item.name}</td>
+      <td style="text-align:center; font-weight:bold;">x${item.qty}</td>
+      <td style="text-align:right; font-weight:bold;">${settings.currency}${item.price * item.qty}</td>
     </tr>`,
     )
     .join("");
 
   const tableRow = invoice.isTakeaway
-    ? `<p>Type    : Takeaway (${getTableName(invoice.tableId, settings)})</p>
-  <p>Customer: ${invoice.customerName}</p>
-  <p>Phone   : ${invoice.customerPhone}</p>`
-    : `<p>Table   : ${getTableName(invoice.tableId, settings)}</p>`;
+    ? `<p style="font-weight:bold; margin: 4px 0;">TYPE: Takeaway (${getTableName(invoice.tableId, settings)})</p>
+  <p style="font-weight:bold; margin: 4px 0;">CUST: ${invoice.customerName}</p>
+  <p style="font-weight:bold; margin: 4px 0;">PHONE: ${invoice.customerPhone}</p>`
+    : `<p style="font-weight:bold; margin: 4px 0;">TABLE: ${getTableName(invoice.tableId, settings)}</p>`;
 
   return `<!DOCTYPE html>
 <html>
 <head>
+  <meta charset="utf-8">
   <style>
-    body { font-family:'Courier New',monospace; width:320px; margin:auto; font-size:15px; }
-    h1 { text-align:center; font-size:19px; letter-spacing:3px; margin-bottom:4px; }
-    .sub { text-align:center; font-size:12px; color:#666; margin:2px 0; }
-    .dash { border-top:2px dashed #333; margin:10px 0; }
-    table { width:100%; border-collapse:collapse; }
-    .total { font-size:19px; font-weight:bold; }
-    .center { text-align:center; }
+    body { font-family:'Courier New',Courier,monospace; width:290px; margin:0 auto; font-size:17px; line-height:1.4; color:#000; }
+    h1 { text-align:center; font-size:24px; font-weight:bold; letter-spacing:2px; margin:0 0 4px 0; text-transform:uppercase; }
+    .sub { text-align:center; font-size:14px; margin:3px 0; font-weight:bold; }
+    .dash { border-top:2px dashed #000; margin:12px 0; }
+    table { width:100%; border-collapse:collapse; font-size:17px; }
+    .total { font-size:22px; font-weight:bold; margin: 8px 0; }
+    .center { text-align:center; font-weight:bold; }
+    p { margin: 6px 0; }
   </style>
 </head>
 <body>
@@ -38,14 +40,14 @@ export function generateInvoiceHTML(invoice: Invoice, settings: AppSettings) {
   <p class="sub">GST: ${settings.gstNumber}</p>
   <div class="dash"></div>
   ${tableRow}
-  <p>Bill No : ${invoice.orderNo}</p>
-  <p>Date    : ${new Date(invoice.createdAt).toLocaleString("en-IN")}</p>
-  <p>Payment : ${invoice.paymentMethod.toUpperCase()}</p>
+  <p style="font-weight:bold;">BILL NO : ${invoice.orderNo}</p>
+  <p style="font-weight:bold;">DATE    : ${new Date(invoice.createdAt).toLocaleString("en-IN")}</p>
+  <p style="font-weight:bold;">PAYMENT : ${invoice.paymentMethod.toUpperCase()}</p>
   <div class="dash"></div>
   <table>${rows}</table>
   <div class="dash"></div>
-  <p>Subtotal : ${settings.currency}${invoice.subtotal}</p>
-  <p>GST (${settings.gstPercent}%) : ${settings.currency}${invoice.gstAmount}</p>
+  <p style="font-weight:bold;">Subtotal : ${settings.currency}${invoice.subtotal}</p>
+  <p style="font-weight:bold;">GST (${settings.gstPercent}%) : ${settings.currency}${invoice.gstAmount}</p>
   <div class="dash"></div>
   <p class="total">TOTAL : ${settings.currency}${invoice.total}</p>
   <div class="dash"></div>

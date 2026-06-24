@@ -26,11 +26,13 @@ export default function TableOrderScreen() {
   const [selectedCategory, setSelectedCategory] = useState(
     () => getSubCategories(categories, "restaurant")[0]?.id ?? categories[0]?.id ?? "popular",
   );
+  const [selectedFoodType, setSelectedFoodType] = useState<"all" | "veg" | "non-veg">("all");
 
   function handleSelectSection(section: MenuSection) {
     setSelectedSection(section);
     const firstCategory = getSubCategories(categories, section)[0];
     if (firstCategory) setSelectedCategory(firstCategory.id);
+    setSelectedFoodType("all");
   }
   const { getOrderForTable, updateOrderItem, generateBill } = useOrder();
   const createOrder = useOrderStore((state) => state.createOrder);
@@ -92,6 +94,14 @@ export default function TableOrderScreen() {
     order?.items.forEach((item) => map.set(item.menuItemId, item.qty));
     return map;
   }, [order?.items]);
+
+  const filteredItems = useMemo(() => {
+    return items.filter((item) => {
+      if (selectedFoodType === "veg" && !item.isVeg) return false;
+      if (selectedFoodType === "non-veg" && item.isVeg) return false;
+      return true;
+    });
+  }, [items, selectedFoodType]);
 
   function changeQty(item: MenuItem, qty: number) {
     if (!order) return;
@@ -302,54 +312,56 @@ export default function TableOrderScreen() {
     );
   }
 
-  return (
-    <View style={styles.screen}>
-      <View style={styles.infoBar}>
-        <View style={styles.infoItem}>
-          <Text style={styles.infoIcon}>{order.isTakeaway ? "👤" : "👥"}</Text>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.infoLabel} numberOfLines={1} ellipsizeMode="tail">
-              {order.isTakeaway ? order.customerPhone : "Guests"}
-            </Text>
-            <Text style={styles.infoValue} numberOfLines={1} ellipsizeMode="tail">
-              {order.isTakeaway ? order.customerName : order.guests}
-            </Text>
+      return (
+        <View style={styles.screen}>
+          <View style={styles.infoBar}>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoIcon}>{order.isTakeaway ? "👤" : "👥"}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.infoLabel} numberOfLines={1} ellipsizeMode="tail">
+                  {order.isTakeaway ? order.customerPhone : "Guests"}
+                </Text>
+                <Text style={styles.infoValue} numberOfLines={1} ellipsizeMode="tail">
+                  {order.isTakeaway ? order.customerName : order.guests}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoIcon}>🕐</Text>
+              <View>
+                <Text style={styles.infoLabel}>Opened At</Text>
+                <Text style={styles.infoValue}>{formatTime(order.openedAt)}</Text>
+              </View>
+            </View>
+            <View style={styles.infoItemLast}>
+              <Text style={styles.infoIcon}>📋</Text>
+              <View>
+                <Text style={styles.infoLabel}>Order No.</Text>
+                <Text style={styles.infoValue}>{order.orderNo}</Text>
+              </View>
+            </View>
+            <TouchableOpacity style={styles.clearNowBtn} onPress={handleClearTable} activeOpacity={0.8}>
+              <Text style={styles.clearNowBtnText}>🗑️ Clear</Text>
+            </TouchableOpacity>
           </View>
-        </View>
-        <View style={styles.infoItem}>
-          <Text style={styles.infoIcon}>🕐</Text>
-          <View>
-            <Text style={styles.infoLabel}>Opened At</Text>
-            <Text style={styles.infoValue}>{formatTime(order.openedAt)}</Text>
+    
+          <View style={styles.body}>
+            <CategorySidebar
+              categories={categories}
+              selectedSection={selectedSection}
+              selectedId={selectedCategory}
+              onSelectSection={handleSelectSection}
+              onSelect={setSelectedCategory}
+              selectedFoodType={selectedFoodType}
+              onSelectFoodType={setSelectedFoodType}
+            />
+            <MenuList
+              title={activeCategory?.name ?? "Menu"}
+              items={filteredItems}
+              getQty={(itemId) => qtyById.get(itemId) ?? 0}
+              onChangeQty={changeQty}
+            />
           </View>
-        </View>
-        <View style={styles.infoItemLast}>
-          <Text style={styles.infoIcon}>📋</Text>
-          <View>
-            <Text style={styles.infoLabel}>Order No.</Text>
-            <Text style={styles.infoValue}>{order.orderNo}</Text>
-          </View>
-        </View>
-        <TouchableOpacity style={styles.clearNowBtn} onPress={handleClearTable} activeOpacity={0.8}>
-          <Text style={styles.clearNowBtnText}>🗑️ Clear</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.body}>
-        <CategorySidebar
-          categories={categories}
-          selectedSection={selectedSection}
-          selectedId={selectedCategory}
-          onSelectSection={handleSelectSection}
-          onSelect={setSelectedCategory}
-        />
-        <MenuList
-          title={activeCategory?.name ?? "Menu"}
-          items={items}
-          getQty={(itemId) => qtyById.get(itemId) ?? 0}
-          onChangeQty={changeQty}
-        />
-      </View>
 
       {/* Clear Table Button for active/billed tables */}
       {(tableStatus === "active" || tableStatus === "bill") && (
