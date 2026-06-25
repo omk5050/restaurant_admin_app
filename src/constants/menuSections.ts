@@ -1,7 +1,7 @@
 import { Category, MenuSection } from "@/types";
 
 export const MENU_SECTIONS: { id: MenuSection; name: string; icon: string }[] = [
-  { id: "restaurant", name: "Restaurant", icon: "🍽️" },
+  { id: "restaurant", name: "Menu", icon: "🍽️" },
 ];
 
 const RESTAURANT_CATEGORY_KEYS = new Set(["popular", "starters", "main", "rice"]);

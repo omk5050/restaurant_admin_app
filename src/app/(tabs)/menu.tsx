@@ -1,5 +1,6 @@
-import { useState, useRef } from "react";
-import { FlatList, Pressable, StyleSheet, Text, View, Modal, TextInput, ScrollView, TouchableOpacity, useWindowDimensions, ActivityIndicator, Platform, Image } from "react-native";
+import { useState, useRef, memo } from "react";
+import { FlatList, Pressable, StyleSheet, Text, View, Modal, TextInput, ScrollView, TouchableOpacity, useWindowDimensions, ActivityIndicator, Platform } from "react-native";
+import { Image } from "expo-image";
 
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -218,7 +219,7 @@ function Header({
   );
 }
 
-function MenuCard({
+const MenuCard = memo(function MenuCard({
   item,
   categoryName,
   onDeletePress,
@@ -241,7 +242,8 @@ function MenuCard({
             height: 110,
             borderRadius: 16,
           }}
-          resizeMode="cover"
+          contentFit="cover"
+          transition={150}
         />
 
         <TouchableOpacity
@@ -316,7 +318,7 @@ function MenuCard({
       </View>
     </Card>
   );
-}
+});
 
 export default function MenuManagementScreen() {
   const { menuItems, categories } = useMenu();
@@ -606,6 +608,10 @@ export default function MenuManagementScreen() {
             contentContainerStyle={styles.list}
             onScroll={handleScroll}
             scrollEventThrottle={16}
+            initialNumToRender={8}
+            maxToRenderPerBatch={10}
+            windowSize={5}
+            removeClippedSubviews={Platform.OS !== "web"}
             renderItem={({ item }) => (
               <MenuCard
                 item={item}
@@ -675,7 +681,7 @@ export default function MenuManagementScreen() {
                     ]}
                     disabled={uploading}
                   >
-                    <Text style={{ color: formSection === "restaurant" ? COLORS.white : COLORS.slate, fontWeight: "800" }}>🍽️ Restaurant</Text>
+                    <Text style={{ color: formSection === "restaurant" ? COLORS.white : COLORS.slate, fontWeight: "800" }}>🍽️ Menu</Text>
                   </Pressable>
                   <Pressable
                     onPress={() => handleFormSectionChange("cafe")}
@@ -869,7 +875,7 @@ export default function MenuManagementScreen() {
             {categoryError ? <Text style={styles.errorText}>{categoryError}</Text> : null}
 
             <Text style={{ fontSize: 13, fontWeight: "700", color: COLORS.text, marginTop: 10, marginBottom: 6 }}>
-              Active {selectedSection === "restaurant" ? "Restaurant" : "Cafe"} Tags
+              Active {selectedSection === "restaurant" ? "Menu" : "Cafe"} Tags
             </Text>
 
             <ScrollView style={{ flexGrow: 0, maxHeight: 220 }} showsVerticalScrollIndicator={false}>
