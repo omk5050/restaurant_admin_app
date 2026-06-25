@@ -198,9 +198,9 @@ function Header({
       <View style={styles.sectionHeader}>
         <View style={{ flex: 1, minWidth: 140 }}>
           <Text style={styles.title} numberOfLines={2} adjustsFontSizeToFit>{sectionTitle}</Text>
-          <Text style={styles.subtitle}>
-            {selectedCategoryId ? "Filtered by category" : "Tap-friendly cards for quick item review"}
-          </Text>
+          {selectedCategoryId ? (
+            <Text style={styles.subtitle}>Filtered by category</Text>
+          ) : null}
         </View>
         <View style={{ alignItems: "flex-end", gap: 6, paddingVertical: 4 }}>
           <Text style={styles.availableText}>{visibleCount} available</Text>

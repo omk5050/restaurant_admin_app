@@ -77,7 +77,7 @@ export function OrderBottomBar({ onKotPress, onHoldPress, onAddCustomItem }: Ord
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Add Custom Item</Text>
-            <Text style={styles.modalSubtitle}>This item will be added to this bill only and won't save to the menu.</Text>
+            <Text style={styles.modalSubtitle}>This item will be added to this bill only and won&apos;t save to the menu.</Text>
 
             <View style={styles.field}>
               <Text style={styles.fieldLabel}>Item Name</Text>

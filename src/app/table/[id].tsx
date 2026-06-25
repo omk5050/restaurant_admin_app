@@ -55,6 +55,7 @@ export default function TableOrderScreen() {
 
   useEffect(() => {
     if (table && table.name.startsWith("T") && !order) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTakeawayModalVisible(true);
     } else {
       setTakeawayModalVisible(false);
@@ -328,16 +329,16 @@ export default function TableOrderScreen() {
             </View>
             <View style={styles.infoItem}>
               <Text style={styles.infoIcon}>🕐</Text>
-              <View>
-                <Text style={styles.infoLabel}>Opened At</Text>
-                <Text style={styles.infoValue}>{formatTime(order.openedAt)}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.infoLabel} numberOfLines={1} ellipsizeMode="tail">Opened At</Text>
+                <Text style={styles.infoValue} numberOfLines={1} ellipsizeMode="tail">{formatTime(order.openedAt)}</Text>
               </View>
             </View>
             <View style={styles.infoItemLast}>
               <Text style={styles.infoIcon}>📋</Text>
-              <View>
-                <Text style={styles.infoLabel}>Order No.</Text>
-                <Text style={styles.infoValue}>{order.orderNo}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.infoLabel} numberOfLines={1} ellipsizeMode="tail">Order No.</Text>
+                <Text style={styles.infoValue} numberOfLines={1} ellipsizeMode="tail">{order.orderNo}</Text>
               </View>
             </View>
             <TouchableOpacity style={styles.clearNowBtn} onPress={handleClearTable} activeOpacity={0.8}>
@@ -452,8 +453,8 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.border,
     borderBottomWidth: 1,
     flexDirection: "row",
-    gap: 8,
-    paddingHorizontal: 12,
+    gap: 6,
+    paddingHorizontal: 8,
     paddingVertical: 9,
   },
   infoItem: {
@@ -462,14 +463,14 @@ const styles = StyleSheet.create({
     borderRightWidth: 1,
     flex: 1,
     flexDirection: "row",
-    gap: 6,
-    paddingRight: 6,
+    gap: 4,
+    paddingRight: 4,
   },
   infoItemLast: {
     alignItems: "center",
     flex: 1,
     flexDirection: "row",
-    gap: 6,
+    gap: 4,
   },
   infoIcon: {
     fontSize: 14,
