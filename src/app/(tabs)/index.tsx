@@ -146,28 +146,28 @@ export default function DashboardScreen() {
       </View>
 
       <View style={[styles.metricsRow, isSmallScreen && { flexWrap: "wrap", gap: 10 }]}>
-        <Card style={[styles.metricCard, isSmallScreen && { minWidth: "47%", flex: 0 }]}>
+        <Card style={[styles.metricCard, isSmallScreen && { minWidth: "45%" }]}>
           <View style={[styles.metricIconPlate, { backgroundColor: "#FFF1E7" }]}>
             <MaterialIcons name="chair" size={20} color="#FF8A00" />
           </View>
           <Text style={[styles.metricValue, { color: "#FF8A00" }]}>{activeTables}</Text>
           <Text style={styles.metricLabel}>Active</Text>
         </Card>
-        <Card style={[styles.metricCard, isSmallScreen && { minWidth: "47%", flex: 0 }]}>
+        <Card style={[styles.metricCard, isSmallScreen && { minWidth: "45%" }]}>
           <View style={[styles.metricIconPlate, { backgroundColor: "#EFF6FF" }]}>
             <MaterialIcons name="receipt-long" size={20} color={COLORS.blue} />
           </View>
           <Text style={[styles.metricValue, styles.billMetric]}>{billedTables}</Text>
           <Text style={styles.metricLabel}>Bills</Text>
         </Card>
-        <Card style={[styles.metricCard, isSmallScreen && { minWidth: "47%", flex: 0 }]}>
+        <Card style={[styles.metricCard, isSmallScreen && { minWidth: "45%" }]}>
           <View style={[styles.metricIconPlate, { backgroundColor: "#ECFDF3" }]}>
             <MaterialIcons name="credit-card" size={20} color="#22C55E" />
           </View>
           <Text style={[styles.metricValue, styles.paidMetric, { color: "#22C55E" }]}>{paidTables}</Text>
           <Text style={styles.metricLabel}>Paid</Text>
         </Card>
-        <Card style={[styles.metricCard, isSmallScreen && { minWidth: "47%", flex: 0 }]}>
+        <Card style={[styles.metricCard, isSmallScreen && { minWidth: "45%" }]}>
           <View style={[styles.metricIconPlate, { backgroundColor: "#F5F3FF" }]}>
             <MaterialCommunityIcons name="door-open" size={20} color={COLORS.purple} />
           </View>

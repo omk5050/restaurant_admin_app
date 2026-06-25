@@ -40,15 +40,15 @@ function Header({ orders }: { orders: Order[] }) {
       </View>
 
       <View style={[styles.metricRow, isSmallScreen && { flexWrap: "wrap", gap: 10 }]}>
-        <Card style={[styles.metric, isSmallScreen && { minWidth: "47%", flex: 0 }]}>
+        <Card style={[styles.metric, isSmallScreen && { minWidth: "45%" }]}>
           <Text style={styles.metricValue}>{orders.length}</Text>
           <Text style={styles.metricLabel}>Total orders</Text>
         </Card>
-        <Card style={[styles.metric, isSmallScreen && { minWidth: "47%", flex: 0 }]}>
+        <Card style={[styles.metric, isSmallScreen && { minWidth: "45%" }]}>
           <Text style={[styles.metricValue, { color: COLORS.blue }]}>{billedOrders.length}</Text>
           <Text style={styles.metricLabel}>Need payment</Text>
         </Card>
-        <Card style={[styles.metricWide, isSmallScreen && { minWidth: "100%", flex: 0, alignItems: "center" }]}>
+        <Card style={[styles.metricWide, isSmallScreen && { minWidth: "90%", alignItems: "center" }]}>
           <Text style={styles.metricValue}>{formatCurrency(sales)}</Text>
           <Text style={styles.metricLabel}>Order value</Text>
         </Card>
