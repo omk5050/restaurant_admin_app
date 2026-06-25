@@ -168,7 +168,7 @@ function Header({
           ]}
         >
           <Text style={[styles.categoryText, selectedFoodType === "all" && { color: COLORS.white }]}>
-            All Type
+            All types
           </Text>
         </Pressable>
 

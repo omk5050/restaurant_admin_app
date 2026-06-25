@@ -80,7 +80,7 @@ export function CategorySidebar({
               ]}
             >
               <Text style={[styles.name, selectedFoodType === "all" && { color: COLORS.white, fontWeight: "800" }]}>
-                All Type
+                All types
               </Text>
             </Pressable>
 
