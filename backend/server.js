@@ -233,9 +233,25 @@ function getScopedId(baseId, adminId, usesSuffixedIds) {
   return usesSuffixedIds ? `${baseId}_${adminId}` : baseId;
 }
 
-async function ensureDefaultMenuData(adminId) {
-  // Disabled automatic seeding to prevent mock categories/items from injecting into user databases
-  return;
+async function cleanupDefaultData(adminId) {
+  if (!adminId) return;
+  const targetCategoryIds = [
+    "popular", "popular_" + adminId,
+    "beverages", "beverages_" + adminId,
+    "snacks", "snacks_" + adminId,
+    "desserts", "desserts_" + adminId,
+    "starters", "starters_" + adminId,
+    "rice", "rice_" + adminId
+  ];
+  // 1. Delete matching categories
+  await Category.deleteMany({ adminId, id: { $in: targetCategoryIds } });
+
+  // 2. Delete menu items that belong to those categories
+  await MenuItem.deleteMany({ adminId, categoryId: { $in: targetCategoryIds } });
+
+  // 3. Delete any other default seeded items (whose IDs start with 'm' followed by digit)
+  await MenuItem.deleteMany({ adminId, id: { $regex: /^m\d/ } });
+  await MenuItem.deleteMany({ adminId, id: { $regex: new RegExp("^m\\d+_" + adminId + "$") } });
 }
 
 function getTableName(id) {
@@ -727,7 +743,7 @@ app.post("/api/tables/:id/clear", authenticateToken, async (req, res) => {
 app.get("/api/categories", authenticateToken, async (req, res) => {
   try {
     const adminId = resolveAdminId(req);
-    await ensureDefaultMenuData(adminId);
+    await cleanupDefaultData(adminId);
     const categories = await Category.find({ adminId }).sort({ sortOrder: 1 });
     res.json(categories);
   } catch (err) {
@@ -806,7 +822,7 @@ app.post("/api/upload", authenticateToken, upload.single("image"), async (req, r
 app.get("/api/menu", authenticateToken, async (req, res) => {
   try {
     const adminId = resolveAdminId(req);
-    await ensureDefaultMenuData(adminId);
+    await cleanupDefaultData(adminId);
     const menuItems = await MenuItem.find({ adminId });
     // Map to plain objects with a guaranteed 'id' field
     const items = menuItems.map((item) => ({
