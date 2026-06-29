@@ -35,7 +35,7 @@ export default function TableOrderScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const tableId = Number(id);
   const { findTable, ensureOrderForTable, clearTable, setTableStatus } = useTables();
-  const { categories } = useMenu();
+  const { categories, fetchMenu } = useMenu();
   const [selectedSection, setSelectedSection] = useState<MenuSection>("restaurant");
   const [selectedCategory, setSelectedCategory] = useState(
     () => getSubCategories(categories, "restaurant")[0]?.id ?? categories[0]?.id ?? "popular",
@@ -108,6 +108,22 @@ export default function TableOrderScreen() {
       setActiveOrderType(order.isTakeaway ? "pick-up" : "dine-in");
     }
   }, [order]);
+
+  // Fetch categories and items from database on mount
+  useEffect(() => {
+    fetchMenu();
+  }, [fetchMenu]);
+
+  // Sync selectedCategory to first available category of the section once loaded
+  useEffect(() => {
+    const subCats = getSubCategories(categories, selectedSection);
+    if (subCats.length > 0) {
+      const exists = subCats.some((cat) => cat.id === selectedCategory);
+      if (!exists) {
+        setSelectedCategory(subCats[0].id);
+      }
+    }
+  }, [categories, selectedSection, selectedCategory]);
 
   // Auto-initialize orders (both Dine-In and Takeaway) on load without prompting customer details
   useEffect(() => {
