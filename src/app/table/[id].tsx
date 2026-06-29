@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  Image,
   Modal,
   StyleSheet,
   Text,
@@ -30,6 +31,37 @@ import { useSettingsStore } from "@/store/settingsStore";
 import { MenuItem, MenuSection, PaymentMethod } from "@/types";
 import { formatCurrency, formatTime } from "@/utils/formatters";
 import { generateInvoiceHTML, generateKotHTML } from "@/utils/invoiceTemplate";
+
+// Desktop menu item image map
+const desktopMenuImages: Record<string, number> = {
+  "Veg Dum Biryani":        require("../../../assets/images/Veg-Dum-Biryani.jpg"),
+  "Egg Dum Biryani":        require("../../../assets/images/egg-dum-biryani.jpg"),
+  "French Fries Classic":   require("../../../assets/images/french-fries-classic.jpg"),
+  "Peri Peri French Fries": require("../../../assets/images/peri-peri-fries.jpg"),
+  "Tripple Choco Bowl":     require("../../../assets/images/triple-choco-bowl.jpg"),
+  "Oreo Choco Bowl":        require("../../../assets/images/oreo-choco-bowl.jpg"),
+  "Paneer Tikka Biryani":   require("../../../assets/images/Paneer-Tikka-Biryani.jpg"),
+  "Paneer Kalimiri Kabab":  require("../../../assets/images/paneer-kalimiri-kabab.jpg"),
+  "Chicken Dum Biryani":    require("../../../assets/images/Chicken-Dum-Biryani.jpg"),
+  "Mutton Dum Biryani":     require("../../../assets/images/Mutton-Dum-Biryani.jpg"),
+  "Chicken Tikka Biryani":  require("../../../assets/images/chicken-Tikka-Biryani.jpg"),
+  "Tandoori Biryani":       require("../../../assets/images/Tandoori-Biryani.jpg"),
+  "Afghani Tandoor":        require("../../../assets/images/Afghani-Tandoor.jpg"),
+  "Chicken Sheekh Kabab":   require("../../../assets/images/Chicken-Sheekh-Kabab.jpg"),
+  "Mutton Sheekh Kebab":    require("../../../assets/images/Mutton-Sheekh-Kebab.jpg"),
+  "Chicken Tikka Kebab":    require("../../../assets/images/Chicken-Tikka-Kebab.jpg"),
+  "Chicken Tangadi Kebab":  require("../../../assets/images/Chicken-Tangadi-Kebab.jpg"),
+  "Lahsuni Kebab":          require("../../../assets/images/Lahsuni-Kebab.jpg"),
+  "Paneer Tikka Kebab":     require("../../../assets/images/Paneer-Tikka-Kebab.jpg"),
+  "Speacial Paradise Kebab":require("../../../assets/images/Speacial-Paradise-Kebab.jpg"),
+  "Chicken Hariyali Kebab": require("../../../assets/images/Chicken-Hariyali-Kebab.jpg"),
+  "Paneer Kalimiri kebab":  require("../../../assets/images/Paneer-Kalimiri-kebab.jpg"),
+  "Chicken Kalimiri kebab": require("../../../assets/images/Chicken-Kalimiri-kebab.jpg"),
+  "Tandoor Chicken Red":    require("../../../assets/images/Tandoor-Chicken-Red.jpg"),
+  "Tandoor Chicken White":  require("../../../assets/images/Tandoor-chicken-White.jpg"),
+  "Tandoori Lollipop":      require("../../../assets/images/Tandoori-Lollipop.jpg"),
+  "Reshmi Kebab":           require("../../../assets/images/Reshmi-Kebab.jpg"),
+};
 
 export default function TableOrderScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -71,7 +103,12 @@ export default function TableOrderScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [shortCode, setShortCode] = useState("");
   const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());
-  const [isBottomBarExpanded, setIsBottomBarExpanded] = useState(true);
+  // Tax & Discount local state (desktop only, session-only — not persisted)
+  const [taxEnabled, setTaxEnabled] = useState(true);
+  const [discountType, setDiscountType] = useState<"percent" | "flat">("percent");
+  const [discountValue, setDiscountValue] = useState(0);
+  const [discountModalVisible, setDiscountModalVisible] = useState(false);
+  const [discountInputText, setDiscountInputText] = useState("");
   const [localGuests, setLocalGuests] = useState(4);
 
   // Dine In / Pick Up selection
@@ -187,6 +224,18 @@ export default function TableOrderScreen() {
       return true;
     });
   }, [items, selectedFoodType, searchQuery]);
+
+  // Effective totals applying local tax/discount overrides (desktop only)
+  const discountAmount = useMemo(() => {
+    if (!order || discountValue <= 0) return 0;
+    if (discountType === "percent") return (order.subtotal * discountValue) / 100;
+    return Math.min(discountValue, order.subtotal);
+  }, [order, discountValue, discountType]);
+
+  const effectiveTotal = useMemo(() => {
+    if (!order) return 0;
+    return Math.max(0, order.subtotal - discountAmount + (taxEnabled ? order.gstAmount : 0));
+  }, [order, discountAmount, taxEnabled]);
 
   function changeQty(item: MenuItem, qty: number) {
     if (!order) return;
@@ -561,7 +610,7 @@ export default function TableOrderScreen() {
                 return (
                   <TouchableOpacity
                     key={cat.id}
-                    onPress={() => setSelectedCategory(cat.id)}
+                    onPress={() => setSelectedCategory(isActive ? "" : cat.id)}
                     style={[styles.desktopCategoryItem, isActive && styles.desktopCategoryItemActive]}
                   >
                     <Text style={styles.desktopCategoryIcon}>{cat.icon}</Text>
@@ -579,6 +628,28 @@ export default function TableOrderScreen() {
 
           {/* Middle Menu Items Grid */}
           <View style={styles.desktopMiddlePanel}>
+            {/* Veg / All / Non-Veg Symbol Filter */}
+            <View style={styles.desktopFoodTypeRow}>
+              <TouchableOpacity
+                style={[styles.desktopFoodTypeBtn, selectedFoodType === "veg" && styles.desktopFoodTypeBtnVeg]}
+                onPress={() => setSelectedFoodType(selectedFoodType === "veg" ? "all" : "veg")}
+              >
+                <Text style={styles.desktopFoodTypeIcon}>🟢</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.desktopFoodTypeBtn, selectedFoodType === "all" && styles.desktopFoodTypeBtnAll]}
+                onPress={() => setSelectedFoodType("all")}
+              >
+                <Text style={styles.desktopFoodTypeIcon}>⚪</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.desktopFoodTypeBtn, selectedFoodType === "non-veg" && styles.desktopFoodTypeBtnNonVeg]}
+                onPress={() => setSelectedFoodType(selectedFoodType === "non-veg" ? "all" : "non-veg")}
+              >
+                <Text style={styles.desktopFoodTypeIcon}>🔴</Text>
+              </TouchableOpacity>
+            </View>
+
             <View style={styles.desktopSearchRow}>
               <View style={styles.desktopSearchInputContainer}>
                 <Text style={styles.desktopSearchIcon}>🔍</Text>
@@ -610,11 +681,16 @@ export default function TableOrderScreen() {
               <View style={styles.desktopItemsGrid}>
                 {filteredItems.map((item) => {
                   const qty = qtyById.get(item.id) || 0;
+                  const imgSrc = item.imageUrl
+                    ? { uri: item.imageUrl }
+                    : desktopMenuImages[item.name as keyof typeof desktopMenuImages] ||
+                      require("../../../assets/images/Veg-Dum-Biryani.jpg");
                   return (
                     <TouchableOpacity
                       key={item.id}
                       style={[styles.desktopMenuItemCard, qty > 0 && styles.desktopMenuItemCardSelected]}
                       onPress={() => changeQty(item, qty + 1)}
+                      activeOpacity={0.75}
                     >
                       <View
                         style={[
@@ -622,9 +698,15 @@ export default function TableOrderScreen() {
                           { backgroundColor: item.isVeg ? "#22c55e" : "#ef4444" },
                         ]}
                       />
+                      <Image
+                        source={imgSrc}
+                        style={styles.desktopMenuItemCardImage}
+                        resizeMode="cover"
+                      />
                       <Text style={styles.desktopMenuItemCardText} numberOfLines={2}>
                         {item.name}
                       </Text>
+                      <Text style={styles.desktopMenuItemCardPrice}>{formatCurrency(item.price)}</Text>
                       {qty > 0 && (
                         <View style={styles.desktopMenuItemQtyBadge}>
                           <Text style={styles.desktopMenuItemQtyBadgeText}>{qty}</Text>
@@ -760,8 +842,25 @@ export default function TableOrderScreen() {
 
             {/* Bottom Billing Details Panel */}
             <View style={styles.desktopRightFooter}>
+              {/* Totals breakdown */}
+              {(discountValue > 0 || !taxEnabled) && (
+                <View style={{ gap: 2, marginBottom: 4 }}>
+                  {discountValue > 0 && (
+                    <View style={styles.desktopSplitRow}>
+                      <Text style={{ fontSize: 11, color: COLORS.textSec }}>Discount</Text>
+                      <Text style={{ fontSize: 11, fontWeight: "700", color: "#f97316" }}>-{formatCurrency(discountAmount)}</Text>
+                    </View>
+                  )}
+                  {!taxEnabled && (
+                    <View style={styles.desktopSplitRow}>
+                      <Text style={{ fontSize: 11, color: COLORS.textSec }}>GST ({settings.gstPercent}%)</Text>
+                      <Text style={{ fontSize: 11, fontWeight: "700", color: "#94a3b8" }}>Disabled</Text>
+                    </View>
+                  )}
+                </View>
+              )}
               <View style={[styles.desktopSplitRow, { justifyContent: "flex-end", marginBottom: 6 }]}>
-                <Text style={styles.desktopRightTotal}>Total: {formatCurrency(order.total)}</Text>
+                <Text style={styles.desktopRightTotal}>Total: {formatCurrency(effectiveTotal)}</Text>
               </View>
 
               {/* Operational Action Buttons (Save, Save & Print, Pay Bill) */}
@@ -791,76 +890,52 @@ export default function TableOrderScreen() {
                     <Text style={styles.desktopActionBtnHoldText}>Hold</Text>
                   </TouchableOpacity>
                 </View>
+                {/* Row 3: Split Bill | TAX toggle | Discount */}
+                <View style={styles.desktopActionRow}>
+                  <TouchableOpacity
+                    style={[styles.desktopActionBtnHold, { flex: 1, borderColor: "#3b82f6" }]}
+                    onPress={() => setSplitModalVisible(true)}
+                  >
+                    <Text style={[styles.desktopActionBtnHoldText, { color: "#3b82f6" }]}>🥞 Split Bill</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.desktopActionBtnHold, { flex: 1, borderColor: taxEnabled ? "#22c55e" : "#cbd5e1", backgroundColor: taxEnabled ? "#dcfce7" : COLORS.white }]}
+                    onPress={() => setTaxEnabled(!taxEnabled)}
+                  >
+                    <Text style={[styles.desktopActionBtnHoldText, { color: taxEnabled ? "#15803d" : "#94a3b8" }]}>
+                      {taxEnabled ? "☑ TAX" : "☐ TAX"}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.desktopActionBtnHold, { flex: 1, borderColor: discountValue > 0 ? "#f97316" : "#cbd5e1", backgroundColor: discountValue > 0 ? "#fff7ed" : COLORS.white }]}
+                    onPress={() => {
+                      setDiscountInputText(discountValue > 0 ? String(discountValue) : "");
+                      setDiscountModalVisible(true);
+                    }}
+                  >
+                    <Text style={[styles.desktopActionBtnHoldText, { color: discountValue > 0 ? "#f97316" : "#64748b" }]}>
+                      {discountValue > 0
+                        ? `🏷 -${discountType === "percent" ? discountValue + "%" : "₹" + discountValue}`
+                        : "🏷 Discount"}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
           </View>
         </View>
 
         {/* 3. Bottom Order Summary & Custom Actions Bar */}
-        <View style={[styles.desktopBottomBar, !isBottomBarExpanded && { paddingBottom: 12 }]}>
+        {/* Always-collapsed order summary bar */}
+        <View style={styles.desktopBottomBar}>
           <View style={styles.desktopBottomSummaryRow}>
             <View style={styles.desktopBottomSummaryBadge}>
               <Text style={styles.desktopBottomSummaryBadgeText}>
                 Order Summary ({totalSelectedQty})
               </Text>
             </View>
-            <Text style={styles.desktopBottomSummaryTotal}>Total: {formatCurrency(order.total)}</Text>
-            <TouchableOpacity
-              style={styles.desktopBottomSummaryExpand}
-              onPress={() => setIsBottomBarExpanded(!isBottomBarExpanded)}
-            >
-              <Text style={styles.desktopBottomSummaryExpandText}>
-                {isBottomBarExpanded ? "▼ Collapse" : "▲ Expand"}
-              </Text>
-            </TouchableOpacity>
+            <Text style={styles.desktopBottomSummaryTotal}>Total: {formatCurrency(effectiveTotal)}</Text>
           </View>
-
-          {isBottomBarExpanded && (
-            <View style={styles.desktopBottomActionsRow}>
-              {/* Bottom Print Bill button */}
-                {/* Food Type Filter Buttons */}
-                <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
-                  <TouchableOpacity
-                    style={[styles.desktopBottomHoldBtn, { backgroundColor: selectedFoodType === 'all' ? '#ef4444' : '#fef2f2' }]}
-                    onPress={() => setSelectedFoodType('all')}
-                  >
-                    <Text style={styles.desktopBottomHoldText}>All</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.desktopBottomHoldBtn, { backgroundColor: selectedFoodType === 'veg' ? '#22c55e' : '#fef2f2' }]}
-                    onPress={() => setSelectedFoodType('veg')}
-                  >
-                    <Text style={styles.desktopBottomHoldText}>Veg</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.desktopBottomHoldBtn, { backgroundColor: selectedFoodType === 'non-veg' ? '#ef4444' : '#fef2f2' }]}
-                    onPress={() => setSelectedFoodType('non-veg')}
-                  >
-                    <Text style={styles.desktopBottomHoldText}>Non‑Veg</Text>
-                  </TouchableOpacity>
-                </View>
-              <TouchableOpacity style={styles.desktopBottomHoldBtn} onPress={handlePrintBill}>
-                <Text style={styles.desktopBottomHoldText}>🖨️ Print Bill</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.desktopBottomCustomBtn}
-                onPress={() => setCustomItemModalVisible(true)}
-              >
-                <Text style={styles.desktopBottomCustomText}>+ Add Custom Item</Text>
-              </TouchableOpacity>
-              {/* Bottom Review Bill button */}
-              <TouchableOpacity style={[styles.desktopBottomKotBtn, { backgroundColor: "#22c55e", flex: 1.2 }]} onPress={reviewBill}>
-                <Text style={styles.desktopBottomKotText}>📄 Review Bill</Text>
-              </TouchableOpacity>
-              {/* Split option moved directly after Review Bill */}
-              <TouchableOpacity
-                style={[styles.desktopBottomKotBtn, { backgroundColor: COLORS.white, borderWidth: 1.5, borderColor: "#3b82f6", flex: 1 }]}
-                onPress={() => setSplitModalVisible(true)}
-              >
-                <Text style={[styles.desktopBottomKotText, { color: "#3b82f6" }]}>🥞 Split Bill</Text>
-              </TouchableOpacity>
-            </View>
-          )}
         </View>
 
         {/* Split Bill Modal (Select payment method per split share) */}
@@ -1134,6 +1209,78 @@ export default function TableOrderScreen() {
               <TouchableOpacity style={[styles.kotDismissBtn, { backgroundColor: "#f1f5f9", marginTop: 0 }]} onPress={() => setClearConfirmVisible(false)}>
                 <Text style={[styles.kotDismissText, { color: "#64748b" }]}>Cancel</Text>
               </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Discount Modal */}
+        <Modal visible={discountModalVisible} transparent animationType="fade" onRequestClose={() => setDiscountModalVisible(false)}>
+          <View style={styles.desktopCustomItemOverlay}>
+            <View style={styles.desktopCustomItemCard}>
+              <Text style={styles.desktopCustomItemTitle}>Apply Discount</Text>
+              <Text style={styles.desktopCustomItemSubtitle}>Enter a percentage or flat amount to deduct from the bill.</Text>
+
+              {/* Type toggle */}
+              <View style={styles.discountTypeRow}>
+                <TouchableOpacity
+                  style={[styles.discountTypeBtn, discountType === "percent" && styles.discountTypeBtnActive]}
+                  onPress={() => setDiscountType("percent")}
+                >
+                  <Text style={[styles.discountTypeBtnText, discountType === "percent" && { color: "#fff" }]}>% Percent</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.discountTypeBtn, discountType === "flat" && styles.discountTypeBtnActive]}
+                  onPress={() => setDiscountType("flat")}
+                >
+                  <Text style={[styles.discountTypeBtnText, discountType === "flat" && { color: "#fff" }]}>₹ Flat Amount</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.desktopCustomItemField}>
+                <Text style={styles.desktopCustomItemFieldLabel}>
+                  {discountType === "percent" ? "Discount Percentage (%)" : "Discount Amount (₹)"}
+                </Text>
+                <TextInput
+                  style={styles.desktopCustomItemInput}
+                  placeholder={discountType === "percent" ? "e.g. 10" : "e.g. 50"}
+                  placeholderTextColor="#cbd5e1"
+                  keyboardType="numeric"
+                  value={discountInputText}
+                  onChangeText={setDiscountInputText}
+                />
+                {discountType === "percent" && discountInputText ? (
+                  <Text style={{ fontSize: 11, color: "#f97316", fontWeight: "600", marginTop: 4 }}>
+                    = {formatCurrency((order.subtotal * (parseFloat(discountInputText) || 0)) / 100)} off
+                  </Text>
+                ) : null}
+              </View>
+
+              <View style={styles.desktopCustomItemActions}>
+                <TouchableOpacity
+                  style={[styles.desktopCustomItemCancelBtn]}
+                  onPress={() => {
+                    setDiscountValue(0);
+                    setDiscountInputText("");
+                    setDiscountModalVisible(false);
+                  }}
+                >
+                  <Text style={styles.desktopCustomItemCancelText}>Remove Discount</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.desktopCustomItemAddBtn}
+                  onPress={() => {
+                    const parsed = parseFloat(discountInputText);
+                    if (!isNaN(parsed) && parsed > 0) {
+                      setDiscountValue(parsed);
+                    } else {
+                      setDiscountValue(0);
+                    }
+                    setDiscountModalVisible(false);
+                  }}
+                >
+                  <Text style={styles.desktopCustomItemAddText}>Apply</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </Modal>
@@ -1668,19 +1815,33 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
     borderWidth: 1,
     borderColor: "#cbd5e1",
-    borderRadius: 8,
+    borderRadius: 10,
     width: "18.5%",
-    height: 90,
-    padding: 10,
-    justifyContent: "center",
+    height: 155,
+    padding: 8,
+    justifyContent: "flex-start",
     alignItems: "center",
-    borderLeftWidth: 5,
+    borderLeftWidth: 4,
     position: "relative",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 1,
+    overflow: "hidden",
+  },
+  desktopMenuItemCardImage: {
+    width: "100%",
+    height: 80,
+    borderRadius: 7,
+    marginBottom: 4,
+  },
+  desktopMenuItemCardPrice: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#ef4444",
+    marginTop: 2,
+    textAlign: "center",
   },
   desktopMenuItemCardSelected: {
     backgroundColor: "#f8fafc",
@@ -1696,11 +1857,11 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 8,
   },
   desktopMenuItemCardText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "700",
     color: COLORS.text,
     textAlign: "center",
-    lineHeight: 16,
+    lineHeight: 14,
   },
   desktopMenuItemQtyBadge: {
     position: "absolute",
@@ -1946,12 +2107,66 @@ const styles = StyleSheet.create({
     borderTopColor: "#cbd5e1",
     paddingHorizontal: 16,
     paddingTop: 10,
-    paddingBottom: 24,
+    paddingBottom: 12,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.04,
     shadowRadius: 4,
     elevation: 3,
+  },
+  // Veg/Non-Veg food type filter (desktop middle panel)
+  desktopFoodTypeRow: {
+    flexDirection: "row",
+    gap: 6,
+    marginBottom: 4,
+  },
+  desktopFoodTypeBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: "#cbd5e1",
+    backgroundColor: COLORS.white,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  desktopFoodTypeBtnVeg: {
+    borderColor: "#22c55e",
+    backgroundColor: "#dcfce7",
+  },
+  desktopFoodTypeBtnAll: {
+    borderColor: "#64748b",
+    backgroundColor: "#f1f5f9",
+  },
+  desktopFoodTypeBtnNonVeg: {
+    borderColor: "#ef4444",
+    backgroundColor: "#fee2e2",
+  },
+  desktopFoodTypeIcon: {
+    fontSize: 18,
+  },
+  // Discount modal
+  discountTypeRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  discountTypeBtn: {
+    flex: 1,
+    paddingVertical: 9,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: "#cbd5e1",
+    alignItems: "center",
+    backgroundColor: COLORS.white,
+  },
+  discountTypeBtnActive: {
+    backgroundColor: "#f97316",
+    borderColor: "#f97316",
+  },
+  discountTypeBtnText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#475569",
   },
   desktopBottomSummaryRow: {
     flexDirection: "row",
