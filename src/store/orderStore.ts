@@ -50,6 +50,10 @@ interface OrderStore {
     customerPhone?: string
   ) => Promise<Order>;
   updateOrderItem: (orderId: string, menuItem: MenuItem, qty: number) => Promise<void>;
+  updateOrderMetadata: (
+    orderId: string,
+    metadata: { guests?: number; customerName?: string; customerPhone?: string; isTakeaway?: boolean }
+  ) => Promise<void>;
   generateBill: (orderId: string) => Promise<void>;
   closeOrder: (orderId: string, method: PaymentMethod) => Promise<Invoice>;
 }
@@ -176,6 +180,23 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
     } catch (err) {
       console.error("Failed to close order:", err);
       throw err;
+    }
+  },
+  updateOrderMetadata: async (orderId, metadata) => {
+    try {
+      const res = await apiFetch(`${API_URL}/api/orders/${orderId}/items`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(metadata),
+      });
+      if (res.ok) {
+        const updatedOrder = await res.json();
+        set((state) => ({
+          orders: state.orders.map((o) => (o.id === orderId ? updatedOrder : o)),
+        }));
+      }
+    } catch (err) {
+      console.error("Failed to update order metadata:", err);
     }
   },
 }));

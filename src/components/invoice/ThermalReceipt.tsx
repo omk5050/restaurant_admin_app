@@ -19,11 +19,7 @@ export function ThermalReceipt({ invoice, settings }: ThermalReceiptProps) {
       </View>
       <View style={styles.meta}>
         {invoice.isTakeaway ? (
-          <>
-            <Text style={styles.mono}>Type    : Takeaway ({getTableName(invoice.tableId, settings)})</Text>
-            <Text style={styles.mono}>Customer: {invoice.customerName}</Text>
-            <Text style={styles.mono}>Phone   : {invoice.customerPhone}</Text>
-          </>
+          <Text style={styles.mono}>Type    : Takeaway ({getTableName(invoice.tableId, settings)})</Text>
         ) : (
           <Text style={styles.mono}>Table   : {getTableName(invoice.tableId, settings)}</Text>
         )}

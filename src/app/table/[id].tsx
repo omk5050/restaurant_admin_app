@@ -1,6 +1,18 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Modal, StyleSheet, Text, TextInput, TouchableOpacity, View, Platform } from "react-native";
+import {
+  Modal,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+  Platform,
+  useWindowDimensions,
+  ScrollView,
+  Alert,
+} from "react-native";
+import * as Print from "expo-print";
 
 import { CategorySidebar } from "@/components/menu/CategorySidebar";
 import { MenuList } from "@/components/menu/MenuList";
@@ -14,8 +26,10 @@ import { useOrder } from "@/hooks/useOrder";
 import { useTables } from "@/hooks/useTables";
 import { useOrderStore } from "@/store/orderStore";
 import { useTableStore } from "@/store/tableStore";
-import { MenuItem, MenuSection } from "@/types";
+import { useSettingsStore } from "@/store/settingsStore";
+import { MenuItem, MenuSection, PaymentMethod } from "@/types";
 import { formatCurrency, formatTime } from "@/utils/formatters";
+import { generateInvoiceHTML, generateKotHTML } from "@/utils/invoiceTemplate";
 
 export default function TableOrderScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -34,7 +48,8 @@ export default function TableOrderScreen() {
     if (firstCategory) setSelectedCategory(firstCategory.id);
     setSelectedFoodType("all");
   }
-  const { getOrderForTable, updateOrderItem, generateBill } = useOrder();
+
+  const { getOrderForTable, updateOrderItem, updateOrderMetadata, generateBill, closeOrder } = useOrder();
   const createOrder = useOrderStore((state) => state.createOrder);
 
   const table = findTable(tableId);
@@ -48,32 +63,74 @@ export default function TableOrderScreen() {
   // Error modal state
   const [errorModal, setErrorModal] = useState("");
 
-  // Takeaway state
-  const [customerName, setCustomerName] = useState("");
-  const [customerPhone, setCustomerPhone] = useState("");
-  const [takeawayModalVisible, setTakeawayModalVisible] = useState(false);
+  // Responsive state
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 1024;
 
+  // Desktop specific state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [shortCode, setShortCode] = useState("");
+  const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());
+  const [isBottomBarExpanded, setIsBottomBarExpanded] = useState(true);
+  const [localGuests, setLocalGuests] = useState(4);
+
+  // Dine In / Pick Up selection
+  const [activeOrderType, setActiveOrderType] = useState<"dine-in" | "pick-up">("dine-in");
+
+  // Split Bill Modal State
+  const [splitModalVisible, setSplitModalVisible] = useState(false);
+  const [splitCount, setSplitCount] = useState(2);
+  const [paidSplits, setPaidSplits] = useState<{ [key: number]: PaymentMethod }>({});
+
+  // Pay Bill Modal State (Direct checkout selector)
+  const [payBillModalVisible, setPayBillModalVisible] = useState(false);
+
+  // Custom Item Modal State
+  const [customItemModalVisible, setCustomItemModalVisible] = useState(false);
+  const [customItemName, setCustomItemName] = useState("");
+  const [customItemPrice, setCustomItemPrice] = useState("");
+  const [customItemNameError, setCustomItemNameError] = useState("");
+  const [customItemPriceError, setCustomItemPriceError] = useState("");
+
+  // Sync checked items on load
   useEffect(() => {
-    if (table && table.name.startsWith("T") && !order) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setTakeawayModalVisible(true);
-    } else {
-      setTakeawayModalVisible(false);
+    if (order?.items) {
+      const next = new Set<string>();
+      order.items.forEach((item) => next.add(item.menuItemId));
+      setCheckedItems(next);
     }
-  }, [table, order]);
+  }, [order?.items]);
 
+  // Sync guests count on load
   useEffect(() => {
-    if (Number.isFinite(tableId) && table && !table.name.startsWith("T") && !initialized.current) {
+    if (order) {
+      setLocalGuests(order.guests || 4);
+      setActiveOrderType(order.isTakeaway ? "pick-up" : "dine-in");
+    }
+  }, [order]);
+
+  // Auto-initialize orders (both Dine-In and Takeaway) on load without prompting customer details
+  useEffect(() => {
+    if (Number.isFinite(tableId) && table && !initialized.current) {
       initialized.current = true;
-      ensureOrderForTable(tableId).catch((err) => {
-        console.error("ensureOrderForTable failed:", err);
-        setErrorModal(err.message || "Failed to initialize table session.");
-      });
+      const isTakeaway = table.name.startsWith("T");
+      const currentOrder = getOrderForTable(tableId);
+
+      if (!currentOrder) {
+        createOrder(tableId, isTakeaway ? 1 : 4, isTakeaway, "", "")
+          .then((newOrder) => {
+            useTableStore.getState().setTableOrder(tableId, newOrder.id);
+          })
+          .catch((err) => {
+            console.error("Failed to auto create order:", err);
+            setErrorModal(err.message || "Failed to start order session.");
+          });
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tableId, table]);
 
-  // Resolve table status dynamically for takeaways
+  // Resolve table status dynamically
   const tableStatus = useMemo(() => {
     if (!table) return "empty";
     if (table.name.startsWith("T")) {
@@ -100,9 +157,17 @@ export default function TableOrderScreen() {
     return items.filter((item) => {
       if (selectedFoodType === "veg" && !item.isVeg) return false;
       if (selectedFoodType === "non-veg" && item.isVeg) return false;
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase().trim();
+        return (
+          item.name.toLowerCase().includes(query) ||
+          item.id.toLowerCase().includes(query) ||
+          (item.shortCode && item.shortCode.toLowerCase().includes(query))
+        );
+      }
       return true;
     });
-  }, [items, selectedFoodType]);
+  }, [items, selectedFoodType, searchQuery]);
 
   function changeQty(item: MenuItem, qty: number) {
     if (!order) return;
@@ -122,12 +187,11 @@ export default function TableOrderScreen() {
       setErrorModal("Add at least one item before putting on hold.");
       return;
     }
-    // Table is already active if items exist; ensure status is set to active
     await setTableStatus(tableId, "active");
     router.replace("/(tabs)" as never);
   }
 
-  // Clear Table: show custom confirm modal (Alert.alert doesn't work on web)
+  // Clear Table: show custom confirm modal
   function handleClearTable() {
     setClearConfirmVisible(true);
   }
@@ -156,7 +220,7 @@ export default function TableOrderScreen() {
     router.replace("/(tabs)" as never);
   }
 
-  // Add custom item: creates a temporary menu-item-like entry with a unique ID
+  // Add custom item
   function handleAddCustomItem(name: string, price: number) {
     if (!order) return;
     const customItem: MenuItem = {
@@ -168,85 +232,188 @@ export default function TableOrderScreen() {
       isAvailable: true,
       isVeg: true,
     };
-    // Add with qty 1
     updateOrderItem(order.id, customItem, 1);
+  }
+
+  // Guests modification
+  async function incrementGuests() {
+    if (!order) return;
+    const next = localGuests + 1;
+    setLocalGuests(next);
+    await updateOrderMetadata(order.id, { guests: next });
+  }
+
+  async function decrementGuests() {
+    if (!order) return;
+    if (localGuests <= 1) return;
+    const next = localGuests - 1;
+    setLocalGuests(next);
+    await updateOrderMetadata(order.id, { guests: next });
+  }
+
+  const settings = useSettingsStore((state) => state.settings);
+
+  // Print helper for HTML
+  const triggerPrintHtml = (htmlContent: string) => {
+    if (Platform.OS === "web") {
+      const iframe = document.createElement("iframe");
+      iframe.style.position = "fixed";
+      iframe.style.right = "0";
+      iframe.style.bottom = "0";
+      iframe.style.width = "0";
+      iframe.style.height = "0";
+      iframe.style.border = "0";
+      document.body.appendChild(iframe);
+      const doc = iframe.contentWindow?.document || iframe.contentDocument;
+      if (doc) {
+        doc.open();
+        doc.write(htmlContent);
+        doc.close();
+        setTimeout(() => {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+          document.body.removeChild(iframe);
+        }, 500);
+      }
+    } else {
+      Print.printAsync({ html: htmlContent }).catch((err) => {
+        console.error("Print failed:", err);
+      });
+    }
+  };
+
+  // Action: Print Bill
+  async function handlePrintBill() {
+    if (!order) return;
+    await generateBill(order.id);
+    const targetInvoice = {
+      id: `preview_${order.id}`,
+      orderId: order.id,
+      tableId: order.tableId,
+      orderNo: order.orderNo,
+      items: order.items,
+      subtotal: order.subtotal,
+      gstAmount: order.gstAmount,
+      total: order.total,
+      paymentMethod: "cash",
+      createdAt: new Date().toISOString(),
+      isTakeaway: order.isTakeaway,
+      customerName: order.customerName || "",
+      customerPhone: order.customerPhone || "",
+    };
+    triggerPrintHtml(generateInvoiceHTML(targetInvoice as any, settings));
+  }
+
+  // Order Type Change Handler (Dine In / Pick Up only)
+  async function handleOrderTypeChange(type: "dine-in" | "pick-up") {
+    if (!order) return;
+    setActiveOrderType(type);
+    const isTakeaway = type !== "dine-in";
+    await updateOrderMetadata(order.id, { isTakeaway });
+  }
+
+  // Desktop Save Handler (Saves changes as open, returns to dashboard)
+  async function handleSaveOrder() {
+    if (!order) return;
+    await setTableStatus(tableId, "active");
+    router.replace("/(tabs)" as never);
+  }
+
+  // Desktop Save & Print (Generates draft bill, prints, returns to dashboard)
+  async function handleSaveAndPrint() {
+    if (!order) return;
+    await generateBill(order.id);
+    const targetInvoice = {
+      id: `preview_${order.id}`,
+      orderId: order.id,
+      tableId: order.tableId,
+      orderNo: order.orderNo,
+      items: order.items,
+      subtotal: order.subtotal,
+      gstAmount: order.gstAmount,
+      total: order.total,
+      paymentMethod: "cash",
+      createdAt: new Date().toISOString(),
+      isTakeaway: order.isTakeaway,
+      customerName: order.customerName || "",
+      customerPhone: order.customerPhone || "",
+    };
+    triggerPrintHtml(generateInvoiceHTML(targetInvoice as any, settings));
+    router.replace("/(tabs)" as never);
+  }
+
+  // Desktop Direct Checkout payment handler
+  async function executePayBill(method: PaymentMethod) {
+    if (!order) return;
+    try {
+      const invoice = await closeOrder(order.id, method);
+      setPayBillModalVisible(false);
+      router.replace(`/invoice/${invoice.orderId}` as never);
+    } catch (err: any) {
+      setErrorModal(err.message || "Failed to process payment.");
+    }
+  }
+
+  // Split pay share handler
+  async function handleSplitPay(splitIdx: number, method: PaymentMethod) {
+    if (!order) return;
+    const nextPaid = { ...paidSplits, [splitIdx]: method };
+    setPaidSplits(nextPaid);
+
+    const paidCount = Object.keys(nextPaid).length;
+    if (paidCount === splitCount) {
+      try {
+        const invoice = await closeOrder(order.id, method);
+        setSplitModalVisible(false);
+        setPaidSplits({});
+        router.replace(`/invoice/${invoice.orderId}` as never);
+      } catch (err: any) {
+        setErrorModal(err.message || "Failed to process split payment.");
+      }
+    } else {
+      Alert.alert(
+        "Split Share Paid",
+        `Split #${splitIdx + 1} paid ${formatCurrency(order.total / splitCount)} via ${method.toUpperCase()}.`
+      );
+    }
+  }
+
+  // Custom Item Modal actions
+  function executeAddCustomItem() {
+    let valid = true;
+    setCustomItemNameError("");
+    setCustomItemPriceError("");
+
+    if (!customItemName.trim()) {
+      setCustomItemNameError("Item name is required.");
+      valid = false;
+    }
+    const parsedPrice = parseFloat(customItemPrice);
+    if (!customItemPrice.trim() || isNaN(parsedPrice) || parsedPrice <= 0) {
+      setCustomItemPriceError("Enter a valid price greater than 0.");
+      valid = false;
+    }
+
+    if (!valid) return;
+
+    handleAddCustomItem(customItemName.trim(), parsedPrice);
+    setCustomItemModalVisible(false);
+    setCustomItemName("");
+    setCustomItemPrice("");
+  }
+
+  function handleCustomItemModalClose() {
+    setCustomItemModalVisible(false);
+    setCustomItemName("");
+    setCustomItemPrice("");
+    setCustomItemNameError("");
+    setCustomItemPriceError("");
   }
 
   if (!table || !order) {
     return (
       <View style={styles.emptyScreen}>
         <Text style={styles.emptyText}>Preparing table...</Text>
-
-        {/* Takeaway Details Modal */}
-        <Modal
-          visible={takeawayModalVisible}
-          transparent
-          animationType="slide"
-          onRequestClose={() => {
-            setTakeawayModalVisible(false);
-            router.replace("/(tabs)" as never);
-          }}
-        >
-          <View style={styles.kotOverlay}>
-            <View style={styles.kotCard}>
-              <Text style={styles.kotEmoji}>🛍️</Text>
-              <Text style={styles.kotTitle}>New Takeaway Order</Text>
-              <Text style={styles.kotMessage}>
-                Please enter the customer details for Takeaway {table?.name || `T${tableId - 10}`}
-              </Text>
-              
-              <View style={styles.takeawayForm}>
-                <Text style={styles.takeawayInputLabel}>Customer Name *</Text>
-                <TextInput
-                  style={styles.takeawayInput}
-                  placeholder="Enter customer name"
-                  placeholderTextColor={COLORS.textSec}
-                  value={customerName}
-                  onChangeText={setCustomerName}
-                />
-                
-                <Text style={styles.takeawayInputLabel}>Phone Number *</Text>
-                <TextInput
-                  style={styles.takeawayInput}
-                  placeholder="Enter 10-digit number"
-                  placeholderTextColor={COLORS.textSec}
-                  keyboardType="phone-pad"
-                  value={customerPhone}
-                  onChangeText={setCustomerPhone}
-                />
-              </View>
-
-              <TouchableOpacity
-                style={[
-                  styles.kotDismissBtn,
-                  (!customerName.trim() || !customerPhone.trim()) && { opacity: 0.5 }
-                ]}
-                disabled={!customerName.trim() || !customerPhone.trim()}
-                onPress={async () => {
-                  try {
-                    const newOrder = await createOrder(tableId, 1, true, customerName, customerPhone);
-                    await useTableStore.getState().setTableOrder(tableId, newOrder.id);
-                    setTakeawayModalVisible(false);
-                  } catch (err: any) {
-                    setErrorModal(err.message || "Failed to create takeaway order.");
-                  }
-                }}
-              >
-                <Text style={styles.kotDismissText}>Start Order</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[styles.kotDismissBtn, { backgroundColor: "#f1f5f9", marginTop: 0 }]}
-                onPress={() => {
-                  setTakeawayModalVisible(false);
-                  router.replace("/(tabs)" as never);
-                }}
-              >
-                <Text style={[styles.kotDismissText, { color: "#64748b" }]}>Cancel</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
 
         {/* Error Modal */}
         <Modal visible={!!errorModal} transparent animationType="fade" onRequestClose={() => setErrorModal("")}>
@@ -296,13 +463,7 @@ export default function TableOrderScreen() {
                 await clearTable(tableId);
                 await useOrderStore.getState().fetchOrders();
                 await useOrderStore.getState().fetchAnalytics();
-                if (table.name.startsWith("T")) {
-                  setCustomerName("");
-                  setCustomerPhone("");
-                  setTakeawayModalVisible(true);
-                } else {
-                  await ensureOrderForTable(tableId);
-                }
+                await ensureOrderForTable(tableId);
               }}
             >
               Start New Session
@@ -313,58 +474,681 @@ export default function TableOrderScreen() {
     );
   }
 
-      return (
-        <View style={styles.screen}>
-          <View style={styles.infoBar}>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoIcon}>{order.isTakeaway ? "👤" : "👥"}</Text>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.infoLabel} numberOfLines={1} ellipsizeMode="tail">
-                  {order.isTakeaway ? order.customerPhone : "Guests"}
-                </Text>
-                <Text style={styles.infoValue} numberOfLines={1} ellipsizeMode="tail">
-                  {order.isTakeaway ? order.customerName : order.guests}
-                </Text>
-              </View>
-            </View>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoIcon}>🕐</Text>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.infoLabel} numberOfLines={1} ellipsizeMode="tail">Opened At</Text>
-                <Text style={styles.infoValue} numberOfLines={1} ellipsizeMode="tail">{formatTime(order.openedAt)}</Text>
-              </View>
-            </View>
-            <View style={styles.infoItemLast}>
-              <Text style={styles.infoIcon}>📋</Text>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.infoLabel} numberOfLines={1} ellipsizeMode="tail">Order No.</Text>
-                <Text style={styles.infoValue} numberOfLines={1} ellipsizeMode="tail">{order.orderNo}</Text>
-              </View>
-            </View>
-            <TouchableOpacity style={styles.clearNowBtn} onPress={handleClearTable} activeOpacity={0.8}>
-              <Text style={styles.clearNowBtnText}>🗑️ Clear</Text>
+  // Render Desktop Layout (Mockup replica)
+  if (isDesktop) {
+    const totalSelectedQty = order.items.reduce((sum, item) => sum + item.qty, 0);
+
+    return (
+      <View style={styles.desktopScreen}>
+        {/* 1. Header Bar */}
+        <View style={styles.desktopHeader}>
+          <View style={styles.desktopHeaderLeft}>
+            <TouchableOpacity onPress={() => router.replace("/(tabs)" as never)} style={styles.desktopBackBtn}>
+              <Text style={styles.desktopBackBtnText}>←</Text>
             </TouchableOpacity>
-          </View>
-    
-          <View style={styles.body}>
-            <CategorySidebar
-              categories={categories}
-              selectedSection={selectedSection}
-              selectedId={selectedCategory}
-              onSelectSection={handleSelectSection}
-              onSelect={setSelectedCategory}
-              selectedFoodType={selectedFoodType}
-              onSelectFoodType={setSelectedFoodType}
-            />
-            <MenuList
-              title={activeCategory?.name ?? "Menu"}
-              items={filteredItems}
-              getQty={(itemId) => qtyById.get(itemId) ?? 0}
-              onChangeQty={changeQty}
-            />
+            <Text style={styles.desktopHeaderTitle}>Table Order</Text>
           </View>
 
-      {/* Clear Table Button for active/billed tables */}
+          <View style={styles.desktopHeaderWidgets}>
+            {/* Guests widget */}
+            <View style={styles.desktopHeaderWidget}>
+              <Text style={styles.desktopWidgetIcon}>👥</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.desktopWidgetLabel}>Guests</Text>
+                <View style={styles.guestsCounterRow}>
+                  <TouchableOpacity onPress={decrementGuests} style={styles.guestsCounterBtn}>
+                    <Text style={styles.guestsCounterBtnText}>-</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.desktopWidgetValue}>{localGuests}</Text>
+                  <TouchableOpacity onPress={incrementGuests} style={styles.guestsCounterBtn}>
+                    <Text style={styles.guestsCounterBtnText}>+</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+
+            {/* Opened At widget */}
+            <View style={styles.desktopHeaderWidget}>
+              <Text style={styles.desktopWidgetIcon}>🕐</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.desktopWidgetLabel}>Opened At</Text>
+                <Text style={styles.desktopWidgetValue}>{formatTime(order.openedAt)}</Text>
+              </View>
+            </View>
+
+            {/* Order No widget */}
+            <View style={styles.desktopHeaderWidget}>
+              <Text style={styles.desktopWidgetIcon}>📋</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.desktopWidgetLabel}>Order No.</Text>
+                <Text style={styles.desktopWidgetValue}>{order.orderNo}</Text>
+              </View>
+            </View>
+
+            {/* Clear Button */}
+            <TouchableOpacity style={styles.desktopClearBtn} onPress={handleClearTable}>
+              <Text style={styles.desktopClearBtnText}>🗑️ Clear</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* 2. Main Workspace */}
+        <View style={styles.desktopWorkspace}>
+          {/* Left Category Sidebar */}
+          <View style={styles.desktopLeftSidebar}>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {categories.map((cat) => {
+                const isActive = cat.id === selectedCategory;
+                return (
+                  <TouchableOpacity
+                    key={cat.id}
+                    onPress={() => setSelectedCategory(cat.id)}
+                    style={[styles.desktopCategoryItem, isActive && styles.desktopCategoryItemActive]}
+                  >
+                    <Text style={styles.desktopCategoryIcon}>{cat.icon}</Text>
+                    <Text
+                      style={[styles.desktopCategoryItemText, isActive && styles.desktopCategoryItemTextActive]}
+                      numberOfLines={2}
+                    >
+                      {cat.name}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+
+          {/* Middle Menu Items Grid */}
+          <View style={styles.desktopMiddlePanel}>
+            <View style={styles.desktopSearchRow}>
+              <View style={styles.desktopSearchInputContainer}>
+                <Text style={styles.desktopSearchIcon}>🔍</Text>
+                <TextInput
+                  style={styles.desktopSearchInput}
+                  placeholder="Search item"
+                  placeholderTextColor={COLORS.textSec}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                />
+              </View>
+              <View style={styles.desktopShortCodeContainer}>
+                <TextInput
+                  style={styles.desktopShortCodeInput}
+                  placeholder="Short Code"
+                  placeholderTextColor={COLORS.textSec}
+                  value={shortCode}
+                  onChangeText={(text) => {
+                    setShortCode(text);
+                    setSearchQuery(text);
+                  }}
+                />
+              </View>
+            </View>
+
+            <ScrollView contentContainerStyle={styles.desktopItemsScroll} showsVerticalScrollIndicator={false}>
+              <View style={styles.desktopItemsGrid}>
+                {filteredItems.map((item) => {
+                  const qty = qtyById.get(item.id) || 0;
+                  return (
+                    <TouchableOpacity
+                      key={item.id}
+                      style={[styles.desktopMenuItemCard, qty > 0 && styles.desktopMenuItemCardSelected]}
+                      onPress={() => changeQty(item, qty + 1)}
+                    >
+                      <View
+                        style={[
+                          styles.desktopMenuItemCardIndicator,
+                          { backgroundColor: item.isVeg ? "#22c55e" : "#ef4444" },
+                        ]}
+                      />
+                      <Text style={styles.desktopMenuItemCardText} numberOfLines={2}>
+                        {item.name}
+                      </Text>
+                      {qty > 0 && (
+                        <View style={styles.desktopMenuItemQtyBadge}>
+                          <Text style={styles.desktopMenuItemQtyBadgeText}>{qty}</Text>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </ScrollView>
+          </View>
+
+          {/* Right Billing Sidebar */}
+          <View style={styles.desktopRightPanel}>
+            <View>
+              {/* Type Tabs (Dine In & Pick Up only, emojis and delivery removed) */}
+              <View style={styles.desktopRightTabs}>
+                <TouchableOpacity
+                  style={[styles.desktopRightTab, activeOrderType === "dine-in" && styles.desktopRightTabActive]}
+                  onPress={() => handleOrderTypeChange("dine-in")}
+                >
+                  <Text style={[styles.desktopRightTabText, activeOrderType === "dine-in" && styles.desktopRightTabTextActive]}>
+                    Dine In
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.desktopRightTab, activeOrderType === "pick-up" && styles.desktopRightTabActive]}
+                  onPress={() => handleOrderTypeChange("pick-up")}
+                >
+                  <Text style={[styles.desktopRightTabText, activeOrderType === "pick-up" && styles.desktopRightTabTextActive]}>
+                    Pick Up
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Sub-Header Details (Avatar icons removed) */}
+              <View style={styles.desktopRightSubHeader}>
+                <Text style={styles.desktopRightTitle}>
+                  {order.isTakeaway ? `Takeaway: #${order.orderNo.replace("#", "")}` : `Table: ${table.name}`}
+                </Text>
+                <View style={styles.desktopRightIcons}>
+                  <View style={styles.desktopRightBadge}>
+                    <Text style={styles.desktopRightBadgeText}>
+                      {activeOrderType === "dine-in" ? "Dine In" : "Pick Up"}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Columns Header */}
+              <View style={styles.desktopRightTableHeader}>
+                <Text style={[styles.desktopColText, { width: "45%" }]}>ITEMS</Text>
+                <Text style={[styles.desktopColText, { width: "15%", textAlign: "center" }]}>CHECK ITEMS</Text>
+                <Text style={[styles.desktopColText, { width: "22%", textAlign: "center" }]}>QTY.</Text>
+                <Text style={[styles.desktopColText, { width: "18%", textAlign: "right" }]}>PRICE</Text>
+              </View>
+            </View>
+
+            {/* Scrollable Order Items List */}
+            {order.items.length === 0 ? (
+              <View style={styles.desktopEmptyOrder}>
+                <Text style={styles.desktopEmptyOrderEmoji}>🍽️</Text>
+                <Text style={styles.desktopEmptyOrderTitle}>No Item Selected</Text>
+                <Text style={styles.desktopEmptyOrderText}>
+                  Please select item from left menu item
+                </Text>
+              </View>
+            ) : (
+              <ScrollView style={styles.desktopRightTableScroll} showsVerticalScrollIndicator={false}>
+                {order.items.map((item) => {
+                  const isChecked = checkedItems.has(item.menuItemId);
+                  return (
+                    <View key={item.menuItemId} style={styles.desktopRightTableRow}>
+                      <View style={{ width: "45%" }}>
+                        <Text style={styles.desktopItemName} numberOfLines={2}>
+                          {item.name}
+                        </Text>
+                      </View>
+                      <View style={{ width: "15%", alignItems: "center" }}>
+                        <TouchableOpacity
+                          style={styles.desktopRowCheckbox}
+                          onPress={() => {
+                            const next = new Set(checkedItems);
+                            if (next.has(item.menuItemId)) {
+                              next.delete(item.menuItemId);
+                            } else {
+                              next.add(item.menuItemId);
+                            }
+                            setCheckedItems(next);
+                          }}
+                        >
+                          <View
+                            style={[
+                              styles.desktopRowCheckboxBox,
+                              isChecked && styles.desktopRowCheckboxBoxChecked,
+                            ]}
+                          >
+                            {isChecked && <Text style={styles.desktopRowCheckboxCheckmark}>✓</Text>}
+                          </View>
+                        </TouchableOpacity>
+                      </View>
+                      <View style={{ width: "22%", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                        <TouchableOpacity
+                          style={styles.desktopRowQtyBtn}
+                          onPress={() => {
+                            const menuItem = { id: item.menuItemId, name: item.name, price: item.price } as MenuItem;
+                            changeQty(menuItem, Math.max(0, item.qty - 1));
+                          }}
+                        >
+                          <Text style={styles.desktopRowQtyBtnText}>-</Text>
+                        </TouchableOpacity>
+                        <Text style={styles.desktopRowQtyVal}>{item.qty}</Text>
+                        <TouchableOpacity
+                          style={styles.desktopRowQtyBtn}
+                          onPress={() => {
+                            const menuItem = { id: item.menuItemId, name: item.name, price: item.price } as MenuItem;
+                            changeQty(menuItem, item.qty + 1);
+                          }}
+                        >
+                          <Text style={styles.desktopRowQtyBtnText}>+</Text>
+                        </TouchableOpacity>
+                      </View>
+                      <View style={{ width: "18%", alignItems: "flex-end" }}>
+                        <Text style={styles.desktopItemPrice}>
+                          {formatCurrency(item.price * item.qty)}
+                        </Text>
+                      </View>
+                    </View>
+                  );
+                })}
+              </ScrollView>
+            )}
+
+            {/* Bottom Billing Details Panel */}
+            <View style={styles.desktopRightFooter}>
+              <View style={[styles.desktopSplitRow, { justifyContent: "flex-end", marginBottom: 6 }]}>
+                <Text style={styles.desktopRightTotal}>Total: {formatCurrency(order.total)}</Text>
+              </View>
+
+              {/* Operational Action Buttons (Save, Save & Print, Pay Bill) */}
+              <View style={styles.desktopActionGrid}>
+                <View style={styles.desktopActionRow}>
+                  <TouchableOpacity style={styles.desktopActionBtnSave} onPress={handleSaveOrder}>
+                    <Text style={styles.desktopActionBtnText}>Save</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.desktopActionBtnSave} onPress={handleSaveAndPrint}>
+                    <Text style={styles.desktopActionBtnText}>Save & Print</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.desktopActionBtnSave, { backgroundColor: "#22c55e" }]}
+                    onPress={() => setPayBillModalVisible(true)}
+                  >
+                    <Text style={styles.desktopActionBtnText}>Pay Bill</Text>
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.desktopActionRow}>
+                  <TouchableOpacity style={styles.desktopActionBtnKOT} onPress={handleKot}>
+                    <Text style={styles.desktopActionBtnText}>KOT</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.desktopActionBtnKOT} onPress={async () => { await handleKot(); triggerPrintHtml(generateKotHTML(order, table, settings)); }}>
+                    <Text style={styles.desktopActionBtnText}>KOT & Print</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.desktopActionBtnHold} onPress={handleHold}>
+                    <Text style={styles.desktopActionBtnHoldText}>Hold</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* 3. Bottom Order Summary & Custom Actions Bar */}
+        <View style={[styles.desktopBottomBar, !isBottomBarExpanded && { paddingBottom: 12 }]}>
+          <View style={styles.desktopBottomSummaryRow}>
+            <View style={styles.desktopBottomSummaryBadge}>
+              <Text style={styles.desktopBottomSummaryBadgeText}>
+                Order Summary ({totalSelectedQty})
+              </Text>
+            </View>
+            <Text style={styles.desktopBottomSummaryTotal}>Total: {formatCurrency(order.total)}</Text>
+            <TouchableOpacity
+              style={styles.desktopBottomSummaryExpand}
+              onPress={() => setIsBottomBarExpanded(!isBottomBarExpanded)}
+            >
+              <Text style={styles.desktopBottomSummaryExpandText}>
+                {isBottomBarExpanded ? "▼ Collapse" : "▲ Expand"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {isBottomBarExpanded && (
+            <View style={styles.desktopBottomActionsRow}>
+              {/* Bottom Print Bill button */}
+              <TouchableOpacity style={styles.desktopBottomHoldBtn} onPress={handlePrintBill}>
+                <Text style={styles.desktopBottomHoldText}>🖨️ Print Bill</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.desktopBottomCustomBtn}
+                onPress={() => setCustomItemModalVisible(true)}
+              >
+                <Text style={styles.desktopBottomCustomText}>+ Add Custom Item</Text>
+              </TouchableOpacity>
+              {/* Bottom Review Bill button */}
+              <TouchableOpacity style={[styles.desktopBottomKotBtn, { backgroundColor: "#22c55e", flex: 1.2 }]} onPress={reviewBill}>
+                <Text style={styles.desktopBottomKotText}>📄 Review Bill</Text>
+              </TouchableOpacity>
+              {/* Split option moved directly after Review Bill */}
+              <TouchableOpacity
+                style={[styles.desktopBottomKotBtn, { backgroundColor: COLORS.white, borderWidth: 1.5, borderColor: "#3b82f6", flex: 1 }]}
+                onPress={() => setSplitModalVisible(true)}
+              >
+                <Text style={[styles.desktopBottomKotText, { color: "#3b82f6" }]}>🥞 Split Bill</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+
+        {/* Split Bill Modal (Select payment method per split share) */}
+        <Modal
+          visible={splitModalVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => {
+            setSplitModalVisible(false);
+            setPaidSplits({});
+          }}
+        >
+          <View style={styles.desktopCustomItemOverlay}>
+            <View style={styles.desktopCustomItemCard}>
+              <Text style={styles.desktopCustomItemTitle}>Split Bill Equally</Text>
+              <Text style={styles.desktopCustomItemSubtitle}>
+                Select split count and process custom payment methods per share. Total: {formatCurrency(order.total)}
+              </Text>
+
+              <View style={[styles.guestsCounterRow, { justifyContent: "center", marginVertical: 10 }]}>
+                <TouchableOpacity
+                  onPress={() => {
+                    if (splitCount > 2) {
+                      setSplitCount(splitCount - 1);
+                      setPaidSplits({});
+                    }
+                  }}
+                  style={styles.guestsCounterBtn}
+                >
+                  <Text style={styles.guestsCounterBtnText}>-</Text>
+                </TouchableOpacity>
+                <Text style={[styles.desktopWidgetValue, { fontSize: 18, marginHorizontal: 20 }]}>
+                  {splitCount} Splits
+                </Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    if (splitCount < 12) {
+                      setSplitCount(splitCount + 1);
+                      setPaidSplits({});
+                    }
+                  }}
+                  style={styles.guestsCounterBtn}
+                >
+                  <Text style={styles.guestsCounterBtnText}>+</Text>
+                </TouchableOpacity>
+              </View>
+
+              <Text style={{ textAlign: "center", fontWeight: "800", color: "#ef4444", fontSize: 15, marginBottom: 12 }}>
+                Each Share: {formatCurrency(order.total / splitCount)}
+              </Text>
+
+              <ScrollView style={{ maxHeight: 240, marginBottom: 12 }}>
+                {Array.from({ length: splitCount }).map((_, idx) => {
+                  const method = paidSplits[idx];
+                  const isPaid = method !== undefined;
+                  return (
+                    <View key={idx} style={styles.desktopSplitPaymentRow}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.desktopSplitRowText}>Split #{idx + 1}</Text>
+                        <Text style={{ fontSize: 11, color: COLORS.textSec }}>
+                          Share: {formatCurrency(order.total / splitCount)}
+                        </Text>
+                      </View>
+                      {isPaid ? (
+                        <View style={{ backgroundColor: "#ecfdf5", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 }}>
+                          <Text style={{ color: "#16a34a", fontWeight: "800", fontSize: 11 }}>
+                            ✓ Paid ({method.toUpperCase()})
+                          </Text>
+                        </View>
+                      ) : (
+                        <View style={{ flexDirection: "row", gap: 4 }}>
+                          <TouchableOpacity
+                            style={[styles.desktopSplitPayBtn, { backgroundColor: "#22c55e" }]}
+                            onPress={() => handleSplitPay(idx, "cash")}
+                          >
+                            <Text style={styles.desktopSplitPayBtnText}>Cash</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[styles.desktopSplitPayBtn, { backgroundColor: "#3b82f6" }]}
+                            onPress={() => handleSplitPay(idx, "card")}
+                          >
+                            <Text style={styles.desktopSplitPayBtnText}>Card</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[styles.desktopSplitPayBtn, { backgroundColor: "#a855f7" }]}
+                            onPress={() => handleSplitPay(idx, "upi")}
+                          >
+                            <Text style={styles.desktopSplitPayBtnText}>UPI</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[styles.desktopSplitPayBtn, { backgroundColor: "#eab308" }]}
+                            onPress={() => handleSplitPay(idx, "credit")}
+                          >
+                            <Text style={styles.desktopSplitPayBtnText}>Due</Text>
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                    </View>
+                  );
+                })}
+              </ScrollView>
+
+              <TouchableOpacity
+                style={styles.desktopCustomItemCancelBtn}
+                onPress={() => {
+                  setSplitModalVisible(false);
+                  setPaidSplits({});
+                }}
+              >
+                <Text style={styles.desktopCustomItemCancelText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Pay Bill Modal (Dedicated payment selector) */}
+        <Modal
+          visible={payBillModalVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setPayBillModalVisible(false)}
+        >
+          <View style={styles.desktopCustomItemOverlay}>
+            <View style={styles.desktopCustomItemCard}>
+              <Text style={styles.desktopCustomItemTitle}>Process Payment</Text>
+              <Text style={styles.desktopCustomItemSubtitle}>
+                Select payment method to close this bill session. Total: {formatCurrency(order.total)}
+              </Text>
+
+              <View style={{ gap: 10, marginVertical: 12 }}>
+                <TouchableOpacity
+                  style={[styles.desktopPayModalOptionBtn, { backgroundColor: "#22c55e" }]}
+                  onPress={() => executePayBill("cash")}
+                >
+                  <Text style={styles.desktopPayModalOptionText}>💵 Cash</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.desktopPayModalOptionBtn, { backgroundColor: "#3b82f6" }]}
+                  onPress={() => executePayBill("card")}
+                >
+                  <Text style={styles.desktopPayModalOptionText}>💳 Card</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.desktopPayModalOptionBtn, { backgroundColor: "#a855f7" }]}
+                  onPress={() => executePayBill("upi")}
+                >
+                  <Text style={styles.desktopPayModalOptionText}>📱 UPI</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.desktopPayModalOptionBtn, { backgroundColor: "#eab308" }]}
+                  onPress={() => executePayBill("credit")}
+                >
+                  <Text style={styles.desktopPayModalOptionText}>📄 Due (Credit)</Text>
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity
+                style={styles.desktopCustomItemCancelBtn}
+                onPress={() => setPayBillModalVisible(false)}
+              >
+                <Text style={styles.desktopCustomItemCancelText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Custom Item Modal */}
+        <Modal
+          visible={customItemModalVisible}
+          animationType="fade"
+          transparent
+          onRequestClose={handleCustomItemModalClose}
+        >
+          <View style={styles.desktopCustomItemOverlay}>
+            <View style={styles.desktopCustomItemCard}>
+              <Text style={styles.desktopCustomItemTitle}>Add Custom Item</Text>
+              <Text style={styles.desktopCustomItemSubtitle}>
+                This custom item will only be added to this active bill session.
+              </Text>
+
+              <View style={styles.desktopCustomItemField}>
+                <Text style={styles.desktopCustomItemFieldLabel}>Item Name</Text>
+                <TextInput
+                  style={[styles.desktopCustomItemInput, !!customItemNameError && { borderColor: "#ef4444" }]}
+                  placeholder="e.g. Special Dessert"
+                  placeholderTextColor="#cbd5e1"
+                  value={customItemName}
+                  onChangeText={(text) => {
+                    setCustomItemName(text);
+                    setCustomItemNameError("");
+                  }}
+                />
+                {!!customItemNameError && (
+                  <Text style={styles.desktopCustomItemErrorText}>{customItemNameError}</Text>
+                )}
+              </View>
+
+              <View style={styles.desktopCustomItemField}>
+                <Text style={styles.desktopCustomItemFieldLabel}>Price (₹)</Text>
+                <TextInput
+                  style={[styles.desktopCustomItemInput, !!customItemPriceError && { borderColor: "#ef4444" }]}
+                  placeholder="e.g. 150"
+                  placeholderTextColor="#cbd5e1"
+                  keyboardType="numeric"
+                  value={customItemPrice}
+                  onChangeText={(text) => {
+                    setCustomItemPrice(text);
+                    setCustomItemPriceError("");
+                  }}
+                />
+                {!!customItemPriceError && (
+                  <Text style={styles.desktopCustomItemErrorText}>{customItemPriceError}</Text>
+                )}
+              </View>
+
+              <View style={styles.desktopCustomItemActions}>
+                <TouchableOpacity style={styles.desktopCustomItemCancelBtn} onPress={handleCustomItemModalClose}>
+                  <Text style={styles.desktopCustomItemCancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.desktopCustomItemAddBtn} onPress={executeAddCustomItem}>
+                  <Text style={styles.desktopCustomItemAddText}>Add to Bill</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Unified Overlays/Modals */}
+        {/* Error Modal */}
+        <Modal visible={!!errorModal} transparent animationType="fade" onRequestClose={() => setErrorModal("")}>
+          <View style={styles.kotOverlay}>
+            <View style={styles.kotCard}>
+              <Text style={styles.kotEmoji}>⚠️</Text>
+              <Text style={[styles.kotTitle, { color: "#f59e0b" }]}>Alert</Text>
+              <Text style={styles.kotMessage}>{errorModal}</Text>
+              <TouchableOpacity style={[styles.kotDismissBtn, { backgroundColor: "#f59e0b" }]} onPress={() => setErrorModal("")}>
+                <Text style={styles.kotDismissText}>OK</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
+        {/* KOT Success Modal */}
+        <Modal visible={kotModalVisible} transparent animationType="fade" onRequestClose={handleKotDismiss}>
+          <View style={styles.kotOverlay}>
+            <View style={styles.kotCard}>
+              <Text style={styles.kotEmoji}>🖨️</Text>
+              <Text style={styles.kotTitle}>KOT Sent!</Text>
+              <Text style={styles.kotMessage}>
+                Kitchen Order Ticket for {table.name} ({order.orderNo}) has been sent to the kitchen.
+              </Text>
+              <TouchableOpacity style={styles.kotDismissBtn} onPress={handleKotDismiss}>
+                <Text style={styles.kotDismissText}>OK, Back to Dashboard</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Clear Table Confirm Modal */}
+        <Modal visible={clearConfirmVisible} transparent animationType="fade" onRequestClose={() => setClearConfirmVisible(false)}>
+          <View style={styles.kotOverlay}>
+            <View style={styles.kotCard}>
+              <Text style={styles.kotEmoji}>🗑️</Text>
+              <Text style={[styles.kotTitle, { color: "#ef4444" }]}>Clear Table?</Text>
+              <Text style={styles.kotMessage}>
+                This will cancel the current order and free {table.name}. This cannot be undone.
+              </Text>
+              <TouchableOpacity style={[styles.kotDismissBtn, { backgroundColor: "#ef4444" }]} onPress={executeClearTable}>
+                <Text style={styles.kotDismissText}>Yes, Clear Table</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.kotDismissBtn, { backgroundColor: "#f1f5f9", marginTop: 0 }]} onPress={() => setClearConfirmVisible(false)}>
+                <Text style={[styles.kotDismissText, { color: "#64748b" }]}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      </View>
+    );
+  }
+
+  // -------------------------------------------------------------
+  // Mobile Layout Fallback (Original code preserved)
+  // -------------------------------------------------------------
+  return (
+    <View style={styles.screen}>
+      <View style={styles.infoBar}>
+        <View style={styles.infoItem}>
+          <Text style={styles.infoIcon}>👥</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.infoLabel} numberOfLines={1} ellipsizeMode="tail">Guests</Text>
+            <Text style={styles.infoValue} numberOfLines={1} ellipsizeMode="tail">{order.guests}</Text>
+          </View>
+        </View>
+        <View style={styles.infoItem}>
+          <Text style={styles.infoIcon}>🕐</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.infoLabel} numberOfLines={1} ellipsizeMode="tail">Opened At</Text>
+            <Text style={styles.infoValue} numberOfLines={1} ellipsizeMode="tail">{formatTime(order.openedAt)}</Text>
+          </View>
+        </View>
+        <View style={styles.infoItemLast}>
+          <Text style={styles.infoIcon}>📋</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.infoLabel} numberOfLines={1} ellipsizeMode="tail">Order No.</Text>
+            <Text style={styles.infoValue} numberOfLines={1} ellipsizeMode="tail">{order.orderNo}</Text>
+          </View>
+        </View>
+        <TouchableOpacity style={styles.clearNowBtn} onPress={handleClearTable} activeOpacity={0.8}>
+          <Text style={styles.clearNowBtnText}>🗑️ Clear</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.body}>
+        <CategorySidebar
+          categories={categories}
+          selectedSection={selectedSection}
+          selectedId={selectedCategory}
+          onSelectSection={handleSelectSection}
+          onSelect={setSelectedCategory}
+          selectedFoodType={selectedFoodType}
+          onSelectFoodType={setSelectedFoodType}
+        />
+        <MenuList
+          title={activeCategory?.name ?? "Menu"}
+          items={filteredItems}
+          getQty={(itemId) => qtyById.get(itemId) ?? 0}
+          onChangeQty={changeQty}
+        />
+      </View>
+
       {(tableStatus === "active" || tableStatus === "bill") && (
         <TouchableOpacity style={styles.clearTableBtn} onPress={handleClearTable} activeOpacity={0.8}>
           <Text style={styles.clearTableBtnText}>🗑️  Clear Table</Text>
@@ -379,6 +1163,7 @@ export default function TableOrderScreen() {
         onAddCustomItem={handleAddCustomItem}
       />
 
+      {/* Unified Modals for Mobile */}
       {/* Error Modal */}
       <Modal visible={!!errorModal} transparent animationType="fade" onRequestClose={() => setErrorModal("")}>
         <View style={styles.kotOverlay}>
@@ -432,6 +1217,7 @@ export default function TableOrderScreen() {
 }
 
 const styles = StyleSheet.create({
+  // Original Mobile Styles
   screen: {
     backgroundColor: COLORS.bg,
     flex: 1,
@@ -571,7 +1357,6 @@ const styles = StyleSheet.create({
     gap: 10,
     marginTop: 8,
   },
-  // KOT Modal
   kotOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.55)",
@@ -642,5 +1427,681 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     backgroundColor: COLORS.bg,
     width: "100%",
+  },
+
+  // Desktop POS Styles
+  desktopScreen: {
+    flex: 1,
+    backgroundColor: "#f8fafc",
+  },
+  desktopHeader: {
+    height: 64,
+    backgroundColor: COLORS.white,
+    borderBottomWidth: 1,
+    borderBottomColor: "#cbd5e1",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+  },
+  desktopHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  desktopBackBtn: {
+    padding: 8,
+  },
+  desktopBackBtnText: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: COLORS.text,
+  },
+  desktopHeaderTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: COLORS.text,
+  },
+  desktopHeaderWidgets: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  desktopHeaderWidget: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f1f5f9",
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    gap: 8,
+    minWidth: 110,
+  },
+  desktopWidgetIcon: {
+    fontSize: 16,
+  },
+  desktopWidgetLabel: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: COLORS.textSec,
+  },
+  desktopWidgetValue: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: COLORS.text,
+  },
+  guestsCounterRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 2,
+  },
+  guestsCounterBtn: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: "#cbd5e1",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  guestsCounterBtnText: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: COLORS.text,
+    marginTop: -2,
+  },
+  desktopClearBtn: {
+    backgroundColor: "#ef4444",
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  desktopClearBtnText: {
+    color: COLORS.white,
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  desktopWorkspace: {
+    flex: 1,
+    flexDirection: "row",
+    paddingBottom: 110,
+  },
+  desktopLeftSidebar: {
+    width: 200,
+    backgroundColor: COLORS.white,
+    borderRightWidth: 1,
+    borderRightColor: "#cbd5e1",
+    paddingVertical: 8,
+  },
+  desktopCategoryItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: "transparent",
+    gap: 8,
+  },
+  desktopCategoryItemActive: {
+    borderLeftColor: "#ef4444",
+    backgroundColor: "#fef2f2",
+  },
+  desktopCategoryIcon: {
+    fontSize: 16,
+  },
+  desktopCategoryItemText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: COLORS.textSec,
+    flex: 1,
+  },
+  desktopCategoryItemTextActive: {
+    color: "#ef4444",
+    fontWeight: "800",
+  },
+  desktopMiddlePanel: {
+    flex: 1,
+    padding: 16,
+    gap: 12,
+  },
+  desktopSearchRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  desktopSearchInputContainer: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    gap: 8,
+  },
+  desktopSearchIcon: {
+    fontSize: 14,
+    color: COLORS.textSec,
+  },
+  desktopSearchInput: {
+    flex: 1,
+    height: 40,
+    fontSize: 14,
+    color: COLORS.text,
+  },
+  desktopShortCodeContainer: {
+    width: 120,
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+  },
+  desktopShortCodeInput: {
+    flex: 1,
+    height: 40,
+    fontSize: 13,
+    fontWeight: "600",
+    color: COLORS.text,
+  },
+  desktopItemsScroll: {
+    paddingBottom: 24,
+  },
+  desktopItemsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  desktopMenuItemCard: {
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    borderRadius: 8,
+    width: "18.5%",
+    height: 90,
+    padding: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    borderLeftWidth: 5,
+    position: "relative",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  desktopMenuItemCardSelected: {
+    backgroundColor: "#f8fafc",
+    borderColor: "#94a3b8",
+  },
+  desktopMenuItemCardIndicator: {
+    position: "absolute",
+    left: -5,
+    top: 0,
+    bottom: 0,
+    width: 5,
+    borderTopLeftRadius: 8,
+    borderBottomLeftRadius: 8,
+  },
+  desktopMenuItemCardText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: COLORS.text,
+    textAlign: "center",
+    lineHeight: 16,
+  },
+  desktopMenuItemQtyBadge: {
+    position: "absolute",
+    top: 4,
+    right: 4,
+    backgroundColor: "#ea580c",
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  desktopMenuItemQtyBadgeText: {
+    color: COLORS.white,
+    fontSize: 9,
+    fontWeight: "800",
+  },
+  desktopRightPanel: {
+    width: 360,
+    backgroundColor: COLORS.white,
+    borderLeftWidth: 1,
+    borderLeftColor: "#cbd5e1",
+    padding: 14,
+    justifyContent: "space-between",
+  },
+  desktopRightTabs: {
+    flexDirection: "row",
+    borderBottomWidth: 1,
+    borderBottomColor: "#cbd5e1",
+    marginBottom: 10,
+  },
+  desktopRightTab: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: "center",
+    borderBottomWidth: 2,
+    borderBottomColor: "transparent",
+  },
+  desktopRightTabActive: {
+    borderBottomColor: "#ef4444",
+  },
+  desktopRightTabText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: COLORS.textSec,
+  },
+  desktopRightTabTextActive: {
+    color: "#ef4444",
+  },
+  desktopRightSubHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  desktopRightTitle: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#ef4444",
+  },
+  desktopRightIcons: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  desktopRightBadge: {
+    backgroundColor: "#fef3c7",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 4,
+  },
+  desktopRightBadgeText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#d97706",
+  },
+  desktopRightTableHeader: {
+    flexDirection: "row",
+    borderBottomWidth: 1,
+    borderBottomColor: "#cbd5e1",
+    paddingVertical: 6,
+    marginBottom: 4,
+  },
+  desktopColText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#94a3b8",
+  },
+  desktopRightTableScroll: {
+    flex: 1,
+  },
+  desktopRightTableRow: {
+    flexDirection: "row",
+    borderBottomWidth: 1,
+    borderBottomColor: "#f1f5f9",
+    paddingVertical: 8,
+    alignItems: "center",
+  },
+  desktopItemName: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: COLORS.text,
+    lineHeight: 16,
+  },
+  desktopRowCheckbox: {
+    padding: 2,
+  },
+  desktopRowCheckboxBox: {
+    width: 16,
+    height: 16,
+    borderWidth: 1.5,
+    borderColor: "#94a3b8",
+    borderRadius: 3,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: COLORS.white,
+  },
+  desktopRowCheckboxBoxChecked: {
+    backgroundColor: "#22c55e",
+    borderColor: "#22c55e",
+  },
+  desktopRowCheckboxCheckmark: {
+    color: COLORS.white,
+    fontSize: 11,
+    fontWeight: "800",
+    marginTop: -2,
+  },
+  desktopRowQtyBtn: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: COLORS.white,
+  },
+  desktopRowQtyBtnText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: COLORS.text,
+    marginTop: -2,
+  },
+  desktopRowQtyVal: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: COLORS.text,
+    width: 14,
+    textAlign: "center",
+  },
+  desktopItemPrice: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: COLORS.text,
+  },
+  desktopEmptyOrder: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 40,
+  },
+  desktopEmptyOrderEmoji: {
+    fontSize: 40,
+    opacity: 0.6,
+  },
+  desktopEmptyOrderTitle: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: COLORS.text,
+  },
+  desktopEmptyOrderText: {
+    fontSize: 11,
+    color: COLORS.textSec,
+    textAlign: "center",
+    paddingHorizontal: 20,
+  },
+  desktopRightFooter: {
+    borderTopWidth: 1,
+    borderTopColor: "#cbd5e1",
+    paddingTop: 10,
+    gap: 8,
+  },
+  desktopSplitRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  desktopRightTotal: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: COLORS.text,
+  },
+  desktopActionGrid: {
+    gap: 5,
+    marginTop: 4,
+  },
+  desktopActionRow: {
+    flexDirection: "row",
+    gap: 5,
+  },
+  desktopActionBtnSave: {
+    flex: 1,
+    backgroundColor: "#ef4444",
+    borderRadius: 6,
+    paddingVertical: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  desktopActionBtnKOT: {
+    flex: 1,
+    backgroundColor: "#0f172a",
+    borderRadius: 6,
+    paddingVertical: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  desktopActionBtnHold: {
+    flex: 1,
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    borderRadius: 6,
+    paddingVertical: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  desktopActionBtnText: {
+    color: COLORS.white,
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  desktopActionBtnHoldText: {
+    color: "#475569",
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  desktopBottomBar: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: COLORS.white,
+    borderTopWidth: 1,
+    borderTopColor: "#cbd5e1",
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  desktopBottomSummaryRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  desktopBottomSummaryBadge: {
+    backgroundColor: "#ffedd5",
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 20,
+  },
+  desktopBottomSummaryBadgeText: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#ea580c",
+  },
+  desktopBottomSummaryTotal: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#ef4444",
+    marginRight: 60,
+  },
+  desktopBottomSummaryExpand: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  desktopBottomSummaryExpandText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#ef4444",
+  },
+  desktopBottomActionsRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 10,
+  },
+  desktopBottomHoldBtn: {
+    flex: 1,
+    borderWidth: 1.5,
+    borderColor: "#ef4444",
+    borderRadius: 8,
+    paddingVertical: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  desktopBottomHoldText: {
+    color: "#ef4444",
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  desktopBottomCustomBtn: {
+    flex: 2,
+    backgroundColor: "#ef4444",
+    borderRadius: 8,
+    paddingVertical: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  desktopBottomCustomText: {
+    color: COLORS.white,
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  desktopBottomKotBtn: {
+    flex: 1,
+    backgroundColor: "#22c55e",
+    borderRadius: 8,
+    paddingVertical: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  desktopBottomKotText: {
+    color: COLORS.white,
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  desktopCustomItemOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  desktopCustomItemCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
+    padding: 20,
+    width: "100%",
+    maxWidth: 380,
+    gap: 14,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  desktopCustomItemTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: COLORS.text,
+    textAlign: "center",
+  },
+  desktopCustomItemSubtitle: {
+    fontSize: 11,
+    color: COLORS.textSec,
+    textAlign: "center",
+    marginTop: -6,
+  },
+  desktopCustomItemField: {
+    gap: 4,
+  },
+  desktopCustomItemFieldLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: COLORS.textSec,
+  },
+  desktopCustomItemInput: {
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 14,
+    color: COLORS.text,
+    backgroundColor: "#fafafa",
+  },
+  desktopCustomItemErrorText: {
+    fontSize: 10,
+    color: "#ef4444",
+    fontWeight: "600",
+  },
+  desktopCustomItemActions: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 4,
+  },
+  desktopCustomItemCancelBtn: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: "center",
+  },
+  desktopCustomItemCancelText: {
+    color: COLORS.textSec,
+    fontWeight: "700",
+    fontSize: 13,
+  },
+  desktopCustomItemAddBtn: {
+    flex: 1,
+    backgroundColor: COLORS.primary,
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: "center",
+  },
+  desktopCustomItemAddText: {
+    color: COLORS.white,
+    fontWeight: "700",
+    fontSize: 13,
+  },
+
+  // Split Bill styles
+  desktopSplitPaymentRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#cbd5e1",
+  },
+  desktopSplitRowText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: COLORS.text,
+  },
+  desktopSplitPayBtn: {
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  desktopSplitPayBtnText: {
+    color: COLORS.white,
+    fontSize: 10,
+    fontWeight: "800",
+  },
+
+  // Pay Modal Option styles
+  desktopPayModalOptionBtn: {
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  desktopPayModalOptionText: {
+    color: COLORS.white,
+    fontWeight: "800",
+    fontSize: 14,
   },
 });

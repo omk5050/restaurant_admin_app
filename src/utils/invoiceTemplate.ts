@@ -14,9 +14,7 @@ export function generateInvoiceHTML(invoice: Invoice, settings: AppSettings) {
     .join("");
 
   const tableRow = invoice.isTakeaway
-    ? `<p style="font-weight:bold; margin: 4px 0;">TYPE: Takeaway (${getTableName(invoice.tableId, settings)})</p>
-  <p style="font-weight:bold; margin: 4px 0;">CUST: ${invoice.customerName}</p>
-  <p style="font-weight:bold; margin: 4px 0;">PHONE: ${invoice.customerPhone}</p>`
+    ? `<p style="font-weight:bold; margin: 4px 0;">TYPE: Takeaway (${getTableName(invoice.tableId, settings)})</p>`
     : `<p style="font-weight:bold; margin: 4px 0;">TABLE: ${getTableName(invoice.tableId, settings)}</p>`;
 
   return `<!DOCTYPE html>
@@ -24,14 +22,30 @@ export function generateInvoiceHTML(invoice: Invoice, settings: AppSettings) {
 <head>
   <meta charset="utf-8">
   <style>
-    body { font-family:'Courier New',Courier,monospace; width:290px; margin:0 auto; font-size:17px; line-height:1.4; color:#000; }
-    h1 { text-align:center; font-size:24px; font-weight:bold; letter-spacing:2px; margin:0 0 4px 0; text-transform:uppercase; }
-    .sub { text-align:center; font-size:14px; margin:3px 0; font-weight:bold; }
-    .dash { border-top:2px dashed #000; margin:12px 0; }
-    table { width:100%; border-collapse:collapse; font-size:17px; }
-    .total { font-size:22px; font-weight:bold; margin: 8px 0; }
+    @page {
+      size: 80mm auto;
+      margin: 0;
+    }
+    html, body {
+      margin: 0;
+      padding: 10px;
+      font-family: 'Courier New', Courier, monospace;
+      width: 280px;
+      height: auto !important;
+      overflow: visible;
+    }
+    body {
+      font-size: 16px;
+      line-height: 1.3;
+      color: #000;
+    }
+    h1 { text-align:center; font-size:22px; font-weight:bold; letter-spacing:1px; margin:0 0 4px 0; text-transform:uppercase; }
+    .sub { text-align:center; font-size:13px; margin:3px 0; font-weight:bold; }
+    .dash { border-top:2px dashed #000; margin:10px 0; }
+    table { width:100%; border-collapse:collapse; font-size:16px; }
+    .total { font-size:20px; font-weight:bold; margin: 6px 0; }
     .center { text-align:center; font-weight:bold; }
-    p { margin: 6px 0; }
+    p { margin: 4px 0; }
   </style>
 </head>
 <body>
@@ -52,6 +66,59 @@ export function generateInvoiceHTML(invoice: Invoice, settings: AppSettings) {
   <p class="total">TOTAL : ${settings.currency}${invoice.total}</p>
   <div class="dash"></div>
   <p class="center">Thank You! Visit Again</p>
+</body>
+</html>`;
+}
+
+export function generateKotHTML(order: any, table: any, settings: AppSettings) {
+  const rows = order.items
+    .map(
+      (item: any) => `
+    <tr>
+      <td style="padding:6px 0; font-weight:bold; font-size:20px;">${item.name}</td>
+      <td style="text-align:right; font-weight:bold; font-size:24px;">x${item.qty}</td>
+    </tr>`,
+    )
+    .join("");
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    @page {
+      size: 80mm auto;
+      margin: 0;
+    }
+    html, body {
+      margin: 0;
+      padding: 10px;
+      font-family: 'Courier New', Courier, monospace;
+      width: 280px;
+      height: auto !important;
+      overflow: visible;
+    }
+    body {
+      font-size: 16px;
+      line-height: 1.3;
+      color: #000;
+    }
+    h1 { text-align:center; font-size:20px; font-weight:bold; margin:0 0 4px 0; text-transform:uppercase; }
+    .dash { border-top:2px dashed #000; margin:10px 0; }
+    table { width:100%; border-collapse:collapse; font-size:16px; }
+    p { margin: 4px 0; }
+  </style>
+</head>
+<body>
+  <h1>KITCHEN ORDER (KOT)</h1>
+  <div class="dash"></div>
+  <p style="font-weight:bold; font-size:20px; margin: 4px 0;">TABLE/ORDER: ${table?.name || `Order #${order.orderNo}`}</p>
+  <p style="font-weight:bold;">ORDER NO : ${order.orderNo}</p>
+  <p style="font-weight:bold;">DATE     : ${new Date().toLocaleString("en-IN")}</p>
+  <div class="dash"></div>
+  <table>${rows}</table>
+  <div class="dash"></div>
+  <p style="text-align:center; font-weight:bold;">Kitchen Copy</p>
 </body>
 </html>`;
 }

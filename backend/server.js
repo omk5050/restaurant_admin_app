@@ -110,6 +110,7 @@ const MenuItemSchema = new mongoose.Schema({
   isAvailable: { type: Boolean, default: true },
   isVeg: { type: Boolean, default: true },
   imageUrl: { type: String, default: "" },
+  shortCode: { type: String, default: "" },
 });
 MenuItemSchema.index({ adminId: 1, id: 1 }, { unique: true });
 const MenuItem = mongoose.model("MenuItem", MenuItemSchema);
@@ -168,6 +169,8 @@ const UserSchema = new mongoose.Schema({
   role: { type: String, enum: ["admin", "super-admin"], required: true },
   name: { type: String, required: true },
   createdAt: { type: String, required: true },
+  subscriptionPaid: { type: Boolean, default: true },
+  authoritiesEnabled: { type: Boolean, default: true },
 });
 const User = mongoose.model("User", UserSchema);
 
@@ -298,6 +301,8 @@ async function seedDatabase() {
         role: "admin",
         name: "Manager Admin",
         createdAt: new Date().toISOString(),
+        subscriptionPaid: true,
+        authoritiesEnabled: true,
       });
       console.log("Seeded default admin user.");
     }
@@ -843,6 +848,7 @@ app.get("/api/menu", authenticateToken, async (req, res) => {
       isAvailable: item.isAvailable,
       isVeg: item.isVeg,
       imageUrl: item.imageUrl || "",
+      shortCode: item.shortCode || "",
     }));
     res.json(items);
   } catch (err) {
@@ -853,7 +859,7 @@ app.get("/api/menu", authenticateToken, async (req, res) => {
 app.post("/api/menu", authenticateToken, async (req, res) => {
   try {
     const adminId = resolveAdminId(req);
-    const { categoryId, name, price, emoji, isAvailable, isVeg, imageUrl } = req.body;
+    const { categoryId, name, price, emoji, isAvailable, isVeg, imageUrl, shortCode } = req.body;
     const id = "m_" + Date.now();
     const menuItem = await MenuItem.create({
       adminId,
@@ -865,6 +871,7 @@ app.post("/api/menu", authenticateToken, async (req, res) => {
       isAvailable: isAvailable !== undefined ? isAvailable : true,
       isVeg: isVeg !== undefined ? isVeg : true,
       imageUrl: imageUrl || "",
+      shortCode: shortCode || "",
     });
     // Return clean mapped object (consistent with GET /api/menu)
     res.json({
@@ -876,6 +883,7 @@ app.post("/api/menu", authenticateToken, async (req, res) => {
       isAvailable: menuItem.isAvailable,
       isVeg: menuItem.isVeg,
       imageUrl: menuItem.imageUrl || "",
+      shortCode: menuItem.shortCode || "",
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -945,13 +953,33 @@ app.post("/api/orders", authenticateToken, async (req, res) => {
 app.put("/api/orders/:id/items", authenticateToken, async (req, res) => {
   try {
     const adminId = resolveAdminId(req);
-    const { items } = req.body; // Array of items
+    const { items, guests, customerName, customerPhone, isTakeaway } = req.body;
     const settings = await Settings.findOne({ adminId }) || { gstPercent: 5 };
-    const { subtotal, gstAmount, total } = calculateTotal(items, settings.gstPercent);
+
+    const updateFields = {};
+    if (items !== undefined) {
+      const { subtotal, gstAmount, total } = calculateTotal(items, settings.gstPercent);
+      updateFields.items = items;
+      updateFields.subtotal = subtotal;
+      updateFields.gstAmount = gstAmount;
+      updateFields.total = total;
+    }
+    if (guests !== undefined) {
+      updateFields.guests = Number(guests);
+    }
+    if (customerName !== undefined) {
+      updateFields.customerName = customerName;
+    }
+    if (customerPhone !== undefined) {
+      updateFields.customerPhone = customerPhone;
+    }
+    if (isTakeaway !== undefined) {
+      updateFields.isTakeaway = !!isTakeaway;
+    }
 
     const order = await Order.findOneAndUpdate(
       { adminId, id: req.params.id },
-      { items, subtotal, gstAmount, total },
+      updateFields,
       { new: true }
     );
     res.json(order);

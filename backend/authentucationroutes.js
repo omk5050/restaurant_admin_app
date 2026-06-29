@@ -34,6 +34,11 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ error: "Invalid email or password." });
     }
 
+    // Check if admin is disabled (only for admin role, super-admin shouldn't be blocked)
+    if (user.role === "admin" && user.authoritiesEnabled === false) {
+      return res.status(403).json({ error: "Your account is disabled." });
+    }
+
     // Generate JWT token
     const token = jwt.sign(
       { userId: user._id, email: user.email, role: user.role },
@@ -75,12 +80,51 @@ router.get("/admins", authenticateToken, async (req, res) => {
           email: admin.email,
           createdAt: admin.createdAt,
           restaurantName: settings ? settings.restaurantName : "Not Configured",
+          subscriptionPaid: admin.subscriptionPaid !== undefined ? admin.subscriptionPaid : true,
+          authoritiesEnabled: admin.authoritiesEnabled !== undefined ? admin.authoritiesEnabled : true,
         };
       })
     );
     res.json(adminsWithRestaurants);
   } catch (err) {
     console.error("Fetch admins error:", err);
+    res.status(500).json({ error: "Internal server error." });
+  }
+});
+
+// PUT /admins/:id/status - update admin status (Super Admin only)
+router.put("/admins/:id/status", authenticateToken, async (req, res) => {
+  if (req.user.role !== "super-admin") {
+    return res.status(403).json({ error: "Access denied." });
+  }
+  try {
+    const { subscriptionPaid, authoritiesEnabled } = req.body;
+    const admin = await User.findById(req.params.id);
+    if (!admin || admin.role !== "admin") {
+      return res.status(404).json({ error: "Admin user not found." });
+    }
+
+    if (subscriptionPaid !== undefined) {
+      admin.subscriptionPaid = subscriptionPaid;
+    }
+    if (authoritiesEnabled !== undefined) {
+      admin.authoritiesEnabled = authoritiesEnabled;
+    }
+
+    await admin.save();
+    
+    res.json({
+      success: true,
+      admin: {
+        _id: admin._id,
+        name: admin.name,
+        email: admin.email,
+        subscriptionPaid: admin.subscriptionPaid,
+        authoritiesEnabled: admin.authoritiesEnabled,
+      }
+    });
+  } catch (err) {
+    console.error("Update admin status error:", err);
     res.status(500).json({ error: "Internal server error." });
   }
 });

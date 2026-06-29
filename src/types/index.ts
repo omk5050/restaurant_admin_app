@@ -29,6 +29,7 @@ export interface MenuItem {
   isAvailable: boolean;
   isVeg: boolean;
   imageUrl?: string;
+  shortCode?: string;
 }
 
 export interface OrderItem {

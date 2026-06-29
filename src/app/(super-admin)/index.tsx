@@ -103,6 +103,37 @@ export default function SuperAdminDashboard() {
     }
   };
 
+  const toggleAdminStatus = async (adminId: string, field: 'subscriptionPaid' | 'authoritiesEnabled', currentValue: boolean) => {
+    try {
+      const res = await apiFetch(`${API_URL}/api/auth/admins/${adminId}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [field]: currentValue }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        triggerAlert(
+          'Status Updated',
+          `Successfully updated ${field === 'subscriptionPaid' ? 'subscription status' : 'admin authorities'}.`,
+          'success'
+        );
+        fetchAdminsAndRequests();
+      } else {
+        triggerAlert(
+          'Update Failed',
+          data.error || 'Failed to update admin status.',
+          'error'
+        );
+      }
+    } catch (e) {
+      triggerAlert(
+        'Connection Error',
+        'Connection error. Please try again.',
+        'error'
+      );
+    }
+  };
+
   const handlePrint = async (request: any) => {
     if (!request) return;
     const formattedDate = new Date(request.createdAt).toLocaleDateString('en-IN', {
@@ -338,8 +369,12 @@ export default function SuperAdminDashboard() {
                       <Text style={styles.cardRestaurant} numberOfLines={1}>{item.restaurantName}</Text>
                       <Text style={styles.cardAdmin} numberOfLines={1}>{item.name}</Text>
                     </View>
-                    <View style={styles.activeBadge}>
-                      <Text style={styles.activeBadgeText}>Active</Text>
+                    <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+                      <View style={item.authoritiesEnabled ? styles.activeBadge : styles.disabledBadge}>
+                        <Text style={item.authoritiesEnabled ? styles.activeBadgeText : styles.disabledBadgeText}>
+                          {item.authoritiesEnabled ? 'Active' : 'Disabled'}
+                        </Text>
+                      </View>
                     </View>
                   </View>
 
@@ -354,6 +389,28 @@ export default function SuperAdminDashboard() {
                       <Text style={styles.detailText}>
                         Joined {new Date(item.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                       </Text>
+                    </View>
+                  </View>
+
+                  {/* Authorities Toggle Section */}
+                  <View style={styles.controlsSection}>
+                    <View style={styles.controlRow}>
+                      <View style={styles.controlInfo}>
+                        <Text style={styles.controlTitle}>Authorities Status</Text>
+                        <Text style={styles.controlSubtitle}>
+                          {item.authoritiesEnabled ? 'Enabled (Full Access)' : 'Disabled (No Access)'}
+                        </Text>
+                      </View>
+                      <TouchableOpacity
+                        activeOpacity={0.8}
+                        onPress={() => toggleAdminStatus(item._id, 'authoritiesEnabled', !item.authoritiesEnabled)}
+                        style={[
+                          styles.customSwitch,
+                          item.authoritiesEnabled ? styles.switchOn : styles.switchOff
+                        ]}
+                      >
+                        <View style={[styles.switchKnob, item.authoritiesEnabled ? styles.knobOn : styles.knobOff]} />
+                      </TouchableOpacity>
                     </View>
                   </View>
 
@@ -871,5 +928,85 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '800',
     fontSize: 14,
+  },
+  disabledBadge: {
+    backgroundColor: '#fee2e2',
+    borderRadius: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+  },
+  disabledBadgeText: {
+    color: '#ef4444',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  unpaidBadge: {
+    backgroundColor: '#fffbeb',
+    borderRadius: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderWidth: 1,
+    borderColor: '#fde68a',
+  },
+  unpaidBadgeText: {
+    color: '#b45309',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  controlsSection: {
+    borderTopWidth: 1,
+    borderTopColor: '#f3f4f6',
+    paddingTop: 12,
+    gap: 12,
+    marginBottom: 4,
+  },
+  controlRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#f8fafc',
+    padding: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+  },
+  controlInfo: {
+    flex: 1,
+  },
+  controlTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#334155',
+  },
+  controlSubtitle: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#64748b',
+    marginTop: 2,
+  },
+  customSwitch: {
+    width: 46,
+    height: 26,
+    borderRadius: 13,
+    padding: 2,
+    justifyContent: 'center',
+  },
+  switchOn: {
+    backgroundColor: '#10b981',
+  },
+  switchOff: {
+    backgroundColor: '#cbd5e1',
+  },
+  switchKnob: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#ffffff',
+  },
+  knobOn: {
+    alignSelf: 'flex-end',
+  },
+  knobOff: {
+    alignSelf: 'flex-start',
   },
 });

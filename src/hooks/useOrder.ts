@@ -7,6 +7,7 @@ import { PaymentMethod } from "@/types";
 export function useOrder(orderId?: string) {
   const orders = useOrderStore((state) => state.orders);
   const updateOrderItem = useOrderStore((state) => state.updateOrderItem);
+  const updateOrderMetadata = useOrderStore((state) => state.updateOrderMetadata);
   const generateBillInStore = useOrderStore((state) => state.generateBill);
   const closeOrderInStore = useOrderStore((state) => state.closeOrder);
   const createOrder = useOrderStore((state) => state.createOrder);
@@ -69,6 +70,7 @@ export function useOrder(orderId?: string) {
     order,
     orders,
     updateOrderItem,
+    updateOrderMetadata,
     generateBill,
     closeOrder,
     findOrder,

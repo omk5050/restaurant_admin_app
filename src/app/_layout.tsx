@@ -2,7 +2,7 @@ import 'react-native-gesture-handler';
 import React, { useEffect, useState } from 'react';
 import { Stack, router, useSegments } from 'expo-router';
 import { StatusBar, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS } from '@/constants/colors';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
@@ -19,6 +19,7 @@ const RootContent = () => {
   const fetchOrders = useOrderStore(s => s.fetchOrders);
   const fetchAnalytics = useOrderStore(s => s.fetchAnalytics);
   const segments = useSegments();
+  const insets = useSafeAreaInsets();
 
   const [selectedAdminId, setSelectedAdminId] = useState<string | null>(null);
 
@@ -70,7 +71,7 @@ const RootContent = () => {
     <View style={styles.stackContainer}>
       <StatusBar style="dark" />
       {role === 'super-admin' && selectedAdminId && (
-        <SafeAreaView edges={['top']} style={{ backgroundColor: '#1e293b' }}>
+        <View style={{ backgroundColor: '#1e293b', paddingTop: insets.top }}>
           <View style={styles.impersonationBanner}>
             <Text style={styles.impersonationText}>
               Viewing Admin&apos;s Restaurant Portal
@@ -79,7 +80,7 @@ const RootContent = () => {
               <Text style={styles.impersonationBtnText}>Return to Super Admin Panel</Text>
             </TouchableOpacity>
           </View>
-        </SafeAreaView>
+        </View>
       )}
       <Stack
         screenOptions={{
@@ -109,9 +110,11 @@ const RootContent = () => {
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <RootContent />
-    </AuthProvider>
+    <SafeAreaProvider>
+      <AuthProvider>
+        <RootContent />
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }
 

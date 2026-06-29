@@ -55,9 +55,10 @@ export default function AdminLoginScreen() {
     try {
       await signIn(email.trim(), password, 'admin');
     } catch (e: any) {
+      const isAccountDisabled = e.message && e.message.toLowerCase().includes('disabled');
       triggerAlert(
-        'Access Denied',
-        'Invalid email or password. Please verify your credentials.',
+        isAccountDisabled ? 'Account Disabled' : 'Access Denied',
+        isAccountDisabled ? 'Your account is disabled.' : 'Invalid email or password. Please verify your credentials.',
         'error'
       );
     }

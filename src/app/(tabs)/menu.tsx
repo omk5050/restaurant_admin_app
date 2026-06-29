@@ -357,6 +357,7 @@ export default function MenuManagementScreen() {
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [formName, setFormName] = useState("");
   const [formPrice, setFormPrice] = useState("");
+  const [formShortCode, setFormShortCode] = useState("");
   const [formCategory, setFormCategory] = useState(categories[0]?.id || "popular");
   const [formEmoji, setFormEmoji] = useState("🍔");
   const [formIsVeg, setFormIsVeg] = useState(true);
@@ -487,6 +488,7 @@ export default function MenuManagementScreen() {
   const handleOpenAdd = () => {
     setFormName("");
     setFormPrice("");
+    setFormShortCode("");
     setFormSection(selectedSection);
     setFormCategory(getSubCategories(categories, selectedSection)[0]?.id || categories[0]?.id || "popular");
     setFormEmoji("🍔");
@@ -525,6 +527,7 @@ export default function MenuManagementScreen() {
         isVeg: formIsVeg,
         isAvailable: formIsAvailable,
         imageUrl,
+        shortCode: formShortCode.trim(),
       });
       setAddModalVisible(false);
     } catch (err: any) {
@@ -651,6 +654,11 @@ export default function MenuManagementScreen() {
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Item Name</Text>
               <TextInput value={formName} onChangeText={setFormName} style={styles.input} placeholder="e.g. Garlic Bread" editable={!uploading} />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Short Code (Optional)</Text>
+              <TextInput value={formShortCode} onChangeText={setFormShortCode} style={styles.input} placeholder="e.g. GB01" editable={!uploading} />
             </View>
 
             <View style={styles.inputGroup}>
