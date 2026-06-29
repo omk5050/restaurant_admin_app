@@ -153,8 +153,10 @@ export default function TableOrderScreen() {
     fetchMenu();
   }, [fetchMenu]);
 
-  // Sync selectedCategory to first available category of the section once loaded
+  // Sync selectedCategory to first available category of the section once loaded.
+  // Skip if selectedCategory is "" — user has explicitly deselected all categories.
   useEffect(() => {
+    if (selectedCategory === "") return; // user deselected — don't auto-reselect
     const subCats = getSubCategories(categories, selectedSection);
     if (subCats.length > 0) {
       const exists = subCats.some((cat) => cat.id === selectedCategory);
@@ -1835,10 +1837,10 @@ const styles = StyleSheet.create({
     borderColor: "#e2e8f0",
     borderRadius: 12,
     width: "23%",
-    padding: 8,
+    padding: 10,
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 10,
     borderLeftWidth: 0,
     position: "relative",
     shadowColor: "#000",
@@ -1850,18 +1852,18 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   desktopMenuItemCardImage: {
-    width: 55,
-    height: 55,
+    width: 72,
+    height: 72,
     borderRadius: 10,
     flexShrink: 0,
   },
   desktopMenuItemCardInfo: {
     flex: 1,
-    gap: 3,
+    gap: 4,
     justifyContent: "center",
   },
   desktopMenuItemCardPrice: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "800",
     color: "#ef4444",
   },
