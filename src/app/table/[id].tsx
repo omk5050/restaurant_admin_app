@@ -616,18 +616,21 @@ export default function TableOrderScreen() {
                       style={[styles.desktopMenuItemCard, qty > 0 && styles.desktopMenuItemCardSelected]}
                       onPress={() => changeQty(item, qty + 1)}
                     >
-                      <View
-                        style={[
-                          styles.desktopMenuItemCardIndicator,
-                          { backgroundColor: item.isVeg ? "#22c55e" : "#ef4444" },
-                        ]}
-                      />
-                      <Text style={styles.desktopMenuItemCardText} numberOfLines={2}>
-                        {item.name}
-                      </Text>
-                      {qty > 0 && (
-                        <View style={styles.desktopMenuItemQtyBadge}>
-                          <Text style={styles.desktopMenuItemQtyBadgeText}>{qty}</Text>
+                      <View style={{ flexDirection: 'row', flex: 1, alignItems: 'center' }}>
+                        <Image
+                          source={{ uri: item.imageUrl ?? "https://via.placeholder.com/80" }}
+                          style={styles.desktopMenuItemImage}
+                          resizeMode="cover"
+                        />
+                        <View style={styles.desktopMenuItemTextWrapper}>
+                          <Text style={styles.desktopMenuItemCardText} numberOfLines={2} ellipsizeMode="tail">
+                            {item.name}
+                          </Text>
+                          {qty > 0 && (
+                            <View style={styles.desktopMenuItemQtyBadge}>
+                              <Text style={styles.desktopMenuItemQtyBadgeText}>{qty}</Text>
+                            </View>
+                          )}
                         </View>
                       )}
                     </TouchableOpacity>
@@ -1672,7 +1675,7 @@ const styles = StyleSheet.create({
     width: "18.5%",
     height: 90,
     padding: 10,
-    justifyContent: "center",
+    flexDirection: "row",
     alignItems: "center",
     borderLeftWidth: 5,
     position: "relative",
@@ -1699,8 +1702,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
     color: COLORS.text,
-    textAlign: "center",
     lineHeight: 16,
+    flex: 1,
+    paddingLeft: 8,
   },
   desktopMenuItemQtyBadge: {
     position: "absolute",
