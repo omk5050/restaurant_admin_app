@@ -213,17 +213,19 @@ export default function TableOrderScreen() {
     return items.filter((item) => {
       if (selectedFoodType === "veg" && !item.isVeg) return false;
       if (selectedFoodType === "non-veg" && item.isVeg) return false;
+      // Short code search: exact prefix match on shortCode only
+      if (shortCode.trim()) {
+        const sc = shortCode.toLowerCase().trim();
+        return item.shortCode ? item.shortCode.toLowerCase().startsWith(sc) : false;
+      }
+      // Name search
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase().trim();
-        return (
-          item.name.toLowerCase().includes(query) ||
-          item.id.toLowerCase().includes(query) ||
-          (item.shortCode && item.shortCode.toLowerCase().includes(query))
-        );
+        return item.name.toLowerCase().includes(query);
       }
       return true;
     });
-  }, [items, selectedFoodType, searchQuery]);
+  }, [items, selectedFoodType, searchQuery, shortCode]);
 
   // Effective totals applying local tax/discount overrides (desktop only)
   const discountAmount = useMemo(() => {
@@ -655,12 +657,13 @@ export default function TableOrderScreen() {
                 <Text style={styles.desktopSearchIcon}>🔍</Text>
                 <TextInput
                   style={styles.desktopSearchInput}
-                  placeholder="Search item"
+                  placeholder="Search by name"
                   placeholderTextColor={COLORS.textSec}
                   value={searchQuery}
                   onChangeText={(text) => {
                     setSearchQuery(text);
-                    setShortCode(text);
+                    // Clear short code when name search is used
+                    if (text) setShortCode("");
                   }}                />
               </View>
               <View style={styles.desktopShortCodeContainer}>
@@ -671,7 +674,8 @@ export default function TableOrderScreen() {
                   value={shortCode}
                   onChangeText={(text) => {
                     setShortCode(text);
-                    setSearchQuery(text);
+                    // Clear name search when short code is used
+                    if (text) setSearchQuery("");
                   }}
                 />
               </View>
@@ -692,21 +696,26 @@ export default function TableOrderScreen() {
                       onPress={() => changeQty(item, qty + 1)}
                       activeOpacity={0.75}
                     >
+                      {/* Veg/Non-veg indicator strip on the left edge */}
                       <View
                         style={[
                           styles.desktopMenuItemCardIndicator,
                           { backgroundColor: item.isVeg ? "#22c55e" : "#ef4444" },
                         ]}
                       />
+                      {/* Image on left */}
                       <Image
                         source={imgSrc}
                         style={styles.desktopMenuItemCardImage}
                         resizeMode="cover"
                       />
-                      <Text style={styles.desktopMenuItemCardText} numberOfLines={2}>
-                        {item.name}
-                      </Text>
-                      <Text style={styles.desktopMenuItemCardPrice}>{formatCurrency(item.price)}</Text>
+                      {/* Text on right */}
+                      <View style={styles.desktopMenuItemCardInfo}>
+                        <Text style={styles.desktopMenuItemCardText} numberOfLines={3}>
+                          {item.name}
+                        </Text>
+                        <Text style={styles.desktopMenuItemCardPrice}>{formatCurrency(item.price)}</Text>
+                      </View>
                       {qty > 0 && (
                         <View style={styles.desktopMenuItemQtyBadge}>
                           <Text style={styles.desktopMenuItemQtyBadgeText}>{qty}</Text>
@@ -1809,18 +1818,18 @@ const styles = StyleSheet.create({
   desktopItemsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 12,
+    gap: 10,
   },
   desktopMenuItemCard: {
     backgroundColor: COLORS.white,
     borderWidth: 1,
     borderColor: "#cbd5e1",
     borderRadius: 10,
-    width: "18.5%",
-    height: 155,
+    width: "31%",
     padding: 8,
-    justifyContent: "flex-start",
+    flexDirection: "row",
     alignItems: "center",
+    gap: 8,
     borderLeftWidth: 4,
     position: "relative",
     shadowColor: "#000",
@@ -1829,23 +1838,26 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 1,
     overflow: "hidden",
+    marginBottom: 8,
   },
   desktopMenuItemCardImage: {
-    width: "100%",
-    height: 80,
-    borderRadius: 7,
-    marginBottom: 4,
+    width: 64,
+    height: 64,
+    borderRadius: 8,
+    flexShrink: 0,
+  },
+  desktopMenuItemCardInfo: {
+    flex: 1,
+    gap: 4,
   },
   desktopMenuItemCardPrice: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "800",
     color: "#ef4444",
-    marginTop: 2,
-    textAlign: "center",
   },
   desktopMenuItemCardSelected: {
-    backgroundColor: "#f8fafc",
-    borderColor: "#94a3b8",
+    backgroundColor: "#f0fdf4",
+    borderColor: "#86efac",
   },
   desktopMenuItemCardIndicator: {
     position: "absolute",
@@ -1857,11 +1869,11 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 8,
   },
   desktopMenuItemCardText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "700",
     color: COLORS.text,
-    textAlign: "center",
-    lineHeight: 14,
+    lineHeight: 16,
+    flexShrink: 1,
   },
   desktopMenuItemQtyBadge: {
     position: "absolute",
