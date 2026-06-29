@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useRouter } from "expo-router";
@@ -12,6 +12,7 @@ export default function AdminLoginScreen() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
+  const passwordRef = useRef<TextInput>(null);
 
   // Custom Alert state
   const [alertVisible, setAlertVisible] = useState(false);
@@ -89,15 +90,21 @@ export default function AdminLoginScreen() {
                 onChangeText={setEmail}
                 keyboardType="email-address"
                 autoCapitalize="none"
+                returnKeyType="next"
+                onSubmitEditing={() => passwordRef.current?.focus()}
+                blurOnSubmit={false}
               />
               <View style={styles.passwordContainer}>
                 <TextInput
+                  ref={passwordRef}
                   placeholder="Password"
                   placeholderTextColor="#94a3b8"
                   secureTextEntry={!showPassword}
                   style={styles.passwordInput}
                   value={password}
                   onChangeText={setPassword}
+                  returnKeyType="done"
+                  onSubmitEditing={handleSubmit}
                 />
                 <TouchableOpacity
                   onPress={() => setShowPassword(!showPassword)}
@@ -182,6 +189,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     color: '#0f172a',
     fontSize: 16,
+    ...Platform.select({
+      web: {
+        outlineStyle: 'none',
+      } as any,
+    }),
   },
   passwordContainer: {
     flexDirection: 'row',
@@ -199,6 +211,11 @@ const styles = StyleSheet.create({
     height: '100%',
     color: '#0f172a',
     fontSize: 16,
+    ...Platform.select({
+      web: {
+        outlineStyle: 'none',
+      } as any,
+    }),
   },
   eyeIcon: {
     padding: 4,

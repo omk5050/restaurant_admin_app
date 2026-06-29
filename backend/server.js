@@ -234,38 +234,8 @@ function getScopedId(baseId, adminId, usesSuffixedIds) {
 }
 
 async function ensureDefaultMenuData(adminId) {
-  if (!adminId) return;
-
-  const categories = await Category.find({ adminId });
-  const usesSuffixedIds = categories.length > 0
-    ? categories.some((category) => category.id.endsWith(`_${adminId}`))
-    : true;
-
-  // 1. Create categories if they don't exist for this admin (i.e. categories count is 0)
-  if (categories.length === 0) {
-    await Promise.all(REQUIRED_CATEGORIES.map((category) => {
-      const id = getScopedId(category.id, adminId, usesSuffixedIds);
-      return Category.findOneAndUpdate(
-        { adminId, id },
-        { ...category, id, adminId },
-        { upsert: true, setDefaultsOnInsert: true }
-      );
-    }));
-  }
-
-  // 2. Create default menu items if none exist for this admin
-  const menuCount = await MenuItem.countDocuments({ adminId });
-  if (menuCount === 0) {
-    await Promise.all(REQUIRED_MENU_ITEMS.map((item) => {
-      const id = getScopedId(item.id, adminId, usesSuffixedIds);
-      const categoryId = getScopedId(item.categoryId, adminId, usesSuffixedIds);
-      return MenuItem.findOneAndUpdate(
-        { adminId, id },
-        { ...item, id, categoryId, adminId },
-        { upsert: true, setDefaultsOnInsert: true }
-      );
-    }));
-  }
+  // Disabled automatic seeding to prevent mock categories/items from injecting into user databases
+  return;
 }
 
 function getTableName(id) {

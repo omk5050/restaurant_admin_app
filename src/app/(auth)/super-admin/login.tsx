@@ -292,6 +292,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     color: '#0f172a',
     fontSize: 15,
+    ...Platform.select({
+      web: {
+        outlineStyle: 'none',
+      } as any,
+    }),
   },
   passwordContainer: {
     flexDirection: 'row',
@@ -309,6 +314,11 @@ const styles = StyleSheet.create({
     height: '100%',
     color: '#0f172a',
     fontSize: 15,
+    ...Platform.select({
+      web: {
+        outlineStyle: 'none',
+      } as any,
+    }),
   },
   eyeIcon: {
     padding: 4,

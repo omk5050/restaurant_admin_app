@@ -15,8 +15,8 @@ interface MenuStore {
 }
 
 export const useMenuStore = create<MenuStore>((set) => ({
-  categories: DEFAULT_CATEGORIES,
-  menuItems: DEFAULT_MENU,
+  categories: [],
+  menuItems: [],
   fetchMenu: async () => {
     try {
       const [catRes, menuRes] = await Promise.all([
