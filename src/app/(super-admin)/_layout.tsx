@@ -1,8 +1,7 @@
 import React, { useEffect } from 'react';
 import { Slot, useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { View } from 'react-native';
-import { StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 
 export default function SuperAdminLayout() {
   const { role } = useAuth();
@@ -13,7 +12,7 @@ export default function SuperAdminLayout() {
       // redirect to super-admin login if not authorized
       router.replace('/(auth)/super-admin/login');
     }
-  }, [role]);
+  }, [role, router]);
 
   return (
     <View style={styles.container}>

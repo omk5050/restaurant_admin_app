@@ -2,7 +2,7 @@ import 'react-native-gesture-handler';
 import React, { useEffect, useState } from 'react';
 import { Stack, router, useSegments } from 'expo-router';
 import { StatusBar, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS } from '@/constants/colors';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
@@ -12,7 +12,7 @@ import { useMenuStore } from '@/store/menuStore';
 import { useOrderStore } from '@/store/orderStore';
 
 const RootContent = () => {
-  const { isAuthenticated, signOut, role } = useAuth();
+  const { isAuthenticated, role } = useAuth();
   const fetchSettings = useSettingsStore(s => s.fetchSettings);
   const fetchTables = useTableStore(s => s.fetchTables);
   const fetchMenu = useMenuStore(s => s.fetchMenu);
@@ -45,14 +45,14 @@ const RootContent = () => {
 
   useEffect(() => {
     const checkSelectedAdmin = async () => {
-      const selected = await AsyncStorage.getItem('selectedAdminId');
-      setSelectedAdminId(selected);
+      if (isAuthenticated) {
+        const selected = await AsyncStorage.getItem('selectedAdminId');
+        setSelectedAdminId(selected);
+      } else {
+        setSelectedAdminId(null);
+      }
     };
-    if (isAuthenticated) {
-      checkSelectedAdmin();
-    } else {
-      setSelectedAdminId(null);
-    }
+    checkSelectedAdmin();
   }, [segments, isAuthenticated]);
 
   const handleExitImpersonation = async () => {

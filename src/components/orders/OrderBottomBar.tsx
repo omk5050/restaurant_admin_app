@@ -6,10 +6,8 @@ import {
   Modal,
   TextInput,
   TouchableOpacity,
-  Alert,
 } from "react-native";
 
-import { Button } from "@/components/ui/Button";
 import { COLORS } from "@/constants/colors";
 
 interface OrderBottomBarProps {

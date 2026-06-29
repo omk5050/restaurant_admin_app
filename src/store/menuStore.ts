@@ -1,7 +1,6 @@
 import { create } from "zustand";
 import { Category, MenuItem } from "@/types";
 import { API_URL } from "@/constants/config";
-import { DEFAULT_CATEGORIES, DEFAULT_MENU } from "@/constants/mockData";
 import { apiFetch } from "@/utils/api";
 
 interface MenuStore {

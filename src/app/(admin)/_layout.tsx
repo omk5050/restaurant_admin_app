@@ -12,7 +12,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       // redirect to admin login if not admin
       router.replace('/(auth)/admin/login');
     }
-  }, [role]);
+  }, [role, router]);
 
   const handleSignOut = async () => {
     await signOut();

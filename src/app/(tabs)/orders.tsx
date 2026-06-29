@@ -4,7 +4,6 @@ import { FlatList, StyleSheet, Text, View, useWindowDimensions } from "react-nat
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { COLORS } from "@/constants/colors";
-import { useOrder } from "@/hooks/useOrder";
 import { useOrderStore } from "@/store/orderStore";
 import { useTableStore } from "@/store/tableStore";
 import { formatCurrency, formatTime } from "@/utils/formatters";

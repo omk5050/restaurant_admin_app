@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "expo-router";
 
@@ -16,7 +16,7 @@ export default function Index() {
     } else {
       router.replace("/(auth)/admin/login");
     }
-  }, [isAuthenticated, role]);
+  }, [isAuthenticated, role, router]);
 
   return null;
 }

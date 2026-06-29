@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { ScrollView, StyleSheet, Text, View, TouchableOpacity } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { Card } from "@/components/ui/Card";
 import { COLORS } from "@/constants/colors";

@@ -1,6 +1,5 @@
 import React from "react";
 import { Modal, StyleSheet, Text, View, Pressable, Platform } from "react-native";
-import { COLORS } from "@/constants/colors";
 
 interface CustomAlertProps {
   visible: boolean;

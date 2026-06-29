@@ -5,7 +5,6 @@ import { ThermalReceipt } from "@/components/invoice/ThermalReceipt";
 import { Button } from "@/components/ui/Button";
 import { useInvoice } from "@/hooks/useInvoice";
 import { useOrder } from "@/hooks/useOrder";
-import { useTableStore } from "@/store/tableStore";
 
 export default function InvoiceScreen() {
   const { orderId } = useLocalSearchParams<{ orderId: string }>();

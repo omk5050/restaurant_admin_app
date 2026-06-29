@@ -60,8 +60,9 @@ export default function SuperAdminDashboard() {
       router.replace('/(auth)/admin/login');
       return;
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchAdminsAndRequests();
-  }, [role]);
+  }, [role, router]);
 
   const handleAction = async (requestId: string, action: 'approve' | 'reject') => {
     try {
@@ -94,7 +95,7 @@ export default function SuperAdminDashboard() {
           'error'
         );
       }
-    } catch (e) {
+    } catch {
       triggerAlert(
         'Connection Error',
         'Connection error. Please try again.',
@@ -125,7 +126,7 @@ export default function SuperAdminDashboard() {
           'error'
         );
       }
-    } catch (e) {
+    } catch {
       triggerAlert(
         'Connection Error',
         'Connection error. Please try again.',

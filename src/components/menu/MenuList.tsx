@@ -1,5 +1,5 @@
-import { useRef, useState } from "react";
-import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { useRef } from "react";
+import { FlatList, StyleSheet, Text, View } from "react-native";
 
 import { MenuItemCard } from "@/components/menu/MenuItemCard";
 import { COLORS } from "@/constants/colors";

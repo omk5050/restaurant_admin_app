@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { router } from 'expo-router';
 
 export default function AuthBar() {
-  const { isAuthenticated, signOut, role } = useAuth();
+  const { isAuthenticated, role } = useAuth();
 
   if (!isAuthenticated) {
     return (

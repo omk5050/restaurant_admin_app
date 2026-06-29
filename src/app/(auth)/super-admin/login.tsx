@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
-import { useAuth } from '../../../contexts/AuthContext';
 import { useRouter } from "expo-router";
 import { API_URL } from '@/constants/config';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,7 +7,6 @@ import { CustomAlert } from '@/components/ui/CustomAlert';
 import { LinearGradient } from 'expo-linear-gradient';
 
 export default function SuperAdminLoginScreen() {
-  const { signIn } = useAuth();
   const [name, setName] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [email, setEmail] = useState('');

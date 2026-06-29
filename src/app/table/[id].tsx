@@ -97,6 +97,7 @@ export default function TableOrderScreen() {
     if (order?.items) {
       const next = new Set<string>();
       order.items.forEach((item) => next.add(item.menuItemId));
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCheckedItems(next);
     }
   }, [order?.items]);
@@ -104,6 +105,7 @@ export default function TableOrderScreen() {
   // Sync guests count on load
   useEffect(() => {
     if (order) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLocalGuests(order.guests || 4);
       setActiveOrderType(order.isTakeaway ? "pick-up" : "dine-in");
     }
@@ -120,6 +122,7 @@ export default function TableOrderScreen() {
     if (subCats.length > 0) {
       const exists = subCats.some((cat) => cat.id === selectedCategory);
       if (!exists) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setSelectedCategory(subCats[0].id);
       }
     }
@@ -584,8 +587,10 @@ export default function TableOrderScreen() {
                   placeholder="Search item"
                   placeholderTextColor={COLORS.textSec}
                   value={searchQuery}
-                  onChangeText={setSearchQuery}
-                />
+                  onChangeText={(text) => {
+                    setSearchQuery(text);
+                    setShortCode(text);
+                  }}                />
               </View>
               <View style={styles.desktopShortCodeContainer}>
                 <TextInput
@@ -813,6 +818,27 @@ export default function TableOrderScreen() {
           {isBottomBarExpanded && (
             <View style={styles.desktopBottomActionsRow}>
               {/* Bottom Print Bill button */}
+                {/* Food Type Filter Buttons */}
+                <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                  <TouchableOpacity
+                    style={[styles.desktopBottomHoldBtn, { backgroundColor: selectedFoodType === 'all' ? '#ef4444' : '#fef2f2' }]}
+                    onPress={() => setSelectedFoodType('all')}
+                  >
+                    <Text style={styles.desktopBottomHoldText}>All</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.desktopBottomHoldBtn, { backgroundColor: selectedFoodType === 'veg' ? '#22c55e' : '#fef2f2' }]}
+                    onPress={() => setSelectedFoodType('veg')}
+                  >
+                    <Text style={styles.desktopBottomHoldText}>Veg</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.desktopBottomHoldBtn, { backgroundColor: selectedFoodType === 'non-veg' ? '#ef4444' : '#fef2f2' }]}
+                    onPress={() => setSelectedFoodType('non-veg')}
+                  >
+                    <Text style={styles.desktopBottomHoldText}>Non‑Veg</Text>
+                  </TouchableOpacity>
+                </View>
               <TouchableOpacity style={styles.desktopBottomHoldBtn} onPress={handlePrintBill}>
                 <Text style={styles.desktopBottomHoldText}>🖨️ Print Bill</Text>
               </TouchableOpacity>
@@ -1608,6 +1634,9 @@ const styles = StyleSheet.create({
     height: 40,
     fontSize: 14,
     color: COLORS.text,
+    ...Platform.select({
+      web: { outlineStyle: 'none' }
+    }),
   },
   desktopShortCodeContainer: {
     width: 120,
@@ -1621,8 +1650,11 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 40,
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: '600',
     color: COLORS.text,
+    ...Platform.select({
+      web: { outlineStyle: 'none' }
+    }),
   },
   desktopItemsScroll: {
     paddingBottom: 24,
