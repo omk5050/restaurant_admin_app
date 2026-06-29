@@ -209,8 +209,17 @@ export default function TableOrderScreen() {
     return map;
   }, [order?.items]);
 
+  // IDs of categories belonging to the currently selected section (used to scope deselect)
+  const sectionCategoryIds = useMemo(
+    () => new Set(getSubCategories(categories, selectedSection).map((c) => c.id)),
+    [categories, selectedSection],
+  );
+
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
+      // When no category is selected, scope to current section only
+      if (!selectedCategory && !sectionCategoryIds.has(item.categoryId)) return false;
+      // Food type filter
       if (selectedFoodType === "veg" && !item.isVeg) return false;
       if (selectedFoodType === "non-veg" && item.isVeg) return false;
       // Short code search: exact prefix match on shortCode only
@@ -225,7 +234,7 @@ export default function TableOrderScreen() {
       }
       return true;
     });
-  }, [items, selectedFoodType, searchQuery, shortCode]);
+  }, [items, selectedFoodType, searchQuery, shortCode, selectedCategory, sectionCategoryIds]);
 
   // Effective totals applying local tax/discount overrides (desktop only)
   const discountAmount = useMemo(() => {
@@ -1818,37 +1827,38 @@ const styles = StyleSheet.create({
   desktopItemsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 10,
+    gap: 8,
   },
   desktopMenuItemCard: {
     backgroundColor: COLORS.white,
     borderWidth: 1,
-    borderColor: "#cbd5e1",
-    borderRadius: 10,
-    width: "31%",
+    borderColor: "#e2e8f0",
+    borderRadius: 12,
+    width: "23%",
     padding: 8,
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    borderLeftWidth: 4,
+    borderLeftWidth: 0,
     position: "relative",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 2,
     overflow: "hidden",
     marginBottom: 8,
   },
   desktopMenuItemCardImage: {
-    width: 64,
-    height: 64,
-    borderRadius: 8,
+    width: 55,
+    height: 55,
+    borderRadius: 10,
     flexShrink: 0,
   },
   desktopMenuItemCardInfo: {
     flex: 1,
-    gap: 4,
+    gap: 3,
+    justifyContent: "center",
   },
   desktopMenuItemCardPrice: {
     fontSize: 12,
@@ -1858,15 +1868,16 @@ const styles = StyleSheet.create({
   desktopMenuItemCardSelected: {
     backgroundColor: "#f0fdf4",
     borderColor: "#86efac",
+    borderWidth: 1.5,
   },
   desktopMenuItemCardIndicator: {
     position: "absolute",
-    left: -5,
+    left: 0,
     top: 0,
     bottom: 0,
-    width: 5,
-    borderTopLeftRadius: 8,
-    borderBottomLeftRadius: 8,
+    width: 4,
+    borderTopLeftRadius: 12,
+    borderBottomLeftRadius: 12,
   },
   desktopMenuItemCardText: {
     fontSize: 12,
@@ -1880,9 +1891,12 @@ const styles = StyleSheet.create({
     top: 4,
     right: 4,
     backgroundColor: "#ea580c",
-    borderRadius: 8,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 5,
   },
   desktopMenuItemQtyBadgeText: {
     color: COLORS.white,
