@@ -70,7 +70,7 @@ export function generateInvoiceHTML(invoice: Invoice, settings: AppSettings) {
 </html>`;
 }
 
-export function generateKotHTML(order: any, table: any, settings: AppSettings) {
+export function generateKotHTML(order: any, table: any, settings: AppSettings, comment?: string) {
   const rows = order.items
     .map(
       (item: any) => `
@@ -80,6 +80,12 @@ export function generateKotHTML(order: any, table: any, settings: AppSettings) {
     </tr>`,
     )
     .join("");
+
+  const commentSection = comment && comment.trim()
+    ? `<div class="dash"></div>
+  <p style="font-weight:bold; font-size:13px; text-transform:uppercase; margin-bottom:2px;">⚠ Kitchen Note:</p>
+  <p style="font-weight:bold; font-size:16px; border:2px solid #000; padding:6px; border-radius:4px;">${comment.trim()}</p>`
+    : "";
 
   return `<!DOCTYPE html>
 <html>
@@ -117,6 +123,7 @@ export function generateKotHTML(order: any, table: any, settings: AppSettings) {
   <p style="font-weight:bold;">DATE     : ${new Date().toLocaleString("en-IN")}</p>
   <div class="dash"></div>
   <table>${rows}</table>
+  ${commentSection}
   <div class="dash"></div>
   <p style="text-align:center; font-weight:bold;">Kitchen Copy</p>
 </body>

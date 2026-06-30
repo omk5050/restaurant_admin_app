@@ -67,7 +67,7 @@ export default function TableOrderScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const tableId = Number(id);
   const { findTable, ensureOrderForTable, clearTable, setTableStatus } = useTables();
-  const { categories, fetchMenu } = useMenu();
+  const { categories, fetchMenu, menuItems: allMenuItems } = useMenu();
   const [selectedSection, setSelectedSection] = useState<MenuSection>("restaurant");
   const [selectedCategory, setSelectedCategory] = useState(
     () => getSubCategories(categories, "restaurant")[0]?.id ?? categories[0]?.id ?? "popular",
@@ -110,6 +110,8 @@ export default function TableOrderScreen() {
   const [discountModalVisible, setDiscountModalVisible] = useState(false);
   const [discountInputText, setDiscountInputText] = useState("");
   const [localGuests, setLocalGuests] = useState(4);
+  // Kitchen comment (persists for session, sent to KOT only)
+  const [orderComment, setOrderComment] = useState("");
 
   // Dine In / Pick Up selection
   const [activeOrderType, setActiveOrderType] = useState<"dine-in" | "pick-up">("dine-in");
@@ -558,6 +560,11 @@ export default function TableOrderScreen() {
   // Render Desktop Layout (Mockup replica)
   if (isDesktop) {
     const totalSelectedQty = order.items.reduce((sum, item) => sum + item.qty, 0);
+    // Dashboard stats (reactive via top-level hook)
+    const allAvgPrice = allMenuItems.length > 0
+      ? Math.round(allMenuItems.reduce((sum, m) => sum + m.price, 0) / allMenuItems.length)
+      : 0;
+    const allVegCount = allMenuItems.filter((m) => m.isVeg).length;
 
     return (
       <View style={styles.desktopScreen}>
@@ -641,6 +648,34 @@ export default function TableOrderScreen() {
 
           {/* Middle Menu Items Grid */}
           <View style={styles.desktopMiddlePanel}>
+            {/* ── Menu Catalog Dashboard Header ── */}
+            <View style={styles.menuCatalogBanner}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.menuCatalogKicker}>MENU CONTROL</Text>
+                <Text style={styles.menuCatalogTitle}>Menu catalog</Text>
+                <Text style={styles.menuCatalogSubtitle}>Fast edits, quick scanning, live availability.</Text>
+              </View>
+              <View style={styles.menuCatalogBadge}>
+                <Text style={styles.menuCatalogBadgeValue}>{allMenuItems.length}</Text>
+                <Text style={styles.menuCatalogBadgeLabel}>Items</Text>
+              </View>
+            </View>
+            {/* Stats Row */}
+            <View style={styles.menuCatalogStatsRow}>
+              <View style={styles.menuCatalogStatCard}>
+                <Text style={styles.menuCatalogStatValue}>{categories.length}</Text>
+                <Text style={styles.menuCatalogStatLabel}>Categories</Text>
+              </View>
+              <View style={styles.menuCatalogStatCard}>
+                <Text style={[styles.menuCatalogStatValue, { color: "#ef4444" }]}>{formatCurrency(allAvgPrice)}</Text>
+                <Text style={styles.menuCatalogStatLabel}>Avg price</Text>
+              </View>
+              <View style={styles.menuCatalogStatCard}>
+                <Text style={styles.menuCatalogStatValue}>{allVegCount}</Text>
+                <Text style={styles.menuCatalogStatLabel}>Veg items</Text>
+              </View>
+            </View>
+
             {/* Veg / All / Non-Veg Symbol Filter */}
             <View style={styles.desktopFoodTypeRow}>
               <TouchableOpacity
@@ -903,7 +938,7 @@ export default function TableOrderScreen() {
                   <TouchableOpacity style={styles.desktopActionBtnKOT} onPress={handleKot}>
                     <Text style={styles.desktopActionBtnText}>KOT</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.desktopActionBtnKOT} onPress={async () => { await handleKot(); triggerPrintHtml(generateKotHTML(order, table, settings)); }}>
+                  <TouchableOpacity style={styles.desktopActionBtnKOT} onPress={async () => { await handleKot(); triggerPrintHtml(generateKotHTML(order, table, settings, orderComment)); }}>
                     <Text style={styles.desktopActionBtnText}>KOT & Print</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.desktopActionBtnHold} onPress={handleHold}>
@@ -939,6 +974,20 @@ export default function TableOrderScreen() {
                         : "🏷 Discount"}
                     </Text>
                   </TouchableOpacity>
+                </View>
+
+                {/* Comment Row */}
+                <View style={styles.desktopCommentRow}>
+                  <Text style={styles.desktopCommentIcon}>✏️</Text>
+                  <TextInput
+                    style={styles.desktopCommentInput}
+                    placeholder="Add kitchen note... (KOT only)"
+                    placeholderTextColor="#94a3b8"
+                    value={orderComment}
+                    onChangeText={setOrderComment}
+                    multiline
+                    numberOfLines={2}
+                  />
                 </View>
               </View>
             </View>
@@ -2394,5 +2443,111 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontWeight: "800",
     fontSize: 14,
+  },
+
+  // ── Menu Catalog Dashboard Styles ──
+  menuCatalogBanner: {
+    backgroundColor: "#2d2416",
+    borderRadius: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    gap: 12,
+    marginBottom: 8,
+    ...Platform.select({
+      web: { boxShadow: "0 2px 8px rgba(0,0,0,0.18)" },
+    }),
+  },
+  menuCatalogKicker: {
+    color: "#FDBA74",
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 1.2,
+    marginBottom: 2,
+  },
+  menuCatalogTitle: {
+    color: "#FFFFFF",
+    fontSize: 20,
+    fontWeight: "900",
+  },
+  menuCatalogSubtitle: {
+    color: "#D7CEC4",
+    fontSize: 10,
+    fontWeight: "600",
+    marginTop: 2,
+  },
+  menuCatalogBadge: {
+    backgroundColor: "#f97316",
+    borderRadius: 14,
+    minWidth: 52,
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  menuCatalogBadgeValue: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "900",
+  },
+  menuCatalogBadgeLabel: {
+    color: "#FFE4C4",
+    fontSize: 9,
+    fontWeight: "800",
+  },
+  menuCatalogStatsRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 8,
+  },
+  menuCatalogStatCard: {
+    flex: 1,
+    backgroundColor: COLORS.white,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    ...Platform.select({
+      web: { boxShadow: "0 1px 4px rgba(0,0,0,0.06)" },
+    }),
+  },
+  menuCatalogStatValue: {
+    fontSize: 16,
+    fontWeight: "900",
+    color: "#ea580c",
+  },
+  menuCatalogStatLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: COLORS.textSec,
+    marginTop: 2,
+  },
+
+  // ── Comment / Kitchen Note styles ──
+  desktopCommentRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 6,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    borderRadius: 8,
+    backgroundColor: "#f8fafc",
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    marginTop: 2,
+  },
+  desktopCommentIcon: {
+    fontSize: 14,
+    marginTop: 4,
+  },
+  desktopCommentInput: {
+    flex: 1,
+    fontSize: 12,
+    color: COLORS.text,
+    minHeight: 36,
+    ...Platform.select({
+      web: { outlineStyle: "none" },
+    }),
   },
 });

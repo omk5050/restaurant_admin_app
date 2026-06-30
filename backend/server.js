@@ -1159,6 +1159,9 @@ app.get("/api/analytics", authenticateToken, async (req, res) => {
 
 // Background job to auto-clear paid tables after 2 minutes grace period
 setInterval(async () => {
+  // Skip if MongoDB is not connected (readyState 1 = connected)
+  if (mongoose.connection.readyState !== 1) return;
+
   try {
     const paidTables = await Table.find({ status: "paid" });
     const now = new Date();
