@@ -83,6 +83,8 @@ export default function TableOrderScreen() {
 
   const { getOrderForTable, updateOrderItem, updateOrderMetadata, generateBill, closeOrder } = useOrder();
   const createOrder = useOrderStore((state) => state.createOrder);
+  const orders = useOrderStore((state) => state.orders);
+  const fetchOrders = useOrderStore((state) => state.fetchOrders);
 
   const table = findTable(tableId);
   const order = getOrderForTable(tableId);
@@ -150,10 +152,11 @@ export default function TableOrderScreen() {
     }
   }, [order]);
 
-  // Fetch categories and items from database on mount
+  // Fetch categories, items and orders from database on mount
   useEffect(() => {
     fetchMenu();
-  }, [fetchMenu]);
+    fetchOrders();
+  }, [fetchMenu, fetchOrders]);
 
   // Sync selectedCategory to first available category of the section once loaded.
   // Skip if selectedCategory is "" — user has explicitly deselected all categories.
@@ -565,6 +568,7 @@ export default function TableOrderScreen() {
       ? Math.round(allMenuItems.reduce((sum, m) => sum + m.price, 0) / allMenuItems.length)
       : 0;
     const allVegCount = allMenuItems.filter((m) => m.isVeg).length;
+    const liveOrdersCount = orders.filter((o) => o.status !== "paid").length;
 
     return (
       <View style={styles.desktopScreen}>
@@ -624,6 +628,59 @@ export default function TableOrderScreen() {
         <View style={styles.desktopWorkspace}>
           {/* Left Category Sidebar */}
           <View style={styles.desktopLeftSidebar}>
+            {/* Sidebar food type tabs (Veg / All / Non-Veg) */}
+            <View style={styles.desktopSidebarFoodTypeRow}>
+              <TouchableOpacity
+                style={[
+                  styles.desktopSidebarFoodTypeBtn,
+                  selectedFoodType === "veg" && styles.desktopSidebarFoodTypeBtnVegActive,
+                ]}
+                onPress={() => setSelectedFoodType(selectedFoodType === "veg" ? "all" : "veg")}
+              >
+                <Text
+                  style={[
+                    styles.desktopSidebarFoodTypeText,
+                    selectedFoodType === "veg" && styles.desktopSidebarFoodTextVegActive,
+                  ]}
+                >
+                  Veg
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.desktopSidebarFoodTypeBtn,
+                  selectedFoodType === "all" && styles.desktopSidebarFoodTypeBtnAllActive,
+                ]}
+                onPress={() => setSelectedFoodType("all")}
+              >
+                <Text
+                  style={[
+                    styles.desktopSidebarFoodTypeText,
+                    selectedFoodType === "all" && styles.desktopSidebarFoodTextAllActive,
+                  ]}
+                >
+                  All
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.desktopSidebarFoodTypeBtn,
+                  selectedFoodType === "non-veg" && styles.desktopSidebarFoodTypeBtnNonVegActive,
+                ]}
+                onPress={() => setSelectedFoodType(selectedFoodType === "non-veg" ? "all" : "non-veg")}
+              >
+                <Text
+                  style={[
+                    styles.desktopSidebarFoodTypeText,
+                    selectedFoodType === "non-veg" && styles.desktopSidebarFoodTextNonVegActive,
+                  ]}
+                >
+                  Non Veg
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Scrollable Category List */}
             <ScrollView showsVerticalScrollIndicator={false}>
               {categories.map((cat) => {
                 const isActive = cat.id === selectedCategory;
@@ -631,11 +688,18 @@ export default function TableOrderScreen() {
                   <TouchableOpacity
                     key={cat.id}
                     onPress={() => setSelectedCategory(isActive ? "" : cat.id)}
-                    style={[styles.desktopCategoryItem, isActive && styles.desktopCategoryItemActive]}
+                    style={[
+                      styles.desktopCategoryItem,
+                      isActive && styles.desktopCategoryItemActive,
+                      styles.desktopCategoryItemWithBorder,
+                    ]}
                   >
                     <Text style={styles.desktopCategoryIcon}>{cat.icon}</Text>
                     <Text
-                      style={[styles.desktopCategoryItemText, isActive && styles.desktopCategoryItemTextActive]}
+                      style={[
+                        styles.desktopCategoryItemText,
+                        isActive && styles.desktopCategoryItemTextActive,
+                      ]}
                       numberOfLines={2}
                     >
                       {cat.name}
@@ -652,12 +716,12 @@ export default function TableOrderScreen() {
             <View style={styles.menuCatalogBanner}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.menuCatalogKicker}>MENU CONTROL</Text>
-                <Text style={styles.menuCatalogTitle}>Menu catalog</Text>
+                <Text style={styles.menuCatalogTitle}>Kitchen catalog</Text>
                 <Text style={styles.menuCatalogSubtitle}>Fast edits, quick scanning, live availability.</Text>
               </View>
               <View style={styles.menuCatalogBadge}>
                 <Text style={styles.menuCatalogBadgeValue}>{allMenuItems.length}</Text>
-                <Text style={styles.menuCatalogBadgeLabel}>Items</Text>
+                <Text style={styles.menuCatalogBadgeLabel}>items</Text>
               </View>
             </View>
             {/* Stats Row */}
@@ -667,7 +731,7 @@ export default function TableOrderScreen() {
                 <Text style={styles.menuCatalogStatLabel}>Categories</Text>
               </View>
               <View style={styles.menuCatalogStatCard}>
-                <Text style={[styles.menuCatalogStatValue, { color: "#ef4444" }]}>{formatCurrency(allAvgPrice)}</Text>
+                <Text style={[styles.menuCatalogStatValue, { color: "#F97316" }]}>{formatCurrency(allAvgPrice)}</Text>
                 <Text style={styles.menuCatalogStatLabel}>Avg price</Text>
               </View>
               <View style={styles.menuCatalogStatCard}>
@@ -676,42 +740,43 @@ export default function TableOrderScreen() {
               </View>
             </View>
 
-            {/* Veg / All / Non-Veg Symbol Filter */}
-            <View style={styles.desktopFoodTypeRow}>
-              <TouchableOpacity
-                style={[styles.desktopFoodTypeBtn, selectedFoodType === "veg" && styles.desktopFoodTypeBtnVeg]}
-                onPress={() => setSelectedFoodType(selectedFoodType === "veg" ? "all" : "veg")}
-              >
-                <Text style={styles.desktopFoodTypeIcon}>🟢</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.desktopFoodTypeBtn, selectedFoodType === "all" && styles.desktopFoodTypeBtnAll]}
-                onPress={() => setSelectedFoodType("all")}
-              >
-                <Text style={styles.desktopFoodTypeIcon}>⚪</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.desktopFoodTypeBtn, selectedFoodType === "non-veg" && styles.desktopFoodTypeBtnNonVeg]}
-                onPress={() => setSelectedFoodType(selectedFoodType === "non-veg" ? "all" : "non-veg")}
-              >
-                <Text style={styles.desktopFoodTypeIcon}>🔴</Text>
-              </TouchableOpacity>
+            {/* Menu Header with Live Orders Badge */}
+            <View style={styles.desktopMenuHeaderRow}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                <Text style={styles.desktopMenuTitleIcon}>🍽️</Text>
+                <Text style={styles.desktopMenuTitleText}>Menu</Text>
+              </View>
+              {liveOrdersCount > 0 && (
+                <View style={styles.desktopLiveOrdersBadge}>
+                  <Text style={styles.desktopLiveOrdersBadgeText}>{liveOrdersCount} live orders</Text>
+                </View>
+              )}
             </View>
 
+            {/* Compact Search Row with Orange Icon Button */}
             <View style={styles.desktopSearchRow}>
               <View style={styles.desktopSearchInputContainer}>
-                <Text style={styles.desktopSearchIcon}>🔍</Text>
                 <TextInput
                   style={styles.desktopSearchInput}
-                  placeholder="Search by name"
+                  placeholder="Search item"
                   placeholderTextColor={COLORS.textSec}
                   value={searchQuery}
                   onChangeText={(text) => {
                     setSearchQuery(text);
                     // Clear short code when name search is used
                     if (text) setShortCode("");
-                  }}                />
+                  }}
+                />
               </View>
+              <TouchableOpacity
+                style={styles.desktopSearchBtn}
+                onPress={() => {}}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.desktopSearchBtnText}>🔍</Text>
+              </TouchableOpacity>
+
+              {/* Short code input (compact) */}
               <View style={styles.desktopShortCodeContainer}>
                 <TextInput
                   style={styles.desktopShortCodeInput}
@@ -1828,22 +1893,19 @@ const styles = StyleSheet.create({
   },
   desktopSearchRow: {
     flexDirection: "row",
-    gap: 12,
+    alignItems: "center",
+    gap: 8,
+    marginVertical: 4,
   },
   desktopSearchInputContainer: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
+    width: 300,
+    height: 40,
     backgroundColor: COLORS.white,
     borderWidth: 1,
     borderColor: "#cbd5e1",
     borderRadius: 8,
     paddingHorizontal: 12,
-    gap: 8,
-  },
-  desktopSearchIcon: {
-    fontSize: 14,
-    color: COLORS.textSec,
+    justifyContent: "center",
   },
   desktopSearchInput: {
     flex: 1,
@@ -1854,13 +1916,29 @@ const styles = StyleSheet.create({
       web: { outlineStyle: 'none' }
     }),
   },
+  desktopSearchBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.white,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  desktopSearchBtnText: {
+    fontSize: 16,
+    color: COLORS.primary,
+  },
   desktopShortCodeContainer: {
-    width: 120,
+    width: 100,
+    height: 40,
     backgroundColor: COLORS.white,
     borderWidth: 1,
     borderColor: "#cbd5e1",
     borderRadius: 8,
     paddingHorizontal: 12,
+    justifyContent: "center",
   },
   desktopShortCodeInput: {
     flex: 1,
@@ -2192,35 +2270,84 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   // Veg/Non-Veg food type filter (desktop middle panel)
-  desktopFoodTypeRow: {
+  desktopSidebarFoodTypeRow: {
     flexDirection: "row",
-    gap: 6,
-    marginBottom: 4,
-  },
-  desktopFoodTypeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 1.5,
-    borderColor: "#cbd5e1",
+    paddingHorizontal: 8,
+    paddingVertical: 10,
+    gap: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: "#cbd5e1",
     backgroundColor: COLORS.white,
-    justifyContent: "center",
+  },
+  desktopSidebarFoodTypeBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
     alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: COLORS.white,
   },
-  desktopFoodTypeBtnVeg: {
-    borderColor: "#22c55e",
+  desktopSidebarFoodTypeBtnVegActive: {
     backgroundColor: "#dcfce7",
+    borderColor: "#22c55e",
   },
-  desktopFoodTypeBtnAll: {
-    borderColor: "#64748b",
+  desktopSidebarFoodTypeBtnAllActive: {
     backgroundColor: "#f1f5f9",
+    borderColor: "#64748b",
   },
-  desktopFoodTypeBtnNonVeg: {
-    borderColor: "#ef4444",
+  desktopSidebarFoodTypeBtnNonVegActive: {
     backgroundColor: "#fee2e2",
+    borderColor: "#ef4444",
   },
-  desktopFoodTypeIcon: {
+  desktopSidebarFoodTypeText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#64748b",
+  },
+  desktopSidebarFoodTextVegActive: {
+    color: "#16a34a",
+    fontWeight: "700",
+  },
+  desktopSidebarFoodTextAllActive: {
+    color: "#334155",
+    fontWeight: "700",
+  },
+  desktopSidebarFoodTextNonVegActive: {
+    color: "#ef4444",
+    fontWeight: "700",
+  },
+  desktopCategoryItemWithBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: "#f1f5f9",
+  },
+  desktopMenuHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginVertical: 4,
+  },
+  desktopMenuTitleIcon: {
     fontSize: 18,
+  },
+  desktopMenuTitleText: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: COLORS.text,
+  },
+  desktopLiveOrdersBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    backgroundColor: "#f8fafc",
+  },
+  desktopLiveOrdersBadgeText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#475569",
   },
   // Discount modal
   discountTypeRow: {
