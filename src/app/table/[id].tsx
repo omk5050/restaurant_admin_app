@@ -873,7 +873,7 @@ export default function TableOrderScreen() {
             </View>
           </View>
 
-          <View>
+          <View style={styles.desktopRightMiddleSection}>
             {/* Type Tabs (Dine In & Pick Up only, emojis and delivery removed) */}
             <View style={styles.desktopRightTabs}>
               <TouchableOpacity
@@ -2817,14 +2817,14 @@ const styles = StyleSheet.create({
   },
   rightTopWidgetCard: {
     flex: 1,
+    height: 52,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f1f5f9",
+    backgroundColor: COLORS.white,
     borderWidth: 1,
     borderColor: "#cbd5e1",
     borderRadius: 8,
     paddingHorizontal: 8,
-    paddingVertical: 6,
     gap: 6,
   },
   rightWidgetLabel: {
@@ -2834,9 +2834,9 @@ const styles = StyleSheet.create({
   },
   rightClearBtn: {
     flex: 1,
+    height: 52,
     backgroundColor: "#ef4444",
     borderRadius: 8,
-    paddingVertical: 6,
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
@@ -2846,5 +2846,9 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontSize: 12,
     fontWeight: "800",
+  },
+  desktopRightMiddleSection: {
+    flex: 1,
+    marginTop: 4,
   },
 });
