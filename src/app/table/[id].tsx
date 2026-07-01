@@ -894,103 +894,106 @@ export default function TableOrderScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Sub-Header Details (Avatar icons removed) */}
-            <View style={styles.desktopRightSubHeader}>
-              <Text style={styles.desktopRightTitle}>
-                {order.isTakeaway ? `Takeaway: #${order.orderNo.replace("#", "")}` : `Table: ${table.name}`}
-              </Text>
-              <View style={styles.desktopRightIcons}>
-                <View style={styles.desktopRightBadge}>
-                  <Text style={styles.desktopRightBadgeText}>
-                    {activeOrderType === "dine-in" ? "Dine In" : "Pick Up"}
-                  </Text>
+            {/* White receipt card wrapper */}
+            <View style={styles.desktopOrderListCard}>
+              {/* Sub-Header Details (Avatar icons removed) */}
+              <View style={styles.desktopRightSubHeader}>
+                <Text style={styles.desktopRightTitle}>
+                  {order.isTakeaway ? `Takeaway: #${order.orderNo.replace("#", "")}` : `Table: ${table.name}`}
+                </Text>
+                <View style={styles.desktopRightIcons}>
+                  <View style={styles.desktopRightBadge}>
+                    <Text style={styles.desktopRightBadgeText}>
+                      {activeOrderType === "dine-in" ? "Dine In" : "Pick Up"}
+                    </Text>
+                  </View>
                 </View>
               </View>
-            </View>
 
-            {/* Columns Header */}
-            <View style={styles.desktopRightTableHeader}>
-              <Text style={[styles.desktopColText, { width: "45%" }]}>ITEMS</Text>
-              <Text style={[styles.desktopColText, { width: "15%", textAlign: "center" }]}>CHECK ITEMS</Text>
-              <Text style={[styles.desktopColText, { width: "22%", textAlign: "center" }]}>QTY.</Text>
-              <Text style={[styles.desktopColText, { width: "18%", textAlign: "right" }]}>PRICE</Text>
+              {/* Columns Header */}
+              <View style={styles.desktopRightTableHeader}>
+                <Text style={[styles.desktopColText, { width: "45%" }]}>ITEMS</Text>
+                <Text style={[styles.desktopColText, { width: "15%", textAlign: "center" }]}>CHECK ITEMS</Text>
+                <Text style={[styles.desktopColText, { width: "22%", textAlign: "center" }]}>QTY.</Text>
+                <Text style={[styles.desktopColText, { width: "18%", textAlign: "right" }]}>PRICE</Text>
+              </View>
+
+              {/* Scrollable Order Items List */}
+              {order.items.length === 0 ? (
+                <View style={styles.desktopEmptyOrder}>
+                  <Text style={styles.desktopEmptyOrderEmoji}>🍽️</Text>
+                  <Text style={styles.desktopEmptyOrderTitle}>No Item Selected</Text>
+                  <Text style={styles.desktopEmptyOrderText}>
+                    Please select item from left menu item
+                  </Text>
+                </View>
+              ) : (
+                <ScrollView style={styles.desktopRightTableScroll} showsVerticalScrollIndicator={false}>
+                  {order.items.map((item) => {
+                    const isChecked = checkedItems.has(item.menuItemId);
+                    return (
+                      <View key={item.menuItemId} style={styles.desktopRightTableRow}>
+                        <View style={{ width: "45%" }}>
+                          <Text style={styles.desktopItemName} numberOfLines={2}>
+                            {item.name}
+                          </Text>
+                        </View>
+                        <View style={{ width: "15%", alignItems: "center" }}>
+                          <TouchableOpacity
+                            style={styles.desktopRowCheckbox}
+                            onPress={() => {
+                              const next = new Set(checkedItems);
+                              if (next.has(item.menuItemId)) {
+                                next.delete(item.menuItemId);
+                              } else {
+                                next.add(item.menuItemId);
+                              }
+                              setCheckedItems(next);
+                            }}
+                          >
+                            <View
+                              style={[
+                                styles.desktopRowCheckboxBox,
+                                isChecked && styles.desktopRowCheckboxBoxChecked,
+                              ]}
+                            >
+                              {isChecked && <Text style={styles.desktopRowCheckboxCheckmark}>✓</Text>}
+                            </View>
+                          </TouchableOpacity>
+                        </View>
+                        <View style={{ width: "22%", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                          <TouchableOpacity
+                            style={styles.desktopRowQtyBtn}
+                            onPress={() => {
+                              const menuItem = { id: item.menuItemId, name: item.name, price: item.price } as MenuItem;
+                              changeQty(menuItem, Math.max(0, item.qty - 1));
+                            }}
+                          >
+                            <Text style={styles.desktopRowQtyBtnText}>-</Text>
+                          </TouchableOpacity>
+                          <Text style={styles.desktopRowQtyVal}>{item.qty}</Text>
+                          <TouchableOpacity
+                            style={styles.desktopRowQtyBtn}
+                            onPress={() => {
+                              const menuItem = { id: item.menuItemId, name: item.name, price: item.price } as MenuItem;
+                              changeQty(menuItem, item.qty + 1);
+                            }}
+                          >
+                            <Text style={styles.desktopRowQtyBtnText}>+</Text>
+                          </TouchableOpacity>
+                        </View>
+                        <View style={{ width: "18%", alignItems: "flex-end" }}>
+                          <Text style={styles.desktopItemPrice}>
+                            {formatCurrency(item.price * item.qty)}
+                          </Text>
+                        </View>
+                      </View>
+                    );
+                  })}
+                </ScrollView>
+              )}
             </View>
           </View>
-
-          {/* Scrollable Order Items List */}
-          {order.items.length === 0 ? (
-            <View style={styles.desktopEmptyOrder}>
-              <Text style={styles.desktopEmptyOrderEmoji}>🍽️</Text>
-              <Text style={styles.desktopEmptyOrderTitle}>No Item Selected</Text>
-              <Text style={styles.desktopEmptyOrderText}>
-                Please select item from left menu item
-              </Text>
-            </View>
-          ) : (
-            <ScrollView style={styles.desktopRightTableScroll} showsVerticalScrollIndicator={false}>
-              {order.items.map((item) => {
-                const isChecked = checkedItems.has(item.menuItemId);
-                return (
-                  <View key={item.menuItemId} style={styles.desktopRightTableRow}>
-                    <View style={{ width: "45%" }}>
-                      <Text style={styles.desktopItemName} numberOfLines={2}>
-                        {item.name}
-                      </Text>
-                    </View>
-                    <View style={{ width: "15%", alignItems: "center" }}>
-                      <TouchableOpacity
-                        style={styles.desktopRowCheckbox}
-                        onPress={() => {
-                          const next = new Set(checkedItems);
-                          if (next.has(item.menuItemId)) {
-                            next.delete(item.menuItemId);
-                          } else {
-                            next.add(item.menuItemId);
-                          }
-                          setCheckedItems(next);
-                        }}
-                      >
-                        <View
-                          style={[
-                            styles.desktopRowCheckboxBox,
-                            isChecked && styles.desktopRowCheckboxBoxChecked,
-                          ]}
-                        >
-                          {isChecked && <Text style={styles.desktopRowCheckboxCheckmark}>✓</Text>}
-                        </View>
-                      </TouchableOpacity>
-                    </View>
-                    <View style={{ width: "22%", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}>
-                      <TouchableOpacity
-                        style={styles.desktopRowQtyBtn}
-                        onPress={() => {
-                          const menuItem = { id: item.menuItemId, name: item.name, price: item.price } as MenuItem;
-                          changeQty(menuItem, Math.max(0, item.qty - 1));
-                        }}
-                      >
-                        <Text style={styles.desktopRowQtyBtnText}>-</Text>
-                      </TouchableOpacity>
-                      <Text style={styles.desktopRowQtyVal}>{item.qty}</Text>
-                      <TouchableOpacity
-                        style={styles.desktopRowQtyBtn}
-                        onPress={() => {
-                          const menuItem = { id: item.menuItemId, name: item.name, price: item.price } as MenuItem;
-                          changeQty(menuItem, item.qty + 1);
-                        }}
-                      >
-                        <Text style={styles.desktopRowQtyBtnText}>+</Text>
-                      </TouchableOpacity>
-                    </View>
-                    <View style={{ width: "18%", alignItems: "flex-end" }}>
-                      <Text style={styles.desktopItemPrice}>
-                        {formatCurrency(item.price * item.qty)}
-                      </Text>
-                    </View>
-                  </View>
-                );
-              })}
-            </ScrollView>
-          )}
 
           {/* Bottom Billing Details Panel */}
           <View style={styles.desktopRightFooter}>
@@ -1000,13 +1003,13 @@ export default function TableOrderScreen() {
                 {discountValue > 0 && (
                   <View style={styles.desktopSplitRow}>
                     <Text style={{ fontSize: 11, color: COLORS.textSec }}>Discount</Text>
-                    <Text style={{ fontSize: 11, fontWeight: "700", color: "#f97316" }}>-{formatCurrency(discountAmount)}</Text>
+                    <Text style={{ fontSize: 11, fontWeight: "700", color: COLORS.primary }}>-{formatCurrency(discountAmount)}</Text>
                   </View>
                 )}
                 {!taxEnabled && (
                   <View style={styles.desktopSplitRow}>
                     <Text style={{ fontSize: 11, color: COLORS.textSec }}>GST ({settings.gstPercent}%)</Text>
-                    <Text style={{ fontSize: 11, fontWeight: "700", color: "#94a3b8" }}>Disabled</Text>
+                    <Text style={{ fontSize: 11, fontWeight: "700", color: COLORS.gray }}>Disabled</Text>
                   </View>
                 )}
               </View>
@@ -1025,7 +1028,7 @@ export default function TableOrderScreen() {
                   <Text style={styles.desktopActionBtnText}>Save & Print</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.desktopActionBtnSave, { backgroundColor: "#22c55e" }]}
+                  style={[styles.desktopActionBtnSave, { backgroundColor: COLORS.green }]}
                   onPress={() => setPayBillModalVisible(true)}
                 >
                   <Text style={styles.desktopActionBtnText}>Pay Bill</Text>
@@ -1045,27 +1048,27 @@ export default function TableOrderScreen() {
               {/* Row 3: Split Bill | TAX toggle | Discount */}
               <View style={styles.desktopActionRow}>
                 <TouchableOpacity
-                  style={[styles.desktopActionBtnHold, { flex: 1, borderColor: "#3b82f6" }]}
+                  style={[styles.desktopActionBtnHold, { flex: 1, borderColor: COLORS.primary }]}
                   onPress={() => setSplitModalVisible(true)}
                 >
-                  <Text style={[styles.desktopActionBtnHoldText, { color: "#3b82f6" }]}>🥞 Split Bill</Text>
+                  <Text style={[styles.desktopActionBtnHoldText, { color: COLORS.primary }]}>🥞 Split Bill</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.desktopActionBtnHold, { flex: 1, borderColor: taxEnabled ? "#22c55e" : "#cbd5e1", backgroundColor: taxEnabled ? "#dcfce7" : COLORS.white }]}
+                  style={[styles.desktopActionBtnHold, { flex: 1, borderColor: taxEnabled ? COLORS.green : "#cbd5e1", backgroundColor: taxEnabled ? COLORS.greenLight : COLORS.white }]}
                   onPress={() => setTaxEnabled(!taxEnabled)}
                 >
-                  <Text style={[styles.desktopActionBtnHoldText, { color: taxEnabled ? "#15803d" : "#94a3b8" }]}>
+                  <Text style={[styles.desktopActionBtnHoldText, { color: taxEnabled ? COLORS.green : "#94a3b8" }]}>
                     {taxEnabled ? "☑ TAX" : "☐ TAX"}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.desktopActionBtnHold, { flex: 1, borderColor: discountValue > 0 ? "#f97316" : "#cbd5e1", backgroundColor: discountValue > 0 ? "#fff7ed" : COLORS.white }]}
+                  style={[styles.desktopActionBtnHold, { flex: 1, borderColor: discountValue > 0 ? COLORS.primary : "#cbd5e1", backgroundColor: discountValue > 0 ? COLORS.primaryLight : COLORS.white }]}
                   onPress={() => {
                     setDiscountInputText(discountValue > 0 ? String(discountValue) : "");
                     setDiscountModalVisible(true);
                   }}
                 >
-                  <Text style={[styles.desktopActionBtnHoldText, { color: discountValue > 0 ? "#f97316" : "#64748b" }]}>
+                  <Text style={[styles.desktopActionBtnHoldText, { color: discountValue > 0 ? COLORS.primary : "#64748b" }]}>
                     {discountValue > 0
                       ? `🏷 -${discountType === "percent" ? discountValue + "%" : "₹" + discountValue}`
                       : "🏷 Discount"}
@@ -2052,7 +2055,7 @@ const styles = StyleSheet.create({
   },
   desktopRightPanel: {
     width: 360,
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.bg,
     borderLeftWidth: 1,
     borderLeftColor: "#cbd5e1",
     padding: 14,
@@ -2060,19 +2063,20 @@ const styles = StyleSheet.create({
   },
   desktopRightTabs: {
     flexDirection: "row",
-    borderBottomWidth: 1,
-    borderBottomColor: "#cbd5e1",
-    marginBottom: 10,
+    backgroundColor: "#e8e5dc",
+    borderRadius: 24,
+    padding: 3,
+    marginBottom: 12,
   },
   desktopRightTab: {
     flex: 1,
-    paddingVertical: 10,
+    paddingVertical: 8,
     alignItems: "center",
-    borderBottomWidth: 2,
-    borderBottomColor: "transparent",
+    justifyContent: "center",
+    borderRadius: 20,
   },
   desktopRightTabActive: {
-    borderBottomColor: "#ef4444",
+    backgroundColor: COLORS.espresso,
   },
   desktopRightTabText: {
     fontSize: 12,
@@ -2080,7 +2084,7 @@ const styles = StyleSheet.create({
     color: COLORS.textSec,
   },
   desktopRightTabTextActive: {
-    color: "#ef4444",
+    color: COLORS.white,
   },
   desktopRightSubHeader: {
     flexDirection: "row",
@@ -2091,7 +2095,7 @@ const styles = StyleSheet.create({
   desktopRightTitle: {
     fontSize: 14,
     fontWeight: "800",
-    color: "#ef4444",
+    color: COLORS.espresso,
   },
   desktopRightIcons: {
     flexDirection: "row",
@@ -2099,15 +2103,26 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   desktopRightBadge: {
-    backgroundColor: "#fef3c7",
+    backgroundColor: COLORS.primaryLight,
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.primaryMid,
   },
   desktopRightBadgeText: {
     fontSize: 10,
     fontWeight: "700",
-    color: "#d97706",
+    color: COLORS.primary,
+  },
+  desktopOrderListCard: {
+    flex: 1,
+    backgroundColor: COLORS.white,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    padding: 12,
+    marginVertical: 10,
   },
   desktopRightTableHeader: {
     flexDirection: "row",
@@ -2236,7 +2251,7 @@ const styles = StyleSheet.create({
   },
   desktopActionBtnSave: {
     flex: 1,
-    backgroundColor: "#ef4444",
+    backgroundColor: COLORS.primary,
     borderRadius: 6,
     paddingVertical: 10,
     alignItems: "center",
@@ -2244,7 +2259,7 @@ const styles = StyleSheet.create({
   },
   desktopActionBtnKOT: {
     flex: 1,
-    backgroundColor: "#0f172a",
+    backgroundColor: COLORS.espresso,
     borderRadius: 6,
     paddingVertical: 10,
     alignItems: "center",
