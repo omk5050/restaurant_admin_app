@@ -571,147 +571,11 @@ export default function TableOrderScreen() {
     const liveOrdersCount = orders.filter((o) => o.status !== "paid").length;
 
     return (
-      <View style={styles.desktopScreen}>
-        {/* 1. Header Bar */}
-        <View style={styles.desktopHeader}>
-          <View style={styles.desktopHeaderLeft}>
-            <TouchableOpacity onPress={() => router.replace("/(tabs)" as never)} style={styles.desktopBackBtn}>
-              <Text style={styles.desktopBackBtnText}>←</Text>
-            </TouchableOpacity>
-            <Text style={styles.desktopHeaderTitle}>Table Order</Text>
-          </View>
-
-          <View style={styles.desktopHeaderWidgets}>
-            {/* Guests widget */}
-            <View style={styles.desktopHeaderWidget}>
-              <Text style={styles.desktopWidgetIcon}>👥</Text>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.desktopWidgetLabel}>Guests</Text>
-                <View style={styles.guestsCounterRow}>
-                  <TouchableOpacity onPress={decrementGuests} style={styles.guestsCounterBtn}>
-                    <Text style={styles.guestsCounterBtnText}>-</Text>
-                  </TouchableOpacity>
-                  <Text style={styles.desktopWidgetValue}>{localGuests}</Text>
-                  <TouchableOpacity onPress={incrementGuests} style={styles.guestsCounterBtn}>
-                    <Text style={styles.guestsCounterBtnText}>+</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-
-            {/* Opened At widget */}
-            <View style={styles.desktopHeaderWidget}>
-              <Text style={styles.desktopWidgetIcon}>🕐</Text>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.desktopWidgetLabel}>Opened At</Text>
-                <Text style={styles.desktopWidgetValue}>{formatTime(order.openedAt)}</Text>
-              </View>
-            </View>
-
-            {/* Order No widget */}
-            <View style={styles.desktopHeaderWidget}>
-              <Text style={styles.desktopWidgetIcon}>📋</Text>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.desktopWidgetLabel}>Order No.</Text>
-                <Text style={styles.desktopWidgetValue}>{order.orderNo}</Text>
-              </View>
-            </View>
-
-            {/* Clear Button */}
-            <TouchableOpacity style={styles.desktopClearBtn} onPress={handleClearTable}>
-              <Text style={styles.desktopClearBtnText}>🗑️ Clear</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* 2. Main Workspace */}
-        <View style={styles.desktopWorkspace}>
-          {/* Left Category Sidebar */}
-          <View style={styles.desktopLeftSidebar}>
-            {/* Sidebar food type tabs (Veg / All / Non-Veg) */}
-            <View style={styles.desktopSidebarFoodTypeRow}>
-              <TouchableOpacity
-                style={[
-                  styles.desktopSidebarFoodTypeBtn,
-                  selectedFoodType === "veg" && styles.desktopSidebarFoodTypeBtnVegActive,
-                ]}
-                onPress={() => setSelectedFoodType(selectedFoodType === "veg" ? "all" : "veg")}
-              >
-                <Text
-                  style={[
-                    styles.desktopSidebarFoodTypeText,
-                    selectedFoodType === "veg" && styles.desktopSidebarFoodTextVegActive,
-                  ]}
-                >
-                  Veg
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.desktopSidebarFoodTypeBtn,
-                  selectedFoodType === "all" && styles.desktopSidebarFoodTypeBtnAllActive,
-                ]}
-                onPress={() => setSelectedFoodType("all")}
-              >
-                <Text
-                  style={[
-                    styles.desktopSidebarFoodTypeText,
-                    selectedFoodType === "all" && styles.desktopSidebarFoodTextAllActive,
-                  ]}
-                >
-                  All
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.desktopSidebarFoodTypeBtn,
-                  selectedFoodType === "non-veg" && styles.desktopSidebarFoodTypeBtnNonVegActive,
-                ]}
-                onPress={() => setSelectedFoodType(selectedFoodType === "non-veg" ? "all" : "non-veg")}
-              >
-                <Text
-                  style={[
-                    styles.desktopSidebarFoodTypeText,
-                    selectedFoodType === "non-veg" && styles.desktopSidebarFoodTextNonVegActive,
-                  ]}
-                >
-                  Non Veg
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Scrollable Category List */}
-            <ScrollView showsVerticalScrollIndicator={false}>
-              {categories.map((cat) => {
-                const isActive = cat.id === selectedCategory;
-                return (
-                  <TouchableOpacity
-                    key={cat.id}
-                    onPress={() => setSelectedCategory(isActive ? "" : cat.id)}
-                    style={[
-                      styles.desktopCategoryItem,
-                      isActive && styles.desktopCategoryItemActive,
-                      styles.desktopCategoryItemWithBorder,
-                    ]}
-                  >
-                    <Text style={styles.desktopCategoryIcon}>{cat.icon}</Text>
-                    <Text
-                      style={[
-                        styles.desktopCategoryItemText,
-                        isActive && styles.desktopCategoryItemTextActive,
-                      ]}
-                      numberOfLines={2}
-                    >
-                      {cat.name}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </View>
-
-          {/* Middle Menu Items Grid */}
-          <View style={styles.desktopMiddlePanel}>
+      <View style={[styles.desktopScreen, { flexDirection: "row" }]}>
+        {/* Left Column (Main workspace area) */}
+        <View style={{ flex: 1, flexDirection: "column", height: "100%", backgroundColor: "#f8fafc" }}>
+          {/* Dashboard Section (Stretched horizontally) */}
+          <View style={styles.desktopDashboardSection}>
             {/* ── Menu Catalog Dashboard Header ── */}
             <View style={styles.menuCatalogBanner}>
               <View style={{ flex: 1 }}>
@@ -724,6 +588,7 @@ export default function TableOrderScreen() {
                 <Text style={styles.menuCatalogBadgeLabel}>items</Text>
               </View>
             </View>
+
             {/* Stats Row */}
             <View style={styles.menuCatalogStatsRow}>
               <View style={styles.menuCatalogStatCard}>
@@ -739,336 +604,481 @@ export default function TableOrderScreen() {
                 <Text style={styles.menuCatalogStatLabel}>Veg items</Text>
               </View>
             </View>
+          </View>
 
-            {/* Menu Header with Live Orders Badge */}
-            <View style={styles.desktopMenuHeaderRow}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                <Text style={styles.desktopMenuTitleIcon}>🍽️</Text>
-                <Text style={styles.desktopMenuTitleText}>Menu</Text>
+          {/* Menu Workspace (Row) */}
+          <View style={[styles.desktopWorkspace, { paddingBottom: 0 }]}>
+            {/* Left Category Sidebar (dropped till menu section) */}
+            <View style={styles.desktopLeftSidebar}>
+              {/* Sidebar food type tabs (Veg / All / Non-Veg) */}
+              <View style={styles.desktopSidebarFoodTypeRow}>
+                <TouchableOpacity
+                  style={[
+                    styles.desktopSidebarFoodTypeBtn,
+                    selectedFoodType === "veg" && styles.desktopSidebarFoodTypeBtnVegActive,
+                  ]}
+                  onPress={() => setSelectedFoodType(selectedFoodType === "veg" ? "all" : "veg")}
+                >
+                  <Text
+                    style={[
+                      styles.desktopSidebarFoodTypeText,
+                      selectedFoodType === "veg" && styles.desktopSidebarFoodTextVegActive,
+                    ]}
+                  >
+                    Veg
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.desktopSidebarFoodTypeBtn,
+                    selectedFoodType === "all" && styles.desktopSidebarFoodTypeBtnAllActive,
+                  ]}
+                  onPress={() => setSelectedFoodType("all")}
+                >
+                  <Text
+                    style={[
+                      styles.desktopSidebarFoodTypeText,
+                      selectedFoodType === "all" && styles.desktopSidebarFoodTextAllActive,
+                    ]}
+                  >
+                    All
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.desktopSidebarFoodTypeBtn,
+                    selectedFoodType === "non-veg" && styles.desktopSidebarFoodTypeBtnNonVegActive,
+                  ]}
+                  onPress={() => setSelectedFoodType(selectedFoodType === "non-veg" ? "all" : "non-veg")}
+                >
+                  <Text
+                    style={[
+                      styles.desktopSidebarFoodTypeText,
+                      selectedFoodType === "non-veg" && styles.desktopSidebarFoodTextNonVegActive,
+                    ]}
+                  >
+                    Non Veg
+                  </Text>
+                </TouchableOpacity>
               </View>
-              {liveOrdersCount > 0 && (
-                <View style={styles.desktopLiveOrdersBadge}>
-                  <Text style={styles.desktopLiveOrdersBadgeText}>{liveOrdersCount} live orders</Text>
-                </View>
-              )}
-            </View>
 
-            {/* Compact Search Row with Orange Icon Button */}
-            <View style={styles.desktopSearchRow}>
-              <View style={styles.desktopSearchInputContainer}>
-                <TextInput
-                  style={styles.desktopSearchInput}
-                  placeholder="Search item"
-                  placeholderTextColor={COLORS.textSec}
-                  value={searchQuery}
-                  onChangeText={(text) => {
-                    setSearchQuery(text);
-                    // Clear short code when name search is used
-                    if (text) setShortCode("");
-                  }}
-                />
-              </View>
-              <TouchableOpacity
-                style={styles.desktopSearchBtn}
-                onPress={() => {}}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.desktopSearchBtnText}>🔍</Text>
-              </TouchableOpacity>
-
-              {/* Short code input (compact) */}
-              <View style={styles.desktopShortCodeContainer}>
-                <TextInput
-                  style={styles.desktopShortCodeInput}
-                  placeholder="Short Code"
-                  placeholderTextColor={COLORS.textSec}
-                  value={shortCode}
-                  onChangeText={(text) => {
-                    setShortCode(text);
-                    // Clear name search when short code is used
-                    if (text) setSearchQuery("");
-                  }}
-                />
-              </View>
-            </View>
-
-            <ScrollView contentContainerStyle={styles.desktopItemsScroll} showsVerticalScrollIndicator={false}>
-              <View style={styles.desktopItemsGrid}>
-                {filteredItems.map((item) => {
-                  const qty = qtyById.get(item.id) || 0;
-                  const imgSrc = item.imageUrl
-                    ? { uri: item.imageUrl }
-                    : desktopMenuImages[item.name as keyof typeof desktopMenuImages] ||
-                      require("../../../assets/images/Veg-Dum-Biryani.jpg");
+              {/* Scrollable Category List */}
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {categories.map((cat) => {
+                  const isActive = cat.id === selectedCategory;
                   return (
                     <TouchableOpacity
-                      key={item.id}
-                      style={[styles.desktopMenuItemCard, qty > 0 && styles.desktopMenuItemCardSelected]}
-                      onPress={() => changeQty(item, qty + 1)}
-                      activeOpacity={0.75}
+                      key={cat.id}
+                      onPress={() => setSelectedCategory(isActive ? "" : cat.id)}
+                      style={[
+                        styles.desktopCategoryItem,
+                        isActive && styles.desktopCategoryItemActive,
+                        styles.desktopCategoryItemWithBorder,
+                      ]}
                     >
-                      {/* Veg/Non-veg indicator strip on the left edge */}
-                      <View
+                      <Text style={styles.desktopCategoryIcon}>{cat.icon}</Text>
+                      <Text
                         style={[
-                          styles.desktopMenuItemCardIndicator,
-                          { backgroundColor: item.isVeg ? "#22c55e" : "#ef4444" },
+                          styles.desktopCategoryItemText,
+                          isActive && styles.desktopCategoryItemTextActive,
                         ]}
-                      />
-                      {/* Image on left */}
-                      <Image
-                        source={imgSrc}
-                        style={styles.desktopMenuItemCardImage}
-                        resizeMode="cover"
-                      />
-                      {/* Text on right */}
-                      <View style={styles.desktopMenuItemCardInfo}>
-                        <Text style={styles.desktopMenuItemCardText} numberOfLines={3}>
-                          {item.name}
-                        </Text>
-                        <Text style={styles.desktopMenuItemCardPrice}>{formatCurrency(item.price)}</Text>
-                      </View>
-                      {qty > 0 && (
-                        <View style={styles.desktopMenuItemQtyBadge}>
-                          <Text style={styles.desktopMenuItemQtyBadgeText}>{qty}</Text>
-                        </View>
-                      )}
+                        numberOfLines={2}
+                      >
+                        {cat.name}
+                      </Text>
                     </TouchableOpacity>
                   );
                 })}
-              </View>
-            </ScrollView>
-          </View>
+              </ScrollView>
 
-          {/* Right Billing Sidebar */}
-          <View style={styles.desktopRightPanel}>
-            <View>
-              {/* Type Tabs (Dine In & Pick Up only, emojis and delivery removed) */}
-              <View style={styles.desktopRightTabs}>
-                <TouchableOpacity
-                  style={[styles.desktopRightTab, activeOrderType === "dine-in" && styles.desktopRightTabActive]}
-                  onPress={() => handleOrderTypeChange("dine-in")}
-                >
-                  <Text style={[styles.desktopRightTabText, activeOrderType === "dine-in" && styles.desktopRightTabTextActive]}>
-                    Dine In
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.desktopRightTab, activeOrderType === "pick-up" && styles.desktopRightTabActive]}
-                  onPress={() => handleOrderTypeChange("pick-up")}
-                >
-                  <Text style={[styles.desktopRightTabText, activeOrderType === "pick-up" && styles.desktopRightTabTextActive]}>
-                    Pick Up
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Sub-Header Details (Avatar icons removed) */}
-              <View style={styles.desktopRightSubHeader}>
-                <Text style={styles.desktopRightTitle}>
-                  {order.isTakeaway ? `Takeaway: #${order.orderNo.replace("#", "")}` : `Table: ${table.name}`}
-                </Text>
-                <View style={styles.desktopRightIcons}>
-                  <View style={styles.desktopRightBadge}>
-                    <Text style={styles.desktopRightBadgeText}>
-                      {activeOrderType === "dine-in" ? "Dine In" : "Pick Up"}
-                    </Text>
+              {/* Sidebar Widgets Section (stacked vertically at bottom) */}
+              <View style={styles.sidebarWidgetsContainer}>
+                {/* Guests widget */}
+                <View style={styles.sidebarWidgetCard}>
+                  <Text style={styles.desktopWidgetIcon}>👥</Text>
+                  <View style={styles.sidebarWidgetContent}>
+                    <Text style={styles.sidebarWidgetLabel}>Guests</Text>
+                    <View style={styles.sidebarGuestsCounterRow}>
+                      <TouchableOpacity onPress={decrementGuests} style={styles.sidebarGuestsCounterBtn}>
+                        <Text style={styles.sidebarGuestsCounterBtnText}>-</Text>
+                      </TouchableOpacity>
+                      <Text style={styles.desktopWidgetValue}>{localGuests}</Text>
+                      <TouchableOpacity onPress={incrementGuests} style={styles.sidebarGuestsCounterBtn}>
+                        <Text style={styles.sidebarGuestsCounterBtnText}>+</Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 </View>
-              </View>
 
-              {/* Columns Header */}
-              <View style={styles.desktopRightTableHeader}>
-                <Text style={[styles.desktopColText, { width: "45%" }]}>ITEMS</Text>
-                <Text style={[styles.desktopColText, { width: "15%", textAlign: "center" }]}>CHECK ITEMS</Text>
-                <Text style={[styles.desktopColText, { width: "22%", textAlign: "center" }]}>QTY.</Text>
-                <Text style={[styles.desktopColText, { width: "18%", textAlign: "right" }]}>PRICE</Text>
+                {/* Opened At widget */}
+                <View style={styles.sidebarWidgetCard}>
+                  <Text style={styles.desktopWidgetIcon}>🕐</Text>
+                  <View style={styles.sidebarWidgetContent}>
+                    <Text style={styles.sidebarWidgetLabel}>Opened At</Text>
+                    <Text style={styles.sidebarWidgetValue}>{formatTime(order.openedAt)}</Text>
+                  </View>
+                </View>
+
+                {/* Order No widget */}
+                <View style={styles.sidebarWidgetCard}>
+                  <Text style={styles.desktopWidgetIcon}>📋</Text>
+                  <View style={styles.sidebarWidgetContent}>
+                    <Text style={styles.sidebarWidgetLabel}>Order No.</Text>
+                    <Text style={styles.sidebarWidgetValue}>{order.orderNo}</Text>
+                  </View>
+                </View>
+
+                {/* Clear Button */}
+                <TouchableOpacity style={styles.sidebarClearBtn} onPress={handleClearTable}>
+                  <Text style={styles.sidebarClearBtnText}>🗑️ Clear</Text>
+                </TouchableOpacity>
               </View>
             </View>
 
-            {/* Scrollable Order Items List */}
-            {order.items.length === 0 ? (
-              <View style={styles.desktopEmptyOrder}>
-                <Text style={styles.desktopEmptyOrderEmoji}>🍽️</Text>
-                <Text style={styles.desktopEmptyOrderTitle}>No Item Selected</Text>
-                <Text style={styles.desktopEmptyOrderText}>
-                  Please select item from left menu item
-                </Text>
-              </View>
-            ) : (
-              <ScrollView style={styles.desktopRightTableScroll} showsVerticalScrollIndicator={false}>
-                {order.items.map((item) => {
-                  const isChecked = checkedItems.has(item.menuItemId);
-                  return (
-                    <View key={item.menuItemId} style={styles.desktopRightTableRow}>
-                      <View style={{ width: "45%" }}>
-                        <Text style={styles.desktopItemName} numberOfLines={2}>
-                          {item.name}
-                        </Text>
-                      </View>
-                      <View style={{ width: "15%", alignItems: "center" }}>
-                        <TouchableOpacity
-                          style={styles.desktopRowCheckbox}
-                          onPress={() => {
-                            const next = new Set(checkedItems);
-                            if (next.has(item.menuItemId)) {
-                              next.delete(item.menuItemId);
-                            } else {
-                              next.add(item.menuItemId);
-                            }
-                            setCheckedItems(next);
-                          }}
-                        >
-                          <View
-                            style={[
-                              styles.desktopRowCheckboxBox,
-                              isChecked && styles.desktopRowCheckboxBoxChecked,
-                            ]}
-                          >
-                            {isChecked && <Text style={styles.desktopRowCheckboxCheckmark}>✓</Text>}
-                          </View>
-                        </TouchableOpacity>
-                      </View>
-                      <View style={{ width: "22%", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}>
-                        <TouchableOpacity
-                          style={styles.desktopRowQtyBtn}
-                          onPress={() => {
-                            const menuItem = { id: item.menuItemId, name: item.name, price: item.price } as MenuItem;
-                            changeQty(menuItem, Math.max(0, item.qty - 1));
-                          }}
-                        >
-                          <Text style={styles.desktopRowQtyBtnText}>-</Text>
-                        </TouchableOpacity>
-                        <Text style={styles.desktopRowQtyVal}>{item.qty}</Text>
-                        <TouchableOpacity
-                          style={styles.desktopRowQtyBtn}
-                          onPress={() => {
-                            const menuItem = { id: item.menuItemId, name: item.name, price: item.price } as MenuItem;
-                            changeQty(menuItem, item.qty + 1);
-                          }}
-                        >
-                          <Text style={styles.desktopRowQtyBtnText}>+</Text>
-                        </TouchableOpacity>
-                      </View>
-                      <View style={{ width: "18%", alignItems: "flex-end" }}>
-                        <Text style={styles.desktopItemPrice}>
-                          {formatCurrency(item.price * item.qty)}
-                        </Text>
-                      </View>
-                    </View>
-                  );
-                })}
-              </ScrollView>
-            )}
-
-            {/* Bottom Billing Details Panel */}
-            <View style={styles.desktopRightFooter}>
-              {/* Totals breakdown */}
-              {(discountValue > 0 || !taxEnabled) && (
-                <View style={{ gap: 2, marginBottom: 4 }}>
-                  {discountValue > 0 && (
-                    <View style={styles.desktopSplitRow}>
-                      <Text style={{ fontSize: 11, color: COLORS.textSec }}>Discount</Text>
-                      <Text style={{ fontSize: 11, fontWeight: "700", color: "#f97316" }}>-{formatCurrency(discountAmount)}</Text>
-                    </View>
-                  )}
-                  {!taxEnabled && (
-                    <View style={styles.desktopSplitRow}>
-                      <Text style={{ fontSize: 11, color: COLORS.textSec }}>GST ({settings.gstPercent}%)</Text>
-                      <Text style={{ fontSize: 11, fontWeight: "700", color: "#94a3b8" }}>Disabled</Text>
-                    </View>
-                  )}
+            {/* Middle Menu Items Grid */}
+            <View style={styles.desktopMiddlePanel}>
+              {/* Menu Header with Live Orders Badge */}
+              <View style={styles.desktopMenuHeaderRow}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <Text style={styles.desktopMenuTitleIcon}>🍽️</Text>
+                  <Text style={styles.desktopMenuTitleText}>Menu</Text>
                 </View>
-              )}
-              <View style={[styles.desktopSplitRow, { justifyContent: "flex-end", marginBottom: 6 }]}>
-                <Text style={styles.desktopRightTotal}>Total: {formatCurrency(effectiveTotal)}</Text>
+                {liveOrdersCount > 0 && (
+                  <View style={styles.desktopLiveOrdersBadge}>
+                    <Text style={styles.desktopLiveOrdersBadgeText}>{liveOrdersCount} live orders</Text>
+                  </View>
+                )}
               </View>
 
-              {/* Operational Action Buttons (Save, Save & Print, Pay Bill) */}
-              <View style={styles.desktopActionGrid}>
-                <View style={styles.desktopActionRow}>
-                  <TouchableOpacity style={styles.desktopActionBtnSave} onPress={handleSaveOrder}>
-                    <Text style={styles.desktopActionBtnText}>Save</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.desktopActionBtnSave} onPress={handleSaveAndPrint}>
-                    <Text style={styles.desktopActionBtnText}>Save & Print</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.desktopActionBtnSave, { backgroundColor: "#22c55e" }]}
-                    onPress={() => setPayBillModalVisible(true)}
-                  >
-                    <Text style={styles.desktopActionBtnText}>Pay Bill</Text>
-                  </TouchableOpacity>
-                </View>
-                <View style={styles.desktopActionRow}>
-                  <TouchableOpacity style={styles.desktopActionBtnKOT} onPress={handleKot}>
-                    <Text style={styles.desktopActionBtnText}>KOT</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.desktopActionBtnKOT} onPress={async () => { await handleKot(); triggerPrintHtml(generateKotHTML(order, table, settings, orderComment)); }}>
-                    <Text style={styles.desktopActionBtnText}>KOT & Print</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.desktopActionBtnHold} onPress={handleHold}>
-                    <Text style={styles.desktopActionBtnHoldText}>Hold</Text>
-                  </TouchableOpacity>
-                </View>
-                {/* Row 3: Split Bill | TAX toggle | Discount */}
-                <View style={styles.desktopActionRow}>
-                  <TouchableOpacity
-                    style={[styles.desktopActionBtnHold, { flex: 1, borderColor: "#3b82f6" }]}
-                    onPress={() => setSplitModalVisible(true)}
-                  >
-                    <Text style={[styles.desktopActionBtnHoldText, { color: "#3b82f6" }]}>🥞 Split Bill</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.desktopActionBtnHold, { flex: 1, borderColor: taxEnabled ? "#22c55e" : "#cbd5e1", backgroundColor: taxEnabled ? "#dcfce7" : COLORS.white }]}
-                    onPress={() => setTaxEnabled(!taxEnabled)}
-                  >
-                    <Text style={[styles.desktopActionBtnHoldText, { color: taxEnabled ? "#15803d" : "#94a3b8" }]}>
-                      {taxEnabled ? "☑ TAX" : "☐ TAX"}
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.desktopActionBtnHold, { flex: 1, borderColor: discountValue > 0 ? "#f97316" : "#cbd5e1", backgroundColor: discountValue > 0 ? "#fff7ed" : COLORS.white }]}
-                    onPress={() => {
-                      setDiscountInputText(discountValue > 0 ? String(discountValue) : "");
-                      setDiscountModalVisible(true);
-                    }}
-                  >
-                    <Text style={[styles.desktopActionBtnHoldText, { color: discountValue > 0 ? "#f97316" : "#64748b" }]}>
-                      {discountValue > 0
-                        ? `🏷 -${discountType === "percent" ? discountValue + "%" : "₹" + discountValue}`
-                        : "🏷 Discount"}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-
-                {/* Comment Row */}
-                <View style={styles.desktopCommentRow}>
-                  <Text style={styles.desktopCommentIcon}>✏️</Text>
+              {/* Compact Search Row with Orange Icon Button */}
+              <View style={styles.desktopSearchRow}>
+                <View style={styles.desktopSearchInputContainer}>
                   <TextInput
-                    style={styles.desktopCommentInput}
-                    placeholder="Add kitchen note... (KOT only)"
-                    placeholderTextColor="#94a3b8"
-                    value={orderComment}
-                    onChangeText={setOrderComment}
-                    multiline
-                    numberOfLines={2}
+                    style={styles.desktopSearchInput}
+                    placeholder="Search item"
+                    placeholderTextColor={COLORS.textSec}
+                    value={searchQuery}
+                    onChangeText={(text) => {
+                      setSearchQuery(text);
+                      // Clear short code when name search is used
+                      if (text) setShortCode("");
+                    }}
+                  />
+                </View>
+                <TouchableOpacity
+                  style={styles.desktopSearchBtn}
+                  onPress={() => {}}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.desktopSearchBtnText}>🔍</Text>
+                </TouchableOpacity>
+
+                {/* Short code input (compact) */}
+                <View style={styles.desktopShortCodeContainer}>
+                  <TextInput
+                    style={styles.desktopShortCodeInput}
+                    placeholder="Short Code"
+                    placeholderTextColor={COLORS.textSec}
+                    value={shortCode}
+                    onChangeText={(text) => {
+                      setShortCode(text);
+                      // Clear name search when short code is used
+                      if (text) setSearchQuery("");
+                    }}
                   />
                 </View>
               </View>
+
+              <ScrollView contentContainerStyle={styles.desktopItemsScroll} showsVerticalScrollIndicator={false}>
+                <View style={styles.desktopItemsGrid}>
+                  {filteredItems.map((item) => {
+                    const qty = qtyById.get(item.id) || 0;
+                    const imgSrc = item.imageUrl
+                      ? { uri: item.imageUrl }
+                      : desktopMenuImages[item.name as keyof typeof desktopMenuImages] ||
+                        require("../../../assets/images/Veg-Dum-Biryani.jpg");
+                    return (
+                      <TouchableOpacity
+                        key={item.id}
+                        style={[styles.desktopMenuItemCard, qty > 0 && styles.desktopMenuItemCardSelected]}
+                        onPress={() => changeQty(item, qty + 1)}
+                        activeOpacity={0.75}
+                      >
+                        {/* Veg/Non-veg indicator strip on the left edge */}
+                        <View
+                          style={[
+                            styles.desktopMenuItemCardIndicator,
+                            { backgroundColor: item.isVeg ? "#22c55e" : "#ef4444" },
+                          ]}
+                        />
+                        {/* Image on left */}
+                        <Image
+                          source={imgSrc}
+                          style={styles.desktopMenuItemCardImage}
+                          resizeMode="cover"
+                        />
+                        {/* Text on right */}
+                        <View style={styles.desktopMenuItemCardInfo}>
+                          <Text style={styles.desktopMenuItemCardText} numberOfLines={3}>
+                            {item.name}
+                          </Text>
+                          <Text style={styles.desktopMenuItemCardPrice}>{formatCurrency(item.price)}</Text>
+                        </View>
+                        {qty > 0 && (
+                          <View style={styles.desktopMenuItemQtyBadge}>
+                            <Text style={styles.desktopMenuItemQtyBadgeText}>{qty}</Text>
+                          </View>
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </ScrollView>
             </View>
+          </View>
+
+          {/* Bottom Order Summary & Custom Actions Bar */}
+          <View style={styles.desktopBottomBar}>
+            {/* Left: Table Order Back button */}
+            <TouchableOpacity
+              style={styles.desktopBottomBackBtn}
+              onPress={() => router.replace("/(tabs)" as never)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.desktopBottomBackBtnText}>← Table Order</Text>
+            </TouchableOpacity>
+
+            {/* Middle: Order Summary (centered) */}
+            <View style={styles.desktopBottomSummaryContainer}>
+              <View style={styles.desktopBottomSummaryBadge}>
+                <Text style={styles.desktopBottomSummaryBadgeText}>
+                  Order Summary ({totalSelectedQty})
+                </Text>
+              </View>
+              <Text style={styles.desktopBottomSummaryTotal}>Total: {formatCurrency(effectiveTotal)}</Text>
+            </View>
+
+            {/* Right: Empty spacer for centering the middle element */}
+            <View style={{ width: 140 }} />
           </View>
         </View>
 
-        {/* 3. Bottom Order Summary & Custom Actions Bar */}
-        {/* Always-collapsed order summary bar */}
-        <View style={styles.desktopBottomBar}>
-          <View style={styles.desktopBottomSummaryRow}>
-            <View style={styles.desktopBottomSummaryBadge}>
-              <Text style={styles.desktopBottomSummaryBadgeText}>
-                Order Summary ({totalSelectedQty})
+        {/* Right Billing Sidebar (covers full height) */}
+        <View style={styles.desktopRightPanel}>
+          <View>
+            {/* Type Tabs (Dine In & Pick Up only, emojis and delivery removed) */}
+            <View style={styles.desktopRightTabs}>
+              <TouchableOpacity
+                style={[styles.desktopRightTab, activeOrderType === "dine-in" && styles.desktopRightTabActive]}
+                onPress={() => handleOrderTypeChange("dine-in")}
+              >
+                <Text style={[styles.desktopRightTabText, activeOrderType === "dine-in" && styles.desktopRightTabTextActive]}>
+                  Dine In
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.desktopRightTab, activeOrderType === "pick-up" && styles.desktopRightTabActive]}
+                onPress={() => handleOrderTypeChange("pick-up")}
+              >
+                <Text style={[styles.desktopRightTabText, activeOrderType === "pick-up" && styles.desktopRightTabTextActive]}>
+                  Pick Up
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Sub-Header Details (Avatar icons removed) */}
+            <View style={styles.desktopRightSubHeader}>
+              <Text style={styles.desktopRightTitle}>
+                {order.isTakeaway ? `Takeaway: #${order.orderNo.replace("#", "")}` : `Table: ${table.name}`}
+              </Text>
+              <View style={styles.desktopRightIcons}>
+                <View style={styles.desktopRightBadge}>
+                  <Text style={styles.desktopRightBadgeText}>
+                    {activeOrderType === "dine-in" ? "Dine In" : "Pick Up"}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Columns Header */}
+            <View style={styles.desktopRightTableHeader}>
+              <Text style={[styles.desktopColText, { width: "45%" }]}>ITEMS</Text>
+              <Text style={[styles.desktopColText, { width: "15%", textAlign: "center" }]}>CHECK ITEMS</Text>
+              <Text style={[styles.desktopColText, { width: "22%", textAlign: "center" }]}>QTY.</Text>
+              <Text style={[styles.desktopColText, { width: "18%", textAlign: "right" }]}>PRICE</Text>
+            </View>
+          </View>
+
+          {/* Scrollable Order Items List */}
+          {order.items.length === 0 ? (
+            <View style={styles.desktopEmptyOrder}>
+              <Text style={styles.desktopEmptyOrderEmoji}>🍽️</Text>
+              <Text style={styles.desktopEmptyOrderTitle}>No Item Selected</Text>
+              <Text style={styles.desktopEmptyOrderText}>
+                Please select item from left menu item
               </Text>
             </View>
-            <Text style={styles.desktopBottomSummaryTotal}>Total: {formatCurrency(effectiveTotal)}</Text>
+          ) : (
+            <ScrollView style={styles.desktopRightTableScroll} showsVerticalScrollIndicator={false}>
+              {order.items.map((item) => {
+                const isChecked = checkedItems.has(item.menuItemId);
+                return (
+                  <View key={item.menuItemId} style={styles.desktopRightTableRow}>
+                    <View style={{ width: "45%" }}>
+                      <Text style={styles.desktopItemName} numberOfLines={2}>
+                        {item.name}
+                      </Text>
+                    </View>
+                    <View style={{ width: "15%", alignItems: "center" }}>
+                      <TouchableOpacity
+                        style={styles.desktopRowCheckbox}
+                        onPress={() => {
+                          const next = new Set(checkedItems);
+                          if (next.has(item.menuItemId)) {
+                            next.delete(item.menuItemId);
+                          } else {
+                            next.add(item.menuItemId);
+                          }
+                          setCheckedItems(next);
+                        }}
+                      >
+                        <View
+                          style={[
+                            styles.desktopRowCheckboxBox,
+                            isChecked && styles.desktopRowCheckboxBoxChecked,
+                          ]}
+                        >
+                          {isChecked && <Text style={styles.desktopRowCheckboxCheckmark}>✓</Text>}
+                        </View>
+                      </TouchableOpacity>
+                    </View>
+                    <View style={{ width: "22%", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                      <TouchableOpacity
+                        style={styles.desktopRowQtyBtn}
+                        onPress={() => {
+                          const menuItem = { id: item.menuItemId, name: item.name, price: item.price } as MenuItem;
+                          changeQty(menuItem, Math.max(0, item.qty - 1));
+                        }}
+                      >
+                        <Text style={styles.desktopRowQtyBtnText}>-</Text>
+                      </TouchableOpacity>
+                      <Text style={styles.desktopRowQtyVal}>{item.qty}</Text>
+                      <TouchableOpacity
+                        style={styles.desktopRowQtyBtn}
+                        onPress={() => {
+                          const menuItem = { id: item.menuItemId, name: item.name, price: item.price } as MenuItem;
+                          changeQty(menuItem, item.qty + 1);
+                        }}
+                      >
+                        <Text style={styles.desktopRowQtyBtnText}>+</Text>
+                      </TouchableOpacity>
+                    </View>
+                    <View style={{ width: "18%", alignItems: "flex-end" }}>
+                      <Text style={styles.desktopItemPrice}>
+                        {formatCurrency(item.price * item.qty)}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })}
+            </ScrollView>
+          )}
+
+          {/* Bottom Billing Details Panel */}
+          <View style={styles.desktopRightFooter}>
+            {/* Totals breakdown */}
+            {(discountValue > 0 || !taxEnabled) && (
+              <View style={{ gap: 2, marginBottom: 4 }}>
+                {discountValue > 0 && (
+                  <View style={styles.desktopSplitRow}>
+                    <Text style={{ fontSize: 11, color: COLORS.textSec }}>Discount</Text>
+                    <Text style={{ fontSize: 11, fontWeight: "700", color: "#f97316" }}>-{formatCurrency(discountAmount)}</Text>
+                  </View>
+                )}
+                {!taxEnabled && (
+                  <View style={styles.desktopSplitRow}>
+                    <Text style={{ fontSize: 11, color: COLORS.textSec }}>GST ({settings.gstPercent}%)</Text>
+                    <Text style={{ fontSize: 11, fontWeight: "700", color: "#94a3b8" }}>Disabled</Text>
+                  </View>
+                )}
+              </View>
+            )}
+            <View style={[styles.desktopSplitRow, { justifyContent: "flex-end", marginBottom: 6 }]}>
+              <Text style={styles.desktopRightTotal}>Total: {formatCurrency(effectiveTotal)}</Text>
+            </View>
+
+            {/* Operational Action Buttons (Save, Save & Print, Pay Bill) */}
+            <View style={styles.desktopActionGrid}>
+              <View style={styles.desktopActionRow}>
+                <TouchableOpacity style={styles.desktopActionBtnSave} onPress={handleSaveOrder}>
+                  <Text style={styles.desktopActionBtnText}>Save</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.desktopActionBtnSave} onPress={handleSaveAndPrint}>
+                  <Text style={styles.desktopActionBtnText}>Save & Print</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.desktopActionBtnSave, { backgroundColor: "#22c55e" }]}
+                  onPress={() => setPayBillModalVisible(true)}
+                >
+                  <Text style={styles.desktopActionBtnText}>Pay Bill</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.desktopActionRow}>
+                <TouchableOpacity style={styles.desktopActionBtnKOT} onPress={handleKot}>
+                  <Text style={styles.desktopActionBtnText}>KOT</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.desktopActionBtnKOT} onPress={async () => { await handleKot(); triggerPrintHtml(generateKotHTML(order, table, settings, orderComment)); }}>
+                  <Text style={styles.desktopActionBtnText}>KOT & Print</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.desktopActionBtnHold} onPress={handleHold}>
+                  <Text style={styles.desktopActionBtnHoldText}>Hold</Text>
+                </TouchableOpacity>
+              </View>
+              {/* Row 3: Split Bill | TAX toggle | Discount */}
+              <View style={styles.desktopActionRow}>
+                <TouchableOpacity
+                  style={[styles.desktopActionBtnHold, { flex: 1, borderColor: "#3b82f6" }]}
+                  onPress={() => setSplitModalVisible(true)}
+                >
+                  <Text style={[styles.desktopActionBtnHoldText, { color: "#3b82f6" }]}>🥞 Split Bill</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.desktopActionBtnHold, { flex: 1, borderColor: taxEnabled ? "#22c55e" : "#cbd5e1", backgroundColor: taxEnabled ? "#dcfce7" : COLORS.white }]}
+                  onPress={() => setTaxEnabled(!taxEnabled)}
+                >
+                  <Text style={[styles.desktopActionBtnHoldText, { color: taxEnabled ? "#15803d" : "#94a3b8" }]}>
+                    {taxEnabled ? "☑ TAX" : "☐ TAX"}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.desktopActionBtnHold, { flex: 1, borderColor: discountValue > 0 ? "#f97316" : "#cbd5e1", backgroundColor: discountValue > 0 ? "#fff7ed" : COLORS.white }]}
+                  onPress={() => {
+                    setDiscountInputText(discountValue > 0 ? String(discountValue) : "");
+                    setDiscountModalVisible(true);
+                  }}
+                >
+                  <Text style={[styles.desktopActionBtnHoldText, { color: discountValue > 0 ? "#f97316" : "#64748b" }]}>
+                    {discountValue > 0
+                      ? `🏷 -${discountType === "percent" ? discountValue + "%" : "₹" + discountValue}`
+                      : "🏷 Discount"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Comment Row */}
+              <View style={styles.desktopCommentRow}>
+                <Text style={styles.desktopCommentIcon}>✏️</Text>
+                <TextInput
+                  style={styles.desktopCommentInput}
+                  placeholder="Add kitchen note... (KOT only)"
+                  placeholderTextColor="#94a3b8"
+                  value={orderComment}
+                  onChangeText={setOrderComment}
+                  multiline
+                  numberOfLines={2}
+                />
+              </View>
+            </View>
           </View>
         </View>
 
@@ -2578,48 +2588,48 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 18,
-    paddingVertical: 14,
+    paddingHorizontal: 28,
+    paddingVertical: 32, // Stretched vertically
     gap: 12,
     marginBottom: 8,
     ...Platform.select({
-      web: { boxShadow: "0 2px 8px rgba(0,0,0,0.18)" },
+      web: { boxShadow: "0 4px 12px rgba(0,0,0,0.22)" },
     }),
   },
   menuCatalogKicker: {
     color: "#FDBA74",
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: "900",
     letterSpacing: 1.2,
-    marginBottom: 2,
+    marginBottom: 4,
   },
   menuCatalogTitle: {
     color: "#FFFFFF",
-    fontSize: 20,
+    fontSize: 26, // Stretched title text size
     fontWeight: "900",
   },
   menuCatalogSubtitle: {
     color: "#D7CEC4",
-    fontSize: 10,
+    fontSize: 13, // Stretched subtitle text size
     fontWeight: "600",
-    marginTop: 2,
+    marginTop: 4,
   },
   menuCatalogBadge: {
     backgroundColor: "#f97316",
-    borderRadius: 14,
-    minWidth: 52,
+    borderRadius: 16,
+    width: 72,
+    height: 72,
+    justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 10,
-    paddingVertical: 8,
   },
   menuCatalogBadgeValue: {
     color: "#fff",
-    fontSize: 18,
+    fontSize: 24,
     fontWeight: "900",
   },
   menuCatalogBadgeLabel: {
     color: "#FFE4C4",
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: "800",
   },
   menuCatalogStatsRow: {
@@ -2630,25 +2640,27 @@ const styles = StyleSheet.create({
   menuCatalogStatCard: {
     flex: 1,
     backgroundColor: COLORS.white,
-    borderRadius: 10,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: "#e2e8f0",
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 24, // Stretched vertically
+    alignItems: "center", // Center horizontally
+    justifyContent: "center", // Center vertically
     ...Platform.select({
-      web: { boxShadow: "0 1px 4px rgba(0,0,0,0.06)" },
+      web: { boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03)" },
     }),
   },
   menuCatalogStatValue: {
-    fontSize: 16,
+    fontSize: 26, // Stretched value text size
     fontWeight: "900",
     color: "#ea580c",
   },
   menuCatalogStatLabel: {
-    fontSize: 10,
+    fontSize: 12, // Stretched label text size
     fontWeight: "700",
     color: COLORS.textSec,
-    marginTop: 2,
+    marginTop: 4,
   },
 
   // ── Comment / Kitchen Note styles ──
@@ -2676,5 +2688,98 @@ const styles = StyleSheet.create({
     ...Platform.select({
       web: { outlineStyle: "none" },
     }),
+  },
+  desktopDashboardSection: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 4,
+    gap: 12,
+  },
+  sidebarWidgetsContainer: {
+    padding: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#cbd5e1",
+    backgroundColor: COLORS.white,
+    gap: 8,
+  },
+  sidebarWidgetCard: {
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  sidebarWidgetContent: {
+    flex: 1,
+  },
+  sidebarWidgetLabel: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: COLORS.textSec,
+  },
+  sidebarWidgetValue: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: COLORS.text,
+    marginTop: 2,
+  },
+  sidebarGuestsCounterRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginTop: 4,
+  },
+  sidebarGuestsCounterBtn: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#e2e8f0",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  sidebarGuestsCounterBtnText: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: COLORS.text,
+    marginTop: -2,
+  },
+  sidebarClearBtn: {
+    backgroundColor: "#ef4444",
+    borderRadius: 8,
+    paddingVertical: 12,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 4,
+  },
+  sidebarClearBtnText: {
+    color: COLORS.white,
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  desktopBottomBackBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderColor: "#cbd5e1",
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: COLORS.white,
+  },
+  desktopBottomBackBtnText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#475569",
+  },
+  desktopBottomSummaryContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
   },
 });

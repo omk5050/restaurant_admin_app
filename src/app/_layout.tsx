@@ -95,7 +95,7 @@ const RootContent = () => {
         <Stack.Screen name="(super-admin)" options={{ headerShown: false }} />
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(admin)" options={{ headerShown: false }} />
-        <Stack.Screen name="table/[id]" options={{ title: 'Table Order' }} />
+        <Stack.Screen name="table/[id]" options={{ headerShown: false }} />
         <Stack.Screen 
           name="payment/[tableId]" 
           options={{ 
