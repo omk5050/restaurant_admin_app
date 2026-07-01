@@ -647,6 +647,7 @@ export default function TableOrderScreen() {
                 <TouchableOpacity
                   style={[
                     styles.desktopSidebarFoodTypeBtn,
+                    { flex: 1.4 },
                     selectedFoodType === "non-veg" && styles.desktopSidebarFoodTypeBtnNonVegActive,
                   ]}
                   onPress={() => setSelectedFoodType(selectedFoodType === "non-veg" ? "all" : "non-veg")}
@@ -1868,10 +1869,10 @@ const styles = StyleSheet.create({
   desktopWorkspace: {
     flex: 1,
     flexDirection: "row",
-    paddingBottom: 110,
+    paddingBottom: 60,
   },
   desktopLeftSidebar: {
-    width: 200,
+    width: 220,
     backgroundColor: COLORS.white,
     borderRightWidth: 1,
     borderRightColor: "#cbd5e1",
@@ -2278,8 +2279,10 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#cbd5e1",
     paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 12,
+    paddingVertical: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.04,
@@ -2775,12 +2778,12 @@ const styles = StyleSheet.create({
     borderColor: "#cbd5e1",
     borderWidth: 1,
     borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     backgroundColor: COLORS.white,
   },
   desktopBottomBackBtnText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "700",
     color: "#475569",
   },
