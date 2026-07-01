@@ -690,49 +690,6 @@ export default function TableOrderScreen() {
                   );
                 })}
               </ScrollView>
-
-              {/* Sidebar Widgets Section (stacked vertically at bottom) */}
-              <View style={styles.sidebarWidgetsContainer}>
-                {/* Guests widget */}
-                <View style={styles.sidebarWidgetCard}>
-                  <Text style={styles.desktopWidgetIcon}>👥</Text>
-                  <View style={styles.sidebarWidgetContent}>
-                    <Text style={styles.sidebarWidgetLabel}>Guests</Text>
-                    <View style={styles.sidebarGuestsCounterRow}>
-                      <TouchableOpacity onPress={decrementGuests} style={styles.sidebarGuestsCounterBtn}>
-                        <Text style={styles.sidebarGuestsCounterBtnText}>-</Text>
-                      </TouchableOpacity>
-                      <Text style={styles.desktopWidgetValue}>{localGuests}</Text>
-                      <TouchableOpacity onPress={incrementGuests} style={styles.sidebarGuestsCounterBtn}>
-                        <Text style={styles.sidebarGuestsCounterBtnText}>+</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                </View>
-
-                {/* Opened At widget */}
-                <View style={styles.sidebarWidgetCard}>
-                  <Text style={styles.desktopWidgetIcon}>🕐</Text>
-                  <View style={styles.sidebarWidgetContent}>
-                    <Text style={styles.sidebarWidgetLabel}>Opened At</Text>
-                    <Text style={styles.sidebarWidgetValue}>{formatTime(order.openedAt)}</Text>
-                  </View>
-                </View>
-
-                {/* Order No widget */}
-                <View style={styles.sidebarWidgetCard}>
-                  <Text style={styles.desktopWidgetIcon}>📋</Text>
-                  <View style={styles.sidebarWidgetContent}>
-                    <Text style={styles.sidebarWidgetLabel}>Order No.</Text>
-                    <Text style={styles.sidebarWidgetValue}>{order.orderNo}</Text>
-                  </View>
-                </View>
-
-                {/* Clear Button */}
-                <TouchableOpacity style={styles.sidebarClearBtn} onPress={handleClearTable}>
-                  <Text style={styles.sidebarClearBtnText}>🗑️ Clear</Text>
-                </TouchableOpacity>
-              </View>
             </View>
 
             {/* Middle Menu Items Grid */}
@@ -839,32 +796,82 @@ export default function TableOrderScreen() {
 
           {/* Bottom Order Summary & Custom Actions Bar */}
           <View style={styles.desktopBottomBar}>
-            {/* Left: Table Order Back button */}
-            <TouchableOpacity
-              style={styles.desktopBottomBackBtn}
-              onPress={() => router.replace("/(tabs)" as never)}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.desktopBottomBackBtnText}>← Table Order</Text>
-            </TouchableOpacity>
+            {/* Left: Table Order Back button (shortened/compact) */}
+            <View style={{ flex: 1, alignItems: "flex-start" }}>
+              <TouchableOpacity
+                style={styles.desktopBottomBackBtn}
+                onPress={() => router.replace("/(tabs)" as never)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.desktopBottomBackBtnText}>← Table Order</Text>
+              </TouchableOpacity>
+            </View>
 
             {/* Middle: Order Summary (centered) */}
-            <View style={styles.desktopBottomSummaryContainer}>
+            <View style={{ flex: 1, alignItems: "center" }}>
               <View style={styles.desktopBottomSummaryBadge}>
                 <Text style={styles.desktopBottomSummaryBadgeText}>
                   Order Summary ({totalSelectedQty})
                 </Text>
               </View>
-              <Text style={styles.desktopBottomSummaryTotal}>Total: {formatCurrency(effectiveTotal)}</Text>
             </View>
 
-            {/* Right: Empty spacer for centering the middle element */}
-            <View style={{ width: 140 }} />
+            {/* Right: Total (at the right end) */}
+            <View style={{ flex: 1, alignItems: "flex-end" }}>
+              <Text style={styles.desktopBottomSummaryTotal}>Total: {formatCurrency(effectiveTotal)}</Text>
+            </View>
           </View>
         </View>
 
         {/* Right Billing Sidebar (covers full height) */}
         <View style={styles.desktopRightPanel}>
+          {/* Top widgets above Dine In / Pick Up tabs */}
+          <View style={styles.rightTopWidgetsGrid}>
+            <View style={styles.rightTopWidgetsRow}>
+              {/* Guests widget */}
+              <View style={styles.rightTopWidgetCard}>
+                <Text style={styles.desktopWidgetIcon}>👥</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.rightWidgetLabel}>Guests</Text>
+                  <View style={styles.guestsCounterRow}>
+                    <TouchableOpacity onPress={decrementGuests} style={styles.guestsCounterBtn}>
+                      <Text style={styles.guestsCounterBtnText}>-</Text>
+                    </TouchableOpacity>
+                    <Text style={styles.desktopWidgetValue}>{localGuests}</Text>
+                    <TouchableOpacity onPress={incrementGuests} style={styles.guestsCounterBtn}>
+                      <Text style={styles.guestsCounterBtnText}>+</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+
+              {/* Opened At widget */}
+              <View style={styles.rightTopWidgetCard}>
+                <Text style={styles.desktopWidgetIcon}>🕐</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.rightWidgetLabel}>Opened At</Text>
+                  <Text style={styles.desktopWidgetValue}>{formatTime(order.openedAt)}</Text>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.rightTopWidgetsRow}>
+              {/* Order No widget */}
+              <View style={styles.rightTopWidgetCard}>
+                <Text style={styles.desktopWidgetIcon}>📋</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.rightWidgetLabel}>Order No.</Text>
+                  <Text style={styles.desktopWidgetValue}>{order.orderNo}</Text>
+                </View>
+              </View>
+
+              {/* Clear Button */}
+              <TouchableOpacity style={styles.rightClearBtn} onPress={handleClearTable}>
+                <Text style={styles.rightClearBtnText}>🗑️ Clear</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
           <View>
             {/* Type Tabs (Dine In & Pick Up only, emojis and delivery removed) */}
             <View style={styles.desktopRightTabs}>
@@ -2781,5 +2788,45 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+  },
+  rightTopWidgetsGrid: {
+    gap: 6,
+    marginBottom: 10,
+  },
+  rightTopWidgetsRow: {
+    flexDirection: "row",
+    gap: 6,
+  },
+  rightTopWidgetCard: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f1f5f9",
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    gap: 6,
+  },
+  rightWidgetLabel: {
+    fontSize: 9,
+    fontWeight: "600",
+    color: COLORS.textSec,
+  },
+  rightClearBtn: {
+    flex: 1,
+    backgroundColor: "#ef4444",
+    borderRadius: 8,
+    paddingVertical: 6,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 6,
+  },
+  rightClearBtnText: {
+    color: COLORS.white,
+    fontSize: 12,
+    fontWeight: "800",
   },
 });
