@@ -872,7 +872,10 @@ export default function TableOrderScreen() {
 
               {/* Clear Button */}
               <TouchableOpacity style={styles.rightClearBtn} onPress={handleClearTable}>
-                <Text style={styles.rightClearBtnText}>🗑️ Clear</Text>
+                <Text style={styles.desktopWidgetIcon}>🗑️</Text>
+                <View style={{ flex: 1, justifyContent: "center" }}>
+                  <Text style={styles.rightClearBtnText}>Clear</Text>
+                </View>
               </TouchableOpacity>
             </View>
           </View>
@@ -2844,13 +2847,12 @@ const styles = StyleSheet.create({
     borderColor: "#ef4444",
     borderRadius: 8,
     flexDirection: "row",
-    justifyContent: "center",
     alignItems: "center",
     gap: 8,
   },
   rightClearBtnText: {
     color: COLORS.white,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "800",
   },
   desktopRightMiddleSection: {
