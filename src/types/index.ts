@@ -40,6 +40,11 @@ export interface OrderItem {
   notes?: string;
 }
 
+export interface PaymentSplit {
+  method: PaymentMethod;
+  amount: number;
+}
+
 export interface Order {
   id: string;
   tableId: number;
@@ -53,6 +58,7 @@ export interface Order {
   openedAt: string;
   closedAt?: string;
   paymentMethod?: PaymentMethod;
+  paymentSplits?: PaymentSplit[];
   isTakeaway?: boolean;
   customerName?: string;
   customerPhone?: string;
@@ -68,6 +74,7 @@ export interface Invoice {
   gstAmount: number;
   total: number;
   paymentMethod: PaymentMethod;
+  paymentSplits?: PaymentSplit[];
   createdAt: string;
   isTakeaway?: boolean;
   customerName?: string;

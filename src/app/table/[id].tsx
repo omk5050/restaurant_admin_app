@@ -449,7 +449,11 @@ export default function TableOrderScreen() {
     const paidCount = Object.keys(nextPaid).length;
     if (paidCount === splitCount) {
       try {
-        const invoice = await closeOrder(order.id, method);
+        const splitsPayload = Array.from({ length: splitCount }).map((_, idx) => ({
+          method: nextPaid[idx],
+          amount: order.total / splitCount
+        }));
+        const invoice = await closeOrder(order.id, method, splitsPayload);
         setSplitModalVisible(false);
         setPaidSplits({});
         router.replace(`/invoice/${invoice.orderId}` as never);
@@ -867,11 +871,9 @@ export default function TableOrderScreen() {
               </View>
 
               {/* Clear Button */}
-              <View style={{ flex: 1 }}>
-                <TouchableOpacity style={styles.rightClearBtn} onPress={handleClearTable}>
-                  <Text style={styles.rightClearBtnText}>🗑️ Clear</Text>
-                </TouchableOpacity>
-              </View>
+              <TouchableOpacity style={styles.rightClearBtn} onPress={handleClearTable}>
+                <Text style={styles.rightClearBtnText}>🗑️ Clear</Text>
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -2027,7 +2029,7 @@ const styles = StyleSheet.create({
     left: 0,
     top: 0,
     bottom: 0,
-    width: 4,
+    width: 8,
     borderTopLeftRadius: 12,
     borderBottomLeftRadius: 12,
   },

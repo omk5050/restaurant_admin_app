@@ -137,6 +137,10 @@ const OrderSchema = new mongoose.Schema({
   openedAt: { type: String, required: true },
   closedAt: { type: String, default: null },
   paymentMethod: { type: String, default: null },
+  paymentSplits: [{
+    method: { type: String, required: true },
+    amount: { type: Number, required: true }
+  }],
   isTakeaway: { type: Boolean, default: false },
   customerName: { type: String, default: "" },
   customerPhone: { type: String, default: "" },
@@ -155,6 +159,10 @@ const InvoiceSchema = new mongoose.Schema({
   gstAmount: { type: Number, required: true },
   total: { type: Number, required: true },
   paymentMethod: { type: String, required: true },
+  paymentSplits: [{
+    method: { type: String, required: true },
+    amount: { type: Number, required: true }
+  }],
   createdAt: { type: String, required: true },
   isTakeaway: { type: Boolean, default: false },
   customerName: { type: String, default: "" },
@@ -996,12 +1004,29 @@ app.post("/api/orders/:id/bill", authenticateToken, async (req, res) => {
 app.post("/api/orders/:id/pay", authenticateToken, async (req, res) => {
   try {
     const adminId = resolveAdminId(req);
-    const { paymentMethod } = req.body;
+    const { paymentMethod, splits } = req.body;
     const closedAt = new Date().toISOString();
+
+    const existingOrder = await Order.findOne({ adminId, id: req.params.id });
+    if (!existingOrder) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+
+    let paymentSplits = [];
+    if (splits && Array.isArray(splits) && splits.length > 0) {
+      paymentSplits = splits.map(s => ({
+        method: s.method,
+        amount: Number(s.amount)
+      }));
+    } else {
+      paymentSplits = [{ method: paymentMethod || "cash", amount: existingOrder.total }];
+    }
+
+    const effectivePaymentMethod = paymentMethod || (splits && splits.length > 0 ? splits[0].method : "cash");
 
     const order = await Order.findOneAndUpdate(
       { adminId, id: req.params.id },
-      { status: "paid", closedAt, paymentMethod },
+      { status: "paid", closedAt, paymentMethod: effectivePaymentMethod, paymentSplits },
       { new: true }
     );
 
@@ -1016,7 +1041,8 @@ app.post("/api/orders/:id/pay", authenticateToken, async (req, res) => {
       subtotal: order.subtotal,
       gstAmount: order.gstAmount,
       total: order.total,
-      paymentMethod,
+      paymentMethod: effectivePaymentMethod,
+      paymentSplits,
       createdAt: closedAt,
       isTakeaway: order.isTakeaway,
       customerName: order.customerName,
@@ -1084,7 +1110,7 @@ app.get("/api/analytics", authenticateToken, async (req, res) => {
     // Weekly sales (group last 7 days Mon-Sun)
     // For simplicity, find the last 7 days including today
     const weeklySales = [];
-    const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const monthNamesShort = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
       d.setDate(now.getDate() - i);
@@ -1097,7 +1123,7 @@ app.get("/api/analytics", authenticateToken, async (req, res) => {
       });
       const daySales = dayInvoices.reduce((sum, inv) => sum + inv.total, 0);
       weeklySales.push({
-        label: weekdays[d.getDay()],
+        label: `${d.getDate()} ${monthNamesShort[d.getMonth()]}`,
         value: daySales,
       });
     }
@@ -1120,6 +1146,34 @@ app.get("/api/analytics", authenticateToken, async (req, res) => {
         value: monthSales,
       });
     }
+
+    // Payment comparison (cards, cash, upi)
+    const invoicesForPayment = await Invoice.find({ adminId });
+    let cashTotal = 0;
+    let cardTotal = 0;
+    let upiTotal = 0;
+
+    for (const inv of invoicesForPayment) {
+      if (inv.paymentSplits && inv.paymentSplits.length > 0) {
+        for (const split of inv.paymentSplits) {
+          const method = split.method.toLowerCase();
+          if (method === "cash") cashTotal += split.amount;
+          else if (method === "card" || method === "cards") cardTotal += split.amount;
+          else if (method === "upi") upiTotal += split.amount;
+        }
+      } else {
+        const method = (inv.paymentMethod || "cash").toLowerCase();
+        if (method === "cash") cashTotal += inv.total;
+        else if (method === "card" || method === "cards") cardTotal += inv.total;
+        else if (method === "upi") upiTotal += inv.total;
+      }
+    }
+
+    const paymentComparison = [
+      { label: "Cash", value: Math.round(cashTotal) },
+      { label: "Card", value: Math.round(cardTotal) },
+      { label: "UPI", value: Math.round(upiTotal) },
+    ];
 
     // Ticket averages
     const allInvoices = await Invoice.find({ adminId });
@@ -1146,6 +1200,7 @@ app.get("/api/analytics", authenticateToken, async (req, res) => {
       emptyTablesCount,
       weeklySales,
       monthlySales,
+      paymentComparison,
       averageTicket,
       paidCount: todayInvoices.length,
       activeCount: openOrdersCount,

@@ -34,6 +34,11 @@ const DEFAULT_ANALYTICS = {
   activeCount: 0,
   monthPace: 0,
   latestOrderOpenedAt: new Date().toISOString(),
+  paymentComparison: [
+    { label: "Cash", value: 0 },
+    { label: "Card", value: 0 },
+    { label: "UPI", value: 0 },
+  ],
 };
 
 interface OrderStore {
@@ -55,7 +60,11 @@ interface OrderStore {
     metadata: { guests?: number; customerName?: string; customerPhone?: string; isTakeaway?: boolean }
   ) => Promise<void>;
   generateBill: (orderId: string) => Promise<void>;
-  closeOrder: (orderId: string, method: PaymentMethod) => Promise<Invoice>;
+  closeOrder: (
+    orderId: string,
+    method: PaymentMethod,
+    splits?: { method: PaymentMethod; amount: number }[]
+  ) => Promise<Invoice>;
 }
 
 export const useOrderStore = create<OrderStore>((set, get) => ({
@@ -156,12 +165,12 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
       console.error("Failed to generate bill:", err);
     }
   },
-  closeOrder: async (orderId, method) => {
+  closeOrder: async (orderId, method, splits) => {
     try {
       const res = await apiFetch(`${API_URL}/api/orders/${orderId}/pay`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paymentMethod: method }),
+        body: JSON.stringify({ paymentMethod: method, splits }),
       });
       if (res.ok) {
         const invoice = await res.json();

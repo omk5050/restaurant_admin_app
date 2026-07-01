@@ -97,28 +97,38 @@ export default function ReportsScreen() {
         <MetricCard label="Month pace" value={formatCurrency(monthPace)} />
       </View>
 
-      <BarChart
-        title="Weekly sales"
-        subtitle="Current service week"
-        data={analytics.weeklySales}
-        accent={COLORS.primary}
-      />
-
-      <BarChart
-        title="Monthly sales"
-        subtitle="6-month revenue trend"
-        data={analytics.monthlySales}
-        accent={COLORS.blue}
-        compact
-      />
-
-      <Card style={styles.insightCard}>
-        <Text style={styles.insightKicker}>Shift insight</Text>
-        <Text style={styles.insightTitle}>Dinner rush is carrying the week.</Text>
-        <Text style={styles.insightText}>
-          Keep track of your active tables and speed up billing cycle times. Focus on fast-moving beverages and specials to increase average ticket values.
-        </Text>
-      </Card>
+      <View style={styles.chartsRow}>
+        <View style={styles.chartCol}>
+          <BarChart
+            title="Weekly sales"
+            subtitle="Current service week"
+            data={analytics.weeklySales}
+            accent={COLORS.primary}
+          />
+        </View>
+        <View style={styles.chartCol}>
+          <BarChart
+            title="Monthly sales"
+            subtitle="6-month revenue trend"
+            data={analytics.monthlySales}
+            accent={COLORS.blue}
+          />
+        </View>
+        <View style={styles.chartCol}>
+          <BarChart
+            title="Payment comparison"
+            subtitle="Cards vs Cash vs UPI"
+            data={
+              (analytics as any).paymentComparison || [
+                { label: "Cash", value: 0 },
+                { label: "Card", value: 0 },
+                { label: "UPI", value: 0 },
+              ]
+            }
+            accent={COLORS.green}
+          />
+        </View>
+      </View>
     </ScrollView>
   );
 }
@@ -301,6 +311,15 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "700",
     lineHeight: 19,
+  },
+  chartsRow: {
+    flexDirection: "row",
+    gap: 12,
+    width: "100%",
+  },
+  chartCol: {
+    flex: 1,
+    minWidth: 260,
   },
 });
 
