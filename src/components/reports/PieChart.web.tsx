@@ -57,7 +57,7 @@ export function PieChart({ title, subtitle, data }: PieChartProps) {
       <View style={styles.chartContent}>
         {/* SVG Donut Chart */}
         <View style={styles.svgWrapper}>
-          <svg width="170" height="170" viewBox="0 0 100 100">
+          <svg width="190" height="190" viewBox="0 0 100 100">
             <g transform="rotate(-90 50 50)">
               {/* Fallback circle if total is 0 */}
               {total === 0 && (
@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
   },
   legendContainer: {
     flex: 1,
-    gap: 12,
+    gap: 16,
     justifyContent: "center",
   },
   legendItem: {
@@ -196,26 +196,26 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   legendDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
   },
   legendTextContainer: {
     flexDirection: "column",
   },
   legendLabel: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "800",
     color: COLORS.text,
   },
   legendValue: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "700",
     color: COLORS.textSec,
     marginTop: 1,
   },
   legendPct: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "600",
     color: COLORS.textSec,
   },

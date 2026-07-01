@@ -2821,6 +2821,7 @@ const styles = StyleSheet.create({
   rightTopWidgetsRow: {
     flexDirection: "row",
     gap: 6,
+    height: 58,
   },
   rightTopWidgetCard: {
     flex: 1,
@@ -2833,6 +2834,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 10,
     gap: 8,
+    overflow: "hidden",
   },
   rightWidgetLabel: {
     fontSize: 9,
@@ -2849,6 +2851,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+    overflow: "hidden",
   },
   rightClearBtnText: {
     color: COLORS.white,
