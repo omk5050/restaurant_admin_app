@@ -368,27 +368,6 @@ export default function TableOrderScreen() {
     }
   };
 
-  // Action: Print Bill
-  async function handlePrintBill() {
-    if (!order) return;
-    await generateBill(order.id);
-    const targetInvoice = {
-      id: `preview_${order.id}`,
-      orderId: order.id,
-      tableId: order.tableId,
-      orderNo: order.orderNo,
-      items: order.items,
-      subtotal: order.subtotal,
-      gstAmount: order.gstAmount,
-      total: order.total,
-      paymentMethod: "cash",
-      createdAt: new Date().toISOString(),
-      isTakeaway: order.isTakeaway,
-      customerName: order.customerName || "",
-      customerPhone: order.customerPhone || "",
-    };
-    triggerPrintHtml(generateInvoiceHTML(targetInvoice as any, settings));
-  }
 
   // Order Type Change Handler (Dine In / Pick Up only)
   async function handleOrderTypeChange(type: "dine-in" | "pick-up") {
@@ -432,7 +411,8 @@ export default function TableOrderScreen() {
   async function executePayBill(method: PaymentMethod) {
     if (!order) return;
     try {
-      const invoice = await closeOrder(order.id, method);
+      const finalGst = taxEnabled ? order.gstAmount : 0;
+      const invoice = await closeOrder(order.id, method, undefined, finalGst, effectiveTotal);
       setPayBillModalVisible(false);
       router.replace(`/invoice/${invoice.orderId}` as never);
     } catch (err: any) {
@@ -449,11 +429,12 @@ export default function TableOrderScreen() {
     const paidCount = Object.keys(nextPaid).length;
     if (paidCount === splitCount) {
       try {
+        const finalGst = taxEnabled ? order.gstAmount : 0;
         const splitsPayload = Array.from({ length: splitCount }).map((_, idx) => ({
           method: nextPaid[idx],
-          amount: order.total / splitCount
+          amount: effectiveTotal / splitCount
         }));
-        const invoice = await closeOrder(order.id, method, splitsPayload);
+        const invoice = await closeOrder(order.id, method, splitsPayload, finalGst, effectiveTotal);
         setSplitModalVisible(false);
         setPaidSplits({});
         router.replace(`/invoice/${invoice.orderId}` as never);
@@ -463,7 +444,7 @@ export default function TableOrderScreen() {
     } else {
       Alert.alert(
         "Split Share Paid",
-        `Split #${splitIdx + 1} paid ${formatCurrency(order.total / splitCount)} via ${method.toUpperCase()}.`
+        `Split #${splitIdx + 1} paid ${formatCurrency(effectiveTotal / splitCount)} via ${method.toUpperCase()}.`
       );
     }
   }
@@ -870,13 +851,15 @@ export default function TableOrderScreen() {
                 </View>
               </View>
 
-              {/* Clear Button */}
-              <TouchableOpacity style={styles.rightClearBtn} onPress={handleClearTable}>
-                <Text style={styles.desktopWidgetIcon}>🗑️</Text>
-                <View style={{ flex: 1, justifyContent: "center" }}>
-                  <Text style={styles.rightClearBtnText}>Clear</Text>
-                </View>
-              </TouchableOpacity>
+              {/* Clear Button wrapped in a View to guarantee identical width layout matching */}
+              <View style={{ flex: 1 }}>
+                <TouchableOpacity style={styles.rightClearBtn} onPress={handleClearTable}>
+                  <Text style={styles.desktopWidgetIcon}>🗑️</Text>
+                  <View style={{ flex: 1, justifyContent: "center" }}>
+                    <Text style={styles.rightClearBtnText}>Clear</Text>
+                  </View>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
 
@@ -2842,7 +2825,7 @@ const styles = StyleSheet.create({
     color: COLORS.textSec,
   },
   rightClearBtn: {
-    flex: 1,
+    width: "100%",
     height: 58,
     backgroundColor: "#ef4444",
     borderWidth: 1,
@@ -2852,6 +2835,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     overflow: "hidden",
+    paddingHorizontal: 10,
   },
   rightClearBtnText: {
     color: COLORS.white,

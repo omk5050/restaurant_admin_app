@@ -1004,13 +1004,17 @@ app.post("/api/orders/:id/bill", authenticateToken, async (req, res) => {
 app.post("/api/orders/:id/pay", authenticateToken, async (req, res) => {
   try {
     const adminId = resolveAdminId(req);
-    const { paymentMethod, splits } = req.body;
+    const { paymentMethod, splits, gstAmount, total } = req.body;
     const closedAt = new Date().toISOString();
 
     const existingOrder = await Order.findOne({ adminId, id: req.params.id });
     if (!existingOrder) {
       return res.status(404).json({ error: "Order not found" });
     }
+
+    // Determine final total and tax from front-end toggles/discounts
+    const finalGstAmount = gstAmount !== undefined ? Number(gstAmount) : existingOrder.gstAmount;
+    const finalTotal = total !== undefined ? Number(total) : existingOrder.total;
 
     let paymentSplits = [];
     if (splits && Array.isArray(splits) && splits.length > 0) {
@@ -1019,14 +1023,21 @@ app.post("/api/orders/:id/pay", authenticateToken, async (req, res) => {
         amount: Number(s.amount)
       }));
     } else {
-      paymentSplits = [{ method: paymentMethod || "cash", amount: existingOrder.total }];
+      paymentSplits = [{ method: paymentMethod || "cash", amount: finalTotal }];
     }
 
     const effectivePaymentMethod = paymentMethod || (splits && splits.length > 0 ? splits[0].method : "cash");
 
     const order = await Order.findOneAndUpdate(
       { adminId, id: req.params.id },
-      { status: "paid", closedAt, paymentMethod: effectivePaymentMethod, paymentSplits },
+      { 
+        status: "paid", 
+        closedAt, 
+        paymentMethod: effectivePaymentMethod, 
+        paymentSplits,
+        gstAmount: finalGstAmount,
+        total: finalTotal
+      },
       { new: true }
     );
 

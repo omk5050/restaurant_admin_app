@@ -63,7 +63,9 @@ interface OrderStore {
   closeOrder: (
     orderId: string,
     method: PaymentMethod,
-    splits?: { method: PaymentMethod; amount: number }[]
+    splits?: { method: PaymentMethod; amount: number }[],
+    gstAmount?: number,
+    total?: number
   ) => Promise<Invoice>;
 }
 
@@ -165,12 +167,12 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
       console.error("Failed to generate bill:", err);
     }
   },
-  closeOrder: async (orderId, method, splits) => {
+  closeOrder: async (orderId, method, splits, gstAmount, total) => {
     try {
       const res = await apiFetch(`${API_URL}/api/orders/${orderId}/pay`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paymentMethod: method, splits }),
+        body: JSON.stringify({ paymentMethod: method, splits, gstAmount, total }),
       });
       if (res.ok) {
         const invoice = await res.json();

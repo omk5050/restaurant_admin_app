@@ -58,8 +58,14 @@ export function useOrder(orderId?: string) {
   );
 
   const closeOrder = useCallback(
-    async (targetOrderId: string, method: PaymentMethod) => {
-      const invoice = await closeOrderInStore(targetOrderId, method);
+    async (
+      targetOrderId: string,
+      method: PaymentMethod,
+      splits?: { method: PaymentMethod; amount: number }[],
+      gstAmount?: number,
+      total?: number
+    ) => {
+      const invoice = await closeOrderInStore(targetOrderId, method, splits, gstAmount, total);
       setTableStatus(invoice.tableId, "paid");
       return invoice;
     },
