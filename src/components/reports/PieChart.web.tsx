@@ -131,7 +131,7 @@ export function PieChart({ title, subtitle, data }: PieChartProps) {
               <View key={item.label + "_" + idx} style={styles.legendItem}>
                 <View style={[styles.legendDot, { backgroundColor: item.color }]} />
                 <View style={styles.legendTextContainer}>
-                  <Text style={styles.legendLabel}>{item.label}</Text>
+                  <Text style={styles.legendLabel}>{item.label}:</Text>
                   <Text style={styles.legendValue}>
                     {formatCurrency(item.value)} <Text style={styles.legendPct}>({pctText})</Text>
                   </Text>
@@ -201,7 +201,9 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   legendTextContainer: {
-    flexDirection: "column",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
   },
   legendLabel: {
     fontSize: 13,
@@ -212,7 +214,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
     color: COLORS.textSec,
-    marginTop: 1,
   },
   legendPct: {
     fontSize: 11,
