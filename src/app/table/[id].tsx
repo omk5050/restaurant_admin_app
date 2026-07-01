@@ -815,7 +815,7 @@ export default function TableOrderScreen() {
           <View style={styles.rightTopWidgetsGrid}>
             <View style={styles.rightTopWidgetsRow}>
               {/* Guests widget */}
-              <View style={styles.rightTopWidgetCard}>
+              <View style={[styles.rightTopWidgetCard, { flex: 0.75 }]}>
                 <Text style={styles.desktopWidgetIcon}>👥</Text>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.rightWidgetLabel}>Guests</Text>
@@ -832,7 +832,7 @@ export default function TableOrderScreen() {
               </View>
 
               {/* Opened At widget */}
-              <View style={styles.rightTopWidgetCard}>
+              <View style={[styles.rightTopWidgetCard, { flex: 1.25 }]}>
                 <Text style={styles.desktopWidgetIcon}>🕐</Text>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.rightWidgetLabel}>Opened At</Text>
@@ -843,7 +843,7 @@ export default function TableOrderScreen() {
 
             <View style={styles.rightTopWidgetsRow}>
               {/* Order No widget */}
-              <View style={styles.rightTopWidgetCard}>
+              <View style={[styles.rightTopWidgetCard, { flex: 0.75 }]}>
                 <Text style={styles.desktopWidgetIcon}>📋</Text>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.rightWidgetLabel}>Order No.</Text>
@@ -852,7 +852,7 @@ export default function TableOrderScreen() {
               </View>
 
               {/* Clear Button wrapped in a View to guarantee identical width layout matching */}
-              <View style={{ flex: 1 }}>
+              <View style={{ flex: 1.25 }}>
                 <TouchableOpacity style={styles.rightClearBtn} onPress={handleClearTable}>
                   <Text style={styles.desktopWidgetIcon}>🗑️</Text>
                   <View style={{ flex: 1, justifyContent: "center" }}>
