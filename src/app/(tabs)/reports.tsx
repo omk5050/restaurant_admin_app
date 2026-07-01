@@ -5,6 +5,17 @@ import { Card } from "@/components/ui/Card";
 import { COLORS } from "@/constants/colors";
 import { useOrderStore } from "@/store/orderStore";
 import { formatCurrency } from "@/utils/formatters";
+import { PieChart } from "@/components/reports/PieChart";
+
+function formatCurrencyCompact(value: number) {
+  if (value >= 1000000) {
+    return `₹${(value / 1000000).toFixed(1)}M`;
+  }
+  if (value >= 1000) {
+    return `₹${(value / 1000).toFixed(1)}k`;
+  }
+  return `₹${value}`;
+}
 
 function BarChart({
   title,
@@ -32,9 +43,10 @@ function BarChart({
       </View>
       <View style={[styles.chartArea, compact && styles.compactChartArea]}>
         {data.map((item, idx) => {
-          const height = Math.max(18, Math.round((item.value / max) * (compact ? 88 : 120)));
+          const height = Math.max(18, Math.round((item.value / max) * (compact ? 120 : 180)));
           return (
             <View key={item.label + "_" + idx} style={styles.barColumn}>
+              <Text style={styles.barValue}>{formatCurrencyCompact(item.value)}</Text>
               <View style={styles.barTrack}>
                 <View style={[styles.bar, { height, backgroundColor: accent }]} />
               </View>
@@ -115,7 +127,7 @@ export default function ReportsScreen() {
           />
         </View>
         <View style={styles.chartCol}>
-          <BarChart
+          <PieChart
             title="Payment comparison"
             subtitle="Cards vs Cash vs UPI"
             data={
@@ -125,7 +137,6 @@ export default function ReportsScreen() {
                 { label: "UPI", value: 0 },
               ]
             }
-            accent={COLORS.green}
           />
         </View>
       </View>
@@ -230,6 +241,7 @@ const styles = StyleSheet.create({
   chartCard: {
     gap: 16,
     padding: 16,
+    flex: 1,
   },
   chartHeader: {
     alignItems: "flex-start",
@@ -258,10 +270,17 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
     flexDirection: "row",
     gap: 9,
-    height: 154,
+    height: 220,
   },
   compactChartArea: {
-    height: 122,
+    height: 160,
+  },
+  barValue: {
+    fontSize: 9,
+    fontWeight: "800",
+    color: COLORS.text,
+    marginBottom: 4,
+    textAlign: "center",
   },
   barColumn: {
     alignItems: "center",
