@@ -867,9 +867,11 @@ export default function TableOrderScreen() {
               </View>
 
               {/* Clear Button */}
-              <TouchableOpacity style={styles.rightClearBtn} onPress={handleClearTable}>
-                <Text style={styles.rightClearBtnText}>🗑️ Clear</Text>
-              </TouchableOpacity>
+              <View style={{ flex: 1 }}>
+                <TouchableOpacity style={styles.rightClearBtn} onPress={handleClearTable}>
+                  <Text style={styles.rightClearBtnText}>🗑️ Clear</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
 
