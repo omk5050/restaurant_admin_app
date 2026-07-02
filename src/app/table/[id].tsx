@@ -1095,7 +1095,7 @@ export default function TableOrderScreen() {
             <View style={styles.desktopCustomItemCard}>
               <Text style={styles.desktopCustomItemTitle}>Split Bill Equally</Text>
               <Text style={styles.desktopCustomItemSubtitle}>
-                Select split count and process custom payment methods per share. Total: {formatCurrency(order.total)}
+                Select split count and process custom payment methods per share. Total: {formatCurrency(effectiveTotal)}
               </Text>
 
               <View style={[styles.guestsCounterRow, { justifyContent: "center", marginVertical: 10 }]}>
@@ -1127,7 +1127,7 @@ export default function TableOrderScreen() {
               </View>
 
               <Text style={{ textAlign: "center", fontWeight: "800", color: "#ef4444", fontSize: 15, marginBottom: 12 }}>
-                Each Share: {formatCurrency(order.total / splitCount)}
+                Each Share: {formatCurrency(effectiveTotal / splitCount)}
               </Text>
 
               <ScrollView style={{ maxHeight: 240, marginBottom: 12 }}>
@@ -1139,7 +1139,7 @@ export default function TableOrderScreen() {
                       <View style={{ flex: 1 }}>
                         <Text style={styles.desktopSplitRowText}>Split #{idx + 1}</Text>
                         <Text style={{ fontSize: 11, color: COLORS.textSec }}>
-                          Share: {formatCurrency(order.total / splitCount)}
+                          Share: {formatCurrency(effectiveTotal / splitCount)}
                         </Text>
                       </View>
                       {isPaid ? (
