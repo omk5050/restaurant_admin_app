@@ -33,4 +33,16 @@ const styles = StyleSheet.create({
     backdropFilter: 'blur(6px)',
   },
   role: { color: '#fff', fontSize: 14 },
+  btn: {
+    backgroundColor: '#4a90e2',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  text: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
 });
+

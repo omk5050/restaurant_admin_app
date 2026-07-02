@@ -1923,9 +1923,9 @@ const styles = StyleSheet.create({
     height: 40,
     fontSize: 14,
     color: COLORS.text,
-    ...Platform.select({
+    ...(Platform.select({
       web: { outlineStyle: 'none' }
-    }),
+    }) as any),
   },
   desktopSearchBtn: {
     width: 40,
@@ -1957,9 +1957,9 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: COLORS.text,
-    ...Platform.select({
+    ...(Platform.select({
       web: { outlineStyle: 'none' }
-    }),
+    }) as any),
   },
   desktopItemsScroll: {
     paddingBottom: 24,
@@ -2700,9 +2700,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: COLORS.text,
     minHeight: 36,
-    ...Platform.select({
+    ...(Platform.select({
       web: { outlineStyle: "none" },
-    }),
+    }) as any),
   },
   desktopDashboardSection: {
     paddingHorizontal: 16,

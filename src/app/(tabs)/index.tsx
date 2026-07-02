@@ -632,5 +632,11 @@ const styles = StyleSheet.create({
     color: "#94A3B8",
     borderColor: "#E2E8F0",
   },
+  errorText: {
+    color: "#ef4444",
+    fontSize: 13,
+    fontWeight: "600",
+    marginBottom: 8,
+  },
 });
 

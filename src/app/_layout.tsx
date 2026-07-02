@@ -1,7 +1,8 @@
 import 'react-native-gesture-handler';
 import React, { useEffect, useState } from 'react';
 import { Stack, router, useSegments } from 'expo-router';
-import { StatusBar, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS } from '@/constants/colors';
@@ -35,7 +36,8 @@ const RootContent = () => {
 
   useEffect(() => {
     const inAuthGroup = segments[0] === '(auth)';
-    const isRoot = segments.length === 0 || (segments.length === 1 && segments[0] === 'index');
+    const len = segments.length as number;
+    const isRoot = len === 0 || (len === 1 && (segments as string[])[0] === 'index');
 
     if (!isAuthenticated && !inAuthGroup && !isRoot) {
       // Redirect to selector screen if unauthenticated and trying to access a protected page
