@@ -313,6 +313,13 @@ export default function TableOrderScreen() {
   // KOT: detect removed items and prompt for removal reason
   const prevKotItemsRef = useRef<{ menuItemId: string; name: string; qty: number }[]>([]);
 
+  // Seed initial KOT items ref when order items load
+  useEffect(() => {
+    if (order?.items && prevKotItemsRef.current.length === 0) {
+      prevKotItemsRef.current = order.items.map((i) => ({ menuItemId: i.menuItemId, name: i.name, qty: i.qty }));
+    }
+  }, [order?.items]);
+
   async function handleKot() {
     if (!order) return;
     if (order.items.length === 0) {
@@ -558,7 +565,7 @@ export default function TableOrderScreen() {
           <Text style={styles.paidEmoji}>✅</Text>
           <Text style={styles.paidTitle}>{table.name} is Paid</Text>
           <Text style={styles.paidSubtitle}>
-            Order {order.orderNo} was completed for {formatCurrency(order.total)}.
+            Order {order?.orderNo ?? "---"} was completed for {formatCurrency(order?.total ?? 0)}.
           </Text>
           <Text style={styles.paidTimer}>
             Table will auto-clear in 2 mins.
@@ -1382,7 +1389,7 @@ export default function TableOrderScreen() {
               <Text style={styles.kotEmoji}>🖨️</Text>
               <Text style={styles.kotTitle}>KOT Sent!</Text>
               <Text style={styles.kotMessage}>
-                Kitchen Order Ticket for {table.name} ({order.orderNo}) has been sent to the kitchen.
+                Kitchen Order Ticket for {table.name} ({order?.orderNo ?? "---"}) has been sent to the kitchen.
               </Text>
               <TouchableOpacity style={styles.kotDismissBtn} onPress={handleKotDismiss}>
                 <Text style={styles.kotDismissText}>OK, Back to Dashboard</Text>
@@ -1509,7 +1516,7 @@ export default function TableOrderScreen() {
                 />
                 {discountType === "percent" && discountInputText ? (
                   <Text style={{ fontSize: 11, color: "#f97316", fontWeight: "600", marginTop: 4 }}>
-                    = {formatCurrency((order.subtotal * (parseFloat(discountInputText) || 0)) / 100)} off
+                    = {formatCurrency(((order?.subtotal ?? 0) * (parseFloat(discountInputText) || 0)) / 100)} off
                   </Text>
                 ) : null}
               </View>
@@ -1568,21 +1575,21 @@ export default function TableOrderScreen() {
           <Text style={styles.infoIcon}>👥</Text>
           <View style={{ flex: 1 }}>
             <Text style={styles.infoLabel} numberOfLines={1} ellipsizeMode="tail">Guests</Text>
-            <Text style={styles.infoValue} numberOfLines={1} ellipsizeMode="tail">{order.guests}</Text>
+            <Text style={styles.infoValue} numberOfLines={1} ellipsizeMode="tail">{order?.guests ?? 0}</Text>
           </View>
         </View>
         <View style={styles.infoItem}>
           <Text style={styles.infoIcon}>🕐</Text>
           <View style={{ flex: 1 }}>
             <Text style={styles.infoLabel} numberOfLines={1} ellipsizeMode="tail">Opened At</Text>
-            <Text style={styles.infoValue} numberOfLines={1} ellipsizeMode="tail">{formatTime(order.openedAt)}</Text>
+            <Text style={styles.infoValue} numberOfLines={1} ellipsizeMode="tail">{order ? formatTime(order.openedAt) : "--:--"}</Text>
           </View>
         </View>
         <View style={styles.infoItemLast}>
           <Text style={styles.infoIcon}>📋</Text>
           <View style={{ flex: 1 }}>
             <Text style={styles.infoLabel} numberOfLines={1} ellipsizeMode="tail">Order No.</Text>
-            <Text style={styles.infoValue} numberOfLines={1} ellipsizeMode="tail">{order.orderNo}</Text>
+            <Text style={styles.infoValue} numberOfLines={1} ellipsizeMode="tail">{order?.orderNo ?? "---"}</Text>
           </View>
         </View>
         <TouchableOpacity style={styles.clearNowBtn} onPress={handleClearTable} activeOpacity={0.8}>
@@ -1644,7 +1651,7 @@ export default function TableOrderScreen() {
             <Text style={styles.kotEmoji}>🖨️</Text>
             <Text style={styles.kotTitle}>KOT Sent!</Text>
             <Text style={styles.kotMessage}>
-              Kitchen Order Ticket for {table.name} ({order.orderNo}) has been sent to the kitchen.
+              Kitchen Order Ticket for {table.name} ({order?.orderNo ?? "---"}) has been sent to the kitchen.
             </Text>
             <TouchableOpacity style={styles.kotDismissBtn} onPress={handleKotDismiss}>
               <Text style={styles.kotDismissText}>OK, Back to Dashboard</Text>
