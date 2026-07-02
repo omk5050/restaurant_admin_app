@@ -851,15 +851,13 @@ export default function TableOrderScreen() {
                 </View>
               </View>
 
-              {/* Clear Button wrapped in a View to guarantee identical width layout matching */}
-              <View style={{ flex: 1 }}>
-                <TouchableOpacity style={styles.rightClearBtn} onPress={handleClearTable}>
-                  <Text style={styles.desktopWidgetIcon}>🗑️</Text>
-                  <View style={{ flex: 1, justifyContent: "center" }}>
-                    <Text style={styles.rightClearBtnText}>Clear</Text>
-                  </View>
-                </TouchableOpacity>
-              </View>
+              {/* Clear Button — direct flex child so it matches rightTopWidgetCard height exactly */}
+              <TouchableOpacity style={styles.rightClearBtn} onPress={handleClearTable}>
+                <Text style={styles.desktopWidgetIcon}>🗑️</Text>
+                <View style={{ flex: 1, justifyContent: "center" }}>
+                  <Text style={styles.rightClearBtnText}>Clear</Text>
+                </View>
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -2825,7 +2823,7 @@ const styles = StyleSheet.create({
     color: COLORS.textSec,
   },
   rightClearBtn: {
-    width: "100%",
+    flex: 1,
     height: 58,
     backgroundColor: "#ef4444",
     borderWidth: 1,
