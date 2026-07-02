@@ -2,6 +2,22 @@ import { create } from "zustand";
 import { Invoice, MenuItem, Order, PaymentMethod } from "@/types";
 import { API_URL } from "@/constants/config";
 import { apiFetch } from "@/utils/api";
+import { useSettingsStore } from "./settingsStore";
+import { useTableStore } from "./tableStore";
+
+// Store pending order promises mapping tempIds to server Order promises
+const pendingOrders = new Map<string, Promise<Order>>();
+
+function calculateTotal(items: any[], gstPercent = 5) {
+  const subtotal = items.reduce((sum, item) => sum + item.price * item.qty, 0);
+  const gstAmount = Math.round(subtotal * (gstPercent / 100));
+  return {
+    subtotal,
+    gstAmount,
+    total: subtotal + gstAmount,
+  };
+}
+
 
 // Default structure for analytics state
 const DEFAULT_ANALYTICS = {
@@ -100,22 +116,65 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
     }
   },
   createOrder: async (tableId, guests, isTakeaway = false, customerName = "", customerPhone = "") => {
-    try {
-      const res = await apiFetch(`${API_URL}/api/orders`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tableId, guests, isTakeaway, customerName, customerPhone }),
-      });
-      if (res.ok) {
-        const order = await res.json();
-        set((state) => ({ orders: [...state.orders, order] }));
-        return order;
+    const tempId = `temp_${tableId}_${Date.now()}`;
+    const newOrder: Order = {
+      id: tempId,
+      tableId,
+      orderNo: "Loading...",
+      guests,
+      status: "open",
+      items: [],
+      subtotal: 0,
+      gstAmount: 0,
+      total: 0,
+      openedAt: new Date().toISOString(),
+      isTakeaway,
+      customerName,
+      customerPhone,
+    };
+
+    // 1. Update orders list synchronously (instant load!)
+    set((state) => ({ orders: [...state.orders, newOrder] }));
+
+    // 2. Update table currentOrderId synchronously
+    useTableStore.setState((state) => ({
+      tables: state.tables.map((t) =>
+        t.id === tableId ? { ...t, currentOrderId: tempId, status: "active" } : t
+      ),
+    }));
+
+    // 3. Trigger backend creation
+    const creationPromise = (async () => {
+      try {
+        const res = await apiFetch(`${API_URL}/api/orders`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tableId, guests, isTakeaway, customerName, customerPhone }),
+        });
+        if (res.ok) {
+          const serverOrder = await res.json();
+          // Swap the temporary order ID with the real order ID in both stores
+          set((state) => ({
+            orders: state.orders.map((o) => (o.id === tempId ? serverOrder : o)),
+          }));
+          useTableStore.setState((state) => ({
+            tables: state.tables.map((t) =>
+              t.id === tableId ? { ...t, currentOrderId: serverOrder.id } : t
+            ),
+          }));
+          pendingOrders.delete(tempId);
+          return serverOrder;
+        }
+        throw new Error("Failed to create order on server");
+      } catch (err) {
+        console.error("Failed to sync order creation to server:", err);
+        pendingOrders.delete(tempId);
+        return newOrder;
       }
-      throw new Error("Failed to create order");
-    } catch (err) {
-      console.error("Failed to create order:", err);
-      throw err;
-    }
+    })();
+
+    pendingOrders.set(tempId, creationPromise);
+    return newOrder;
   },
   updateOrderItem: async (orderId, menuItem, qty) => {
     try {
@@ -136,7 +195,30 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
             ]
           : withoutItem;
 
-      const res = await apiFetch(`${API_URL}/api/orders/${orderId}/items`, {
+      // 1. Perform local calculation and update store synchronously (instant UI feedback!)
+      const gstPercent = useSettingsStore.getState().settings.gstPercent ?? 5;
+      const totals = calculateTotal(items, gstPercent);
+      const localUpdatedOrder = {
+        ...order,
+        items,
+        ...totals,
+      };
+
+      set((state) => ({
+        orders: state.orders.map((o) => (o.id === orderId ? localUpdatedOrder : o)),
+      }));
+
+      // 2. Synchronize with backend in a non-blocking way
+      let activeOrderId = orderId;
+      if (orderId.startsWith("temp_")) {
+        const pendingPromise = pendingOrders.get(orderId);
+        if (pendingPromise) {
+          const serverOrder = await pendingPromise;
+          activeOrderId = serverOrder.id;
+        }
+      }
+
+      const res = await apiFetch(`${API_URL}/api/orders/${activeOrderId}/items`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ items }),
@@ -145,7 +227,7 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
       if (res.ok) {
         const updatedOrder = await res.json();
         set((state) => ({
-          orders: state.orders.map((o) => (o.id === orderId ? updatedOrder : o)),
+          orders: state.orders.map((o) => (o.id === orderId || o.id === activeOrderId ? updatedOrder : o)),
         }));
       }
     } catch (err) {
@@ -154,13 +236,22 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
   },
   generateBill: async (orderId) => {
     try {
-      const res = await apiFetch(`${API_URL}/api/orders/${orderId}/bill`, {
+      let activeOrderId = orderId;
+      if (orderId.startsWith("temp_")) {
+        const pendingPromise = pendingOrders.get(orderId);
+        if (pendingPromise) {
+          const serverOrder = await pendingPromise;
+          activeOrderId = serverOrder.id;
+        }
+      }
+
+      const res = await apiFetch(`${API_URL}/api/orders/${activeOrderId}/bill`, {
         method: "POST",
       });
       if (res.ok) {
         const updatedOrder = await res.json();
         set((state) => ({
-          orders: state.orders.map((o) => (o.id === orderId ? updatedOrder : o)),
+          orders: state.orders.map((o) => (o.id === orderId || o.id === activeOrderId ? updatedOrder : o)),
         }));
       }
     } catch (err) {
@@ -169,7 +260,16 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
   },
   closeOrder: async (orderId, method, splits, gstAmount, total) => {
     try {
-      const res = await apiFetch(`${API_URL}/api/orders/${orderId}/pay`, {
+      let activeOrderId = orderId;
+      if (orderId.startsWith("temp_")) {
+        const pendingPromise = pendingOrders.get(orderId);
+        if (pendingPromise) {
+          const serverOrder = await pendingPromise;
+          activeOrderId = serverOrder.id;
+        }
+      }
+
+      const res = await apiFetch(`${API_URL}/api/orders/${activeOrderId}/pay`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ paymentMethod: method, splits, gstAmount, total }),
@@ -180,7 +280,7 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
         set((state) => ({
           invoices: [...state.invoices, invoice],
           orders: state.orders.map((o) =>
-            o.id === orderId
+            o.id === orderId || o.id === activeOrderId
               ? { ...o, status: "paid", paymentMethod: method, closedAt: invoice.createdAt }
               : o
           ),
@@ -195,7 +295,16 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
   },
   updateOrderMetadata: async (orderId, metadata) => {
     try {
-      const res = await apiFetch(`${API_URL}/api/orders/${orderId}/items`, {
+      let activeOrderId = orderId;
+      if (orderId.startsWith("temp_")) {
+        const pendingPromise = pendingOrders.get(orderId);
+        if (pendingPromise) {
+          const serverOrder = await pendingPromise;
+          activeOrderId = serverOrder.id;
+        }
+      }
+
+      const res = await apiFetch(`${API_URL}/api/orders/${activeOrderId}/items`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(metadata),
@@ -203,7 +312,7 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
       if (res.ok) {
         const updatedOrder = await res.json();
         set((state) => ({
-          orders: state.orders.map((o) => (o.id === orderId ? updatedOrder : o)),
+          orders: state.orders.map((o) => (o.id === orderId || o.id === activeOrderId ? updatedOrder : o)),
         }));
       }
     } catch (err) {
