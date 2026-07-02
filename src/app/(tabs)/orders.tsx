@@ -1,11 +1,12 @@
 import { useEffect } from "react";
-import { FlatList, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { FlatList, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from "react-native";
 
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { COLORS } from "@/constants/colors";
 import { useOrderStore } from "@/store/orderStore";
 import { useTableStore } from "@/store/tableStore";
+import { useEventStore, QueueEvent } from "@/store/eventStore";
 import { formatCurrency, formatTime } from "@/utils/formatters";
 import { Order } from "@/types";
 
@@ -16,7 +17,7 @@ const STATUS_META = {
   paid: { label: "Paid", tone: "green" as const, color: COLORS.green, bg: COLORS.greenLight },
 };
 
-function Header({ orders }: { orders: Order[] }) {
+function Header({ orders, eventCount }: { orders: Order[]; eventCount: number }) {
   const liveOrders = orders.filter((order) => order.status !== "paid");
   const billedOrders = orders.filter((order) => order.status === "billed");
   const sales = orders.reduce((sum, order) => sum + order.total, 0);
@@ -58,8 +59,15 @@ function Header({ orders }: { orders: Order[] }) {
           <Text style={styles.title}>Service tickets</Text>
           <Text style={styles.subtitle}>Newest order first</Text>
         </View>
-        <View style={styles.queuePill}>
-          <Text style={styles.queuePillText}>{billedOrders.length} bills ready</Text>
+        <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+          {eventCount > 0 && (
+            <View style={[styles.queuePill, { backgroundColor: "#fef2f2", borderColor: "#fca5a5" }]}>
+              <Text style={[styles.queuePillText, { color: "#dc2626" }]}>{eventCount} alerts</Text>
+            </View>
+          )}
+          <View style={styles.queuePill}>
+            <Text style={styles.queuePillText}>{billedOrders.length} bills ready</Text>
+          </View>
         </View>
       </View>
     </View>
@@ -114,10 +122,71 @@ function OrderCard({ order }: { order: Order }) {
   );
 }
 
+function EventCard({ event }: { event: QueueEvent }) {
+  const clearEvent = useEventStore((state) => state.clearEvent);
+  const isCleared = event.type === "table_cleared";
+  const isKotRemoval = event.type === "kot_item_removed";
+
+  const accentColor = isCleared ? "#ef4444" : "#f97316";
+  const bgColor = isCleared ? "#fef2f2" : "#fff7ed";
+  const borderColor = isCleared ? "#fca5a5" : "#fed7aa";
+  const railColor = isCleared ? "#ef4444" : "#f97316";
+  const emoji = isCleared ? "🗑️" : "✂️";
+  const label = isCleared ? "Table Cleared" : "Item Removed (KOT)";
+
+  return (
+    <Card style={[styles.orderCard, { backgroundColor: bgColor, borderWidth: 1, borderColor }]}>
+      <View style={[styles.statusRail, { backgroundColor: railColor }]} />
+      <View style={styles.cardTop}>
+        <View style={[styles.tablePlate, { backgroundColor: bgColor, borderWidth: 1.5, borderColor }]}>
+          <Text style={{ fontSize: 24 }}>{emoji}</Text>
+        </View>
+        <View style={styles.orderInfo}>
+          <View style={styles.orderTitleLine}>
+            <Text style={[styles.orderNo, { fontSize: 15, color: accentColor }]}>{event.tableName}</Text>
+            <View style={{ backgroundColor: accentColor, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 }}>
+              <Text style={{ color: "#fff", fontSize: 10, fontWeight: "900" }}>{label}</Text>
+            </View>
+          </View>
+          <Text style={styles.meta}>{formatTime(event.createdAt)}</Text>
+        </View>
+      </View>
+
+      <View style={[styles.previewBox, { backgroundColor: isCleared ? "#fee2e2" : "#ffedd5" }]}>
+        {isKotRemoval && event.detail && (
+          <Text style={[styles.previewText, { color: "#9a3412", marginBottom: 2 }]}>
+            Item: {event.detail}
+          </Text>
+        )}
+        <Text style={[styles.previewText, { color: isCleared ? "#991b1b" : "#9a3412" }]}>
+          Reason: {event.reason}
+        </Text>
+      </View>
+
+      <View style={styles.bottomLine}>
+        <Text style={[styles.itemCountText, { color: accentColor, fontWeight: "700" }]}>
+          {isCleared ? "Order cancelled" : "KOT updated"}
+        </Text>
+        <TouchableOpacity
+          onPress={() => clearEvent(event.id)}
+          style={{ backgroundColor: accentColor, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 }}
+        >
+          <Text style={{ color: "#fff", fontSize: 11, fontWeight: "800" }}>Dismiss</Text>
+        </TouchableOpacity>
+      </View>
+    </Card>
+  );
+}
+
+type ListItem =
+  | { type: "order"; data: Order }
+  | { type: "event"; data: QueueEvent };
+
 export default function OrdersScreen() {
   const orders = useOrderStore((state) => state.orders);
   const fetchOrders = useOrderStore((state) => state.fetchOrders);
   const fetchTables = useTableStore((state) => state.fetchTables);
+  const events = useEventStore((state) => state.events);
 
   useEffect(() => {
     fetchOrders();
@@ -132,14 +201,24 @@ export default function OrdersScreen() {
     return () => clearInterval(interval);
   }, [fetchOrders, fetchTables]);
 
+  // Build combined list: events first (most recent), then orders
+  const listData: ListItem[] = [
+    ...events.map((e): ListItem => ({ type: "event", data: e })),
+    ...[...orders].reverse().map((o): ListItem => ({ type: "order", data: o })),
+  ];
+
   return (
     <FlatList
       style={styles.screen}
       contentContainerStyle={styles.content}
-      data={[...orders].reverse()}
-      keyExtractor={(item) => item.id}
-      ListHeaderComponent={<Header orders={orders} />}
-      renderItem={({ item }) => <OrderCard order={item} />}
+      data={listData}
+      keyExtractor={(item) => item.type === "event" ? `evt_${item.data.id}` : item.data.id}
+      ListHeaderComponent={<Header orders={orders} eventCount={events.length} />}
+      renderItem={({ item }) =>
+        item.type === "event"
+          ? <EventCard event={item.data as QueueEvent} />
+          : <OrderCard order={item.data as Order} />
+      }
     />
   );
 }

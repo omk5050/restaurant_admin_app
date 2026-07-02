@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Image,
   Modal,
   StyleSheet,
@@ -28,6 +29,7 @@ import { useTables } from "@/hooks/useTables";
 import { useOrderStore } from "@/store/orderStore";
 import { useTableStore } from "@/store/tableStore";
 import { useSettingsStore } from "@/store/settingsStore";
+import { useEventStore } from "@/store/eventStore";
 import { MenuItem, MenuSection, PaymentMethod } from "@/types";
 import { formatCurrency, formatTime } from "@/utils/formatters";
 import { generateInvoiceHTML, generateKotHTML } from "@/utils/invoiceTemplate";
@@ -94,8 +96,16 @@ export default function TableOrderScreen() {
   const [kotModalVisible, setKotModalVisible] = useState(false);
   // Clear table confirm modal state
   const [clearConfirmVisible, setClearConfirmVisible] = useState(false);
+  // Clear reason text
+  const [clearReason, setClearReason] = useState("");
+  // KOT item removal reason modal
+  const [kotRemovalReasonVisible, setKotRemovalReasonVisible] = useState(false);
+  const [kotRemovalReason, setKotRemovalReason] = useState("");
+  const [kotRemovalItemName, setKotRemovalItemName] = useState("");
+  const kotRemovalCallback = useRef<((reason: string) => void) | null>(null);
   // Error modal state
   const [errorModal, setErrorModal] = useState("");
+  const addEvent = useEventStore((state) => state.addEvent);
 
   // Responsive state
   const { width } = useWindowDimensions();
@@ -279,24 +289,71 @@ export default function TableOrderScreen() {
 
   // Clear Table: show custom confirm modal
   function handleClearTable() {
+    setClearReason("");
     setClearConfirmVisible(true);
   }
 
   async function executeClearTable() {
     setClearConfirmVisible(false);
+    // Log event with reason to queue before clearing
+    if (table) {
+      addEvent({
+        type: "table_cleared",
+        tableName: table.name,
+        tableId,
+        reason: clearReason.trim() || "No reason provided",
+      });
+    }
     await clearTable(tableId);
     await useOrderStore.getState().fetchOrders();
     await useOrderStore.getState().fetchAnalytics();
     router.replace("/(tabs)" as never);
   }
 
-  // KOT: show confirmation popup, set table active, go back to dashboard
+  // KOT: detect removed items and prompt for removal reason
+  const prevKotItemsRef = useRef<{ menuItemId: string; name: string; qty: number }[]>([]);
+
   async function handleKot() {
     if (!order) return;
     if (order.items.length === 0) {
       setErrorModal("Add at least one item before printing KOT.");
       return;
     }
+
+    // Check if any items were removed since last KOT
+    const prev = prevKotItemsRef.current;
+    const removedItems = prev.filter((prevItem) => {
+      const curr = order.items.find((i) => i.menuItemId === prevItem.menuItemId);
+      return !curr || curr.qty < prevItem.qty;
+    });
+
+    if (removedItems.length > 0 && prev.length > 0) {
+      // Prompt reason for first removed item (or all)
+      const removedNames = removedItems.map((i) => i.name).join(", ");
+      await new Promise<void>((resolve) => {
+        setKotRemovalItemName(removedNames);
+        setKotRemovalReason("");
+        kotRemovalCallback.current = (reason: string) => {
+          if (table) {
+            removedItems.forEach((item) => {
+              addEvent({
+                type: "kot_item_removed",
+                tableName: table.name,
+                tableId,
+                reason: reason.trim() || "No reason provided",
+                detail: item.name,
+              });
+            });
+          }
+          resolve();
+        };
+        setKotRemovalReasonVisible(true);
+      });
+    }
+
+    // Update ref for next KOT comparison
+    prevKotItemsRef.current = order.items.map((i) => ({ menuItemId: i.menuItemId, name: i.name, qty: i.qty }));
+
     await setTableStatus(tableId, "active");
     setKotModalVisible(true);
   }
@@ -481,27 +538,18 @@ export default function TableOrderScreen() {
     setCustomItemPriceError("");
   }
 
-  if (!table || !order) {
+  if (!table) {
     return (
       <View style={styles.emptyScreen}>
-        <Text style={styles.emptyText}>Preparing table...</Text>
-
-        {/* Error Modal */}
-        <Modal visible={!!errorModal} transparent animationType="fade" onRequestClose={() => setErrorModal("")}>
-          <View style={styles.kotOverlay}>
-            <View style={styles.kotCard}>
-              <Text style={styles.kotEmoji}>⚠️</Text>
-              <Text style={[styles.kotTitle, { color: "#f59e0b" }]}>Error</Text>
-              <Text style={styles.kotMessage}>{errorModal}</Text>
-              <TouchableOpacity style={[styles.kotDismissBtn, { backgroundColor: "#f59e0b" }]} onPress={() => setErrorModal("")}>
-                <Text style={styles.kotDismissText}>OK</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+        <Text style={[styles.emptyText, { marginTop: 12 }]}>Loading table...</Text>
       </View>
     );
   }
+
+  // If table exists but order is still being created, show the full UI skeleton
+  // with a lightweight overlay spinner instead of blocking the entire screen
+  const isCreatingOrder = !order;
 
   if (tableStatus === "paid") {
     return (
@@ -547,7 +595,7 @@ export default function TableOrderScreen() {
 
   // Render Desktop Layout (Mockup replica)
   if (isDesktop) {
-    const totalSelectedQty = order.items.reduce((sum, item) => sum + item.qty, 0);
+    const totalSelectedQty = order?.items.reduce((sum, item) => sum + item.qty, 0) ?? 0;
     // Dashboard stats (reactive via top-level hook)
     const allAvgPrice = allMenuItems.length > 0
       ? Math.round(allMenuItems.reduce((sum, m) => sum + m.price, 0) / allMenuItems.length)
@@ -836,7 +884,7 @@ export default function TableOrderScreen() {
                 <Text style={styles.desktopWidgetIcon}>🕐</Text>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.rightWidgetLabel}>Opened At</Text>
-                  <Text style={styles.desktopWidgetValue}>{formatTime(order.openedAt)}</Text>
+                  <Text style={styles.desktopWidgetValue}>{order ? formatTime(order.openedAt) : "--:--"}</Text>
                 </View>
               </View>
             </View>
@@ -847,7 +895,7 @@ export default function TableOrderScreen() {
                 <Text style={styles.desktopWidgetIcon}>📋</Text>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.rightWidgetLabel}>Order No.</Text>
-                  <Text style={styles.desktopWidgetValue}>{order.orderNo}</Text>
+                  <Text style={styles.desktopWidgetValue}>{order?.orderNo ?? "---"}</Text>
                 </View>
               </View>
 
@@ -886,8 +934,8 @@ export default function TableOrderScreen() {
             <View style={styles.desktopOrderListCard}>
               {/* Sub-Header Details (Avatar icons removed) */}
               <View style={styles.desktopRightSubHeader}>
-                <Text style={styles.desktopRightTitle}>
-                  {order.isTakeaway ? `Takeaway: #${order.orderNo.replace("#", "")}` : `Table: ${table.name}`}
+                <Text style={[styles.desktopRightTitle, { fontWeight: "bold", fontSize: 18 }]}>
+                  {isCreatingOrder ? "Loading..." : (order.isTakeaway ? `Takeaway: #${order.orderNo.replace("#", "")}` : `Table: ${table.name}`)}
                 </Text>
                 <View style={styles.desktopRightIcons}>
                   <View style={styles.desktopRightBadge}>
@@ -907,7 +955,13 @@ export default function TableOrderScreen() {
               </View>
 
               {/* Scrollable Order Items List */}
-              {order.items.length === 0 ? (
+              {isCreatingOrder ? (
+                <View style={styles.desktopEmptyOrder}>
+                  <ActivityIndicator size="small" color={COLORS.primary} />
+                  <Text style={styles.desktopEmptyOrderTitle}>Setting up table...</Text>
+                  <Text style={styles.desktopEmptyOrderText}>Ready in a moment</Text>
+                </View>
+              ) : order.items.length === 0 ? (
                 <View style={styles.desktopEmptyOrder}>
                   <Text style={styles.desktopEmptyOrderEmoji}>🍽️</Text>
                   <Text style={styles.desktopEmptyOrderTitle}>No Item Selected</Text>
@@ -1026,7 +1080,7 @@ export default function TableOrderScreen() {
                 <TouchableOpacity style={styles.desktopActionBtnKOT} onPress={handleKot}>
                   <Text style={styles.desktopActionBtnText}>KOT</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.desktopActionBtnKOT} onPress={async () => { await handleKot(); triggerPrintHtml(generateKotHTML(order, table, settings, orderComment)); }}>
+                <TouchableOpacity style={styles.desktopActionBtnKOT} onPress={async () => { await handleKot(); if (order) triggerPrintHtml(generateKotHTML(order, table, settings, orderComment)); }}>
                   <Text style={styles.desktopActionBtnText}>KOT & Print</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.desktopActionBtnHold} onPress={handleHold}>
@@ -1205,7 +1259,7 @@ export default function TableOrderScreen() {
             <View style={styles.desktopCustomItemCard}>
               <Text style={styles.desktopCustomItemTitle}>Process Payment</Text>
               <Text style={styles.desktopCustomItemSubtitle}>
-                Select payment method to close this bill session. Total: {formatCurrency(order.total)}
+                Select payment method to close this bill session. Total: {formatCurrency(order?.total ?? 0)}
               </Text>
 
               <View style={{ gap: 10, marginVertical: 12 }}>
@@ -1346,11 +1400,73 @@ export default function TableOrderScreen() {
               <Text style={styles.kotMessage}>
                 This will cancel the current order and free {table.name}. This cannot be undone.
               </Text>
+              <View style={styles.reasonInputWrapper}>
+                <Text style={styles.reasonInputLabel}>Reason for clearing (optional)</Text>
+                <TextInput
+                  style={styles.reasonInput}
+                  placeholder="e.g. Customer left, Wrong order..."
+                  placeholderTextColor="#94a3b8"
+                  value={clearReason}
+                  onChangeText={setClearReason}
+                  multiline
+                  numberOfLines={2}
+                />
+              </View>
               <TouchableOpacity style={[styles.kotDismissBtn, { backgroundColor: "#ef4444" }]} onPress={executeClearTable}>
                 <Text style={styles.kotDismissText}>Yes, Clear Table</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.kotDismissBtn, { backgroundColor: "#f1f5f9", marginTop: 0 }]} onPress={() => setClearConfirmVisible(false)}>
                 <Text style={[styles.kotDismissText, { color: "#64748b" }]}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
+        {/* KOT Item Removal Reason Modal */}
+        <Modal visible={kotRemovalReasonVisible} transparent animationType="fade" onRequestClose={() => {}}>
+          <View style={styles.kotOverlay}>
+            <View style={styles.kotCard}>
+              <Text style={styles.kotEmoji}>✂️</Text>
+              <Text style={[styles.kotTitle, { color: "#f97316" }]}>Item Removed</Text>
+              <Text style={styles.kotMessage}>
+                You removed: <Text style={{ fontWeight: "900", color: "#ef4444" }}>{kotRemovalItemName}</Text>{"\n"}Please provide a reason for the kitchen.
+              </Text>
+              <View style={styles.reasonInputWrapper}>
+                <Text style={styles.reasonInputLabel}>Reason for removal</Text>
+                <TextInput
+                  style={styles.reasonInput}
+                  placeholder="e.g. Customer changed mind, Out of stock..."
+                  placeholderTextColor="#94a3b8"
+                  value={kotRemovalReason}
+                  onChangeText={setKotRemovalReason}
+                  multiline
+                  numberOfLines={2}
+                  autoFocus
+                />
+              </View>
+              <TouchableOpacity
+                style={[styles.kotDismissBtn, { backgroundColor: "#f97316" }]}
+                onPress={() => {
+                  setKotRemovalReasonVisible(false);
+                  if (kotRemovalCallback.current) {
+                    kotRemovalCallback.current(kotRemovalReason);
+                    kotRemovalCallback.current = null;
+                  }
+                }}
+              >
+                <Text style={styles.kotDismissText}>Send KOT</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.kotDismissBtn, { backgroundColor: "#f1f5f9", marginTop: 0 }]}
+                onPress={() => {
+                  setKotRemovalReasonVisible(false);
+                  if (kotRemovalCallback.current) {
+                    kotRemovalCallback.current("");
+                    kotRemovalCallback.current = null;
+                  }
+                }}
+              >
+                <Text style={[styles.kotDismissText, { color: "#64748b" }]}>Skip Reason</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1434,6 +1550,17 @@ export default function TableOrderScreen() {
   // -------------------------------------------------------------
   // Mobile Layout Fallback (Original code preserved)
   // -------------------------------------------------------------
+
+  // While order is being auto-created, show a quick loading screen
+  if (isCreatingOrder) {
+    return (
+      <View style={styles.emptyScreen}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+        <Text style={[styles.emptyText, { marginTop: 12 }]}>Setting up table...</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.screen}>
       <View style={styles.infoBar}>
@@ -1526,7 +1653,7 @@ export default function TableOrderScreen() {
         </View>
       </Modal>
 
-      {/* Clear Table Confirm Modal */}
+      {/* Clear Table Confirm Modal (Mobile) */}
       <Modal visible={clearConfirmVisible} transparent animationType="fade" onRequestClose={() => setClearConfirmVisible(false)}>
         <View style={styles.kotOverlay}>
           <View style={styles.kotCard}>
@@ -1535,6 +1662,18 @@ export default function TableOrderScreen() {
             <Text style={styles.kotMessage}>
               This will cancel the current order and free {table.name}. This cannot be undone.
             </Text>
+            <View style={styles.reasonInputWrapper}>
+              <Text style={styles.reasonInputLabel}>Reason for clearing (optional)</Text>
+              <TextInput
+                style={styles.reasonInput}
+                placeholder="e.g. Customer left, Wrong order..."
+                placeholderTextColor="#94a3b8"
+                value={clearReason}
+                onChangeText={setClearReason}
+                multiline
+                numberOfLines={2}
+              />
+            </View>
             <TouchableOpacity style={[styles.kotDismissBtn, { backgroundColor: "#ef4444" }]} onPress={executeClearTable}>
               <Text style={styles.kotDismissText}>Yes, Clear Table</Text>
             </TouchableOpacity>
@@ -2081,8 +2220,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   desktopRightTitle: {
-    fontSize: 14,
-    fontWeight: "800",
+    fontSize: 18,
+    fontWeight: "900",
     color: COLORS.espresso,
   },
   desktopRightIcons: {
@@ -2843,5 +2982,31 @@ const styles = StyleSheet.create({
   desktopRightMiddleSection: {
     flex: 1,
     marginTop: 4,
+  },
+  // Reason input styles (used in clear and KOT removal modals)
+  reasonInputWrapper: {
+    width: "100%",
+    gap: 4,
+    marginVertical: 4,
+  },
+  reasonInputLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: COLORS.textSec,
+    textAlign: "left",
+    alignSelf: "flex-start",
+  },
+  reasonInput: {
+    width: "100%",
+    borderWidth: 1.5,
+    borderColor: "#cbd5e1",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 13,
+    color: COLORS.text,
+    backgroundColor: "#f8fafc",
+    minHeight: 52,
+    textAlignVertical: "top",
   },
 });
